@@ -1,0 +1,779 @@
+import { prisma } from "../lib/db";
+import { morphoClient } from "../lib/graphql/client";
+import {
+  GET_VAULTS_V2_PAGINATED,
+  GET_VAULT_V2_TRANSACTIONS,
+  GET_VAULT_REALLOCATES,
+  type VaultV2TransactionsResponse,
+  type VaultReallocatesResponse,
+} from "../lib/graphql/queries";
+import type { VaultV2sResponse, MorphoVaultV2 } from "../lib/types/vault";
+import { calculateAllRiskMetrics } from "../lib/risk-calculator";
+import { detectChanges, storeChanges } from "../lib/change-detector";
+
+const CHAIN_ID = 1; // Ethereum mainnet
+const BATCH_SIZE = 100; // Vaults per API request
+const PARALLEL_BATCH_SIZE = 10; // Vaults processed in parallel
+const TRANSACTIONS_PER_VAULT = 50;
+const MIN_TVL_USD = 1000; // Skip vaults below $1000 TVL
+const API_DELAY_MS = 100; // Delay between API calls to respect rate limits
+
+export interface CollectionResult {
+  success: boolean;
+  vaultsProcessed: number;
+  vaultsSkipped: number;
+  curatorsCreated: number;
+  snapshotsCreated: number;
+  transactionsCollected: number;
+  reallocationsCollected: number;
+  riskSnapshotsCreated: number;
+  changesDetected: number;
+  errors: string[];
+  duration: number;
+}
+
+export interface CollectionOptions {
+  fetchAll?: boolean; // Fetch all vaults (default: true)
+  skipTransactions?: boolean; // Skip transaction fetching for speed
+  skipReallocations?: boolean; // Skip reallocation fetching for speed
+  minTvlUsd?: number; // Minimum TVL to include
+  verbose?: boolean; // Verbose logging
+}
+
+function log(message: string) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`);
+}
+
+function logError(message: string, error?: unknown) {
+  const timestamp = new Date().toISOString();
+  console.error(`[${timestamp}] ERROR: ${message}`, error ?? "");
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch ALL V2 vaults from Morpho API with pagination.
+ * Returns vaults sorted by TVL descending.
+ */
+async function fetchAllVaults(options: CollectionOptions = {}): Promise<MorphoVaultV2[]> {
+  const allVaults: MorphoVaultV2[] = [];
+  let skip = 0;
+  let hasMore = true;
+  const minTvl = options.minTvlUsd ?? MIN_TVL_USD;
+
+  log(`Fetching all V2 vaults from Morpho API (min TVL: $${minTvl.toLocaleString()})...`);
+
+  while (hasMore) {
+    try {
+      const response = await morphoClient.request<VaultV2sResponse>(
+        GET_VAULTS_V2_PAGINATED,
+        {
+          first: BATCH_SIZE,
+          skip,
+          chainId: CHAIN_ID,
+        }
+      );
+
+      const vaults = response.vaultV2s.items;
+
+      if (vaults.length === 0) {
+        hasMore = false;
+      } else {
+        // Filter by minimum TVL
+        const validVaults = vaults.filter((v) => (v.totalAssetsUsd ?? 0) >= minTvl);
+        allVaults.push(...validVaults);
+
+        if (options.verbose) {
+          log(`  Fetched batch ${skip}-${skip + vaults.length}: ${validVaults.length}/${vaults.length} valid vaults`);
+        }
+
+        // If we got fewer vaults than batch size, or last vault is below min TVL, we're done
+        if (vaults.length < BATCH_SIZE) {
+          hasMore = false;
+        } else {
+          // Check if last vault is below minimum TVL (since sorted by TVL)
+          const lastVault = vaults[vaults.length - 1];
+          if ((lastVault.totalAssetsUsd ?? 0) < minTvl) {
+            hasMore = false;
+          } else {
+            skip += BATCH_SIZE;
+            // Small delay to respect rate limits
+            await sleep(API_DELAY_MS);
+          }
+        }
+      }
+    } catch (error) {
+      logError(`Failed to fetch vaults batch at skip=${skip}`, error);
+      hasMore = false;
+    }
+  }
+
+  log(`Fetched ${allVaults.length} total vaults from API`);
+  return allVaults;
+}
+
+/**
+ * Validate vault data before processing.
+ * Returns true if vault should be processed.
+ */
+function isValidVault(vault: MorphoVaultV2, minTvlUsd: number): { valid: boolean; reason?: string } {
+  // Check minimum TVL
+  if ((vault.totalAssetsUsd ?? 0) < minTvlUsd) {
+    return { valid: false, reason: `TVL below $${minTvlUsd}` };
+  }
+
+  // Check for required fields
+  if (!vault.address) {
+    return { valid: false, reason: "Missing address" };
+  }
+
+  if (!vault.asset?.address) {
+    return { valid: false, reason: "Missing asset info" };
+  }
+
+  return { valid: true };
+}
+
+async function fetchVaultTransactions(vaultAddress: string) {
+  try {
+    const response = await morphoClient.request<VaultV2TransactionsResponse>(
+      GET_VAULT_V2_TRANSACTIONS,
+      {
+        vaultAddress,
+        first: TRANSACTIONS_PER_VAULT,
+      }
+    );
+    return response.vaultV2transactions.items;
+  } catch (error) {
+    logError(`Failed to fetch transactions for ${vaultAddress}`, error);
+    return [];
+  }
+}
+
+async function fetchVaultReallocations(vaultAddress: string) {
+  try {
+    const response = await morphoClient.request<VaultReallocatesResponse>(
+      GET_VAULT_REALLOCATES,
+      {
+        vaultAddress,
+        first: TRANSACTIONS_PER_VAULT,
+      }
+    );
+    return response.vaultReallocates.items;
+  } catch (error) {
+    logError(`Failed to fetch reallocations for ${vaultAddress}`, error);
+    return [];
+  }
+}
+
+/**
+ * Ensure curator exists in database. Creates new record if not found.
+ * Returns the curator ID.
+ */
+async function ensureCuratorExists(curatorAddress: string): Promise<{ curatorId: string; created: boolean }> {
+  const normalizedAddress = curatorAddress.toLowerCase();
+
+  // Try to find existing curator
+  let curator = await prisma.curator.findUnique({
+    where: { address: normalizedAddress },
+  });
+
+  if (curator) {
+    return { curatorId: curator.id, created: false };
+  }
+
+  // Create new curator with default name
+  try {
+    curator = await prisma.curator.create({
+      data: {
+        address: normalizedAddress,
+        name: null, // Will be enriched later
+      },
+    });
+    log(`  Created new curator: ${normalizedAddress.slice(0, 10)}...`);
+    return { curatorId: curator.id, created: true };
+  } catch {
+    // May already exist due to race condition
+    const existing = await prisma.curator.findUnique({
+      where: { address: normalizedAddress },
+    });
+    return { curatorId: existing?.id ?? "", created: false };
+  }
+}
+
+async function upsertVault(vault: MorphoVaultV2): Promise<{ vaultId: string; curatorCreated: boolean }> {
+  const existing = await prisma.vault.findUnique({
+    where: { address: vault.address },
+  });
+
+  // Link to curator if available
+  let curatorId: string | null = null;
+  let curatorCreated = false;
+
+  if (vault.curator?.address) {
+    const curatorResult = await ensureCuratorExists(vault.curator.address);
+    curatorId = curatorResult.curatorId;
+    curatorCreated = curatorResult.created;
+  }
+
+  if (existing) {
+    await prisma.vault.update({
+      where: { address: vault.address },
+      data: {
+        name: vault.name,
+        symbol: vault.symbol,
+        curatorAddress: vault.curator?.address,
+        curatorId,
+        performanceFee: vault.performanceFee,
+        managementFee: vault.managementFee,
+        updatedAt: new Date(),
+      },
+    });
+    return { vaultId: existing.id, curatorCreated };
+  } else {
+    const created = await prisma.vault.create({
+      data: {
+        address: vault.address,
+        name: vault.name,
+        symbol: vault.symbol,
+        chainId: CHAIN_ID,
+        assetAddress: vault.asset.address,
+        assetSymbol: vault.asset.symbol,
+        assetDecimals: vault.asset.decimals,
+        curatorAddress: vault.curator?.address,
+        curatorId,
+        performanceFee: vault.performanceFee,
+        managementFee: vault.managementFee,
+      },
+    });
+    return { vaultId: created.id, curatorCreated };
+  }
+}
+
+function calculateSharePrice(vault: MorphoVaultV2): number {
+  if (vault.sharePrice) {
+    return vault.sharePrice;
+  }
+
+  const totalAssets = BigInt(vault.totalAssets || "0");
+  const totalSupply = BigInt(vault.totalSupply || "1");
+
+  if (totalSupply === 0n) {
+    return 1;
+  }
+
+  return Number(totalAssets) / Number(totalSupply);
+}
+
+async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
+  const sharePrice = calculateSharePrice(vault);
+
+  await prisma.vaultSnapshot.create({
+    data: {
+      vaultId,
+      totalAssets: String(vault.totalAssets),
+      totalAssetsUsd: vault.totalAssetsUsd ?? 0,
+      totalSupply: String(vault.totalSupply),
+      sharePrice,
+      apy: vault.apy,
+      netApy: vault.netApy,
+      avgApy: vault.avgApy,
+      avgNetApy: vault.avgNetApy,
+    },
+  });
+}
+
+async function storeAdapterAllocations(
+  vaultId: string,
+  vault: MorphoVaultV2,
+  snapshotTime: Date
+) {
+  const totalAssetsUsd = vault.totalAssetsUsd || 0;
+
+  const allocations = vault.adapters.items.map((adapter) => ({
+    vaultId,
+    adapterAddress: adapter.address,
+    adapterType: adapter.type,
+    assets: String(adapter.assets),
+    assetsUsd: adapter.assetsUsd ?? 0,
+    allocationPct:
+      totalAssetsUsd > 0 ? (adapter.assetsUsd / totalAssetsUsd) * 100 : 0,
+    snapshotTime,
+  }));
+
+  if (allocations.length > 0) {
+    await prisma.adapterAllocation.createMany({
+      data: allocations,
+    });
+  }
+
+  return allocations;
+}
+
+async function storeTransactions(
+  vaultId: string,
+  transactions: Awaited<ReturnType<typeof fetchVaultTransactions>>
+): Promise<number> {
+  let stored = 0;
+
+  for (const tx of transactions) {
+    try {
+      await prisma.vaultTransaction.upsert({
+        where: {
+          vaultId_txHash: {
+            vaultId,
+            txHash: tx.txHash,
+          },
+        },
+        update: {},
+        create: {
+          vaultId,
+          txHash: tx.txHash,
+          blockNumber: tx.blockNumber,
+          timestamp: new Date(Number(tx.timestamp) * 1000),
+          type: tx.type,
+          shares: tx.shares != null ? String(tx.shares) : null,
+          assets: null,
+        },
+      });
+      stored++;
+    } catch {
+      // Skip duplicates silently
+    }
+  }
+
+  return stored;
+}
+
+async function storeReallocations(
+  vaultId: string,
+  reallocations: Awaited<ReturnType<typeof fetchVaultReallocations>>
+): Promise<number> {
+  let stored = 0;
+
+  for (const realloc of reallocations) {
+    try {
+      await prisma.vaultReallocation.create({
+        data: {
+          vaultId,
+          timestamp: new Date(Number(realloc.timestamp) * 1000),
+          txHash: realloc.hash,
+          type: realloc.type,
+          marketId: realloc.market?.uniqueKey,
+          amount: realloc.assets,
+        },
+      });
+      stored++;
+    } catch {
+      // Skip duplicates or errors silently
+    }
+  }
+
+  return stored;
+}
+
+async function updateCuratorStats() {
+  log("Updating curator statistics...");
+
+  const curators = await prisma.curator.findMany({
+    select: { id: true, name: true, address: true },
+  });
+
+  for (const curator of curators) {
+    // Count vaults
+    const vaultCount = await prisma.vault.count({
+      where: { curatorId: curator.id },
+    });
+
+    // Skip curators with no vaults
+    if (vaultCount === 0) continue;
+
+    // Get total assets from latest snapshots
+    const vaultIds = await prisma.vault.findMany({
+      where: { curatorId: curator.id },
+      select: { id: true },
+    });
+
+    let totalAssets = 0;
+    for (const { id } of vaultIds) {
+      const snapshot = await prisma.vaultSnapshot.findFirst({
+        where: { vaultId: id },
+        orderBy: { timestamp: "desc" },
+        select: { totalAssetsUsd: true },
+      });
+      if (snapshot) {
+        totalAssets += snapshot.totalAssetsUsd;
+      }
+    }
+
+    await prisma.curator.update({
+      where: { id: curator.id },
+      data: {
+        vaultCount,
+        totalAssetsManaged: totalAssets,
+      },
+    });
+
+    log(`  ${curator.name || curator.address.slice(0, 10)}: ${vaultCount} vaults, $${(totalAssets / 1e6).toFixed(2)}M`);
+  }
+}
+
+async function createRiskSnapshot(
+  vaultId: string,
+  vault: MorphoVaultV2,
+  allocations: Array<{
+    adapterAddress: string;
+    adapterType: string;
+    assets: string;
+    assetsUsd: number;
+    allocationPct: number;
+  }>
+) {
+  const totalAssetsUsd = vault.totalAssetsUsd || 0;
+  const totalAssets = BigInt(vault.totalAssets || "0");
+
+  // Calculate idle assets
+  const allocatedAssets = allocations.reduce(
+    (sum, a) => sum + BigInt(a.assets),
+    0n
+  );
+  const idleAssets = totalAssets - allocatedAssets;
+  const idleAssetsPercent =
+    totalAssets > 0n ? (Number(idleAssets) / Number(totalAssets)) * 100 : 0;
+
+  // Calculate risk metrics
+  const riskMetrics = calculateAllRiskMetrics(
+    allocations.map((a) => ({
+      address: a.adapterAddress,
+      type: a.adapterType,
+      assets: a.assets,
+      assetsUsd: a.assetsUsd,
+      allocationPct: a.allocationPct,
+    })),
+    idleAssetsPercent,
+    totalAssetsUsd
+  );
+
+  await prisma.vaultRiskSnapshot.create({
+    data: {
+      vaultId,
+      topAdapterPercent: riskMetrics.topAdapterPercent,
+      top3AdaptersPercent: riskMetrics.top3AdaptersPercent,
+      herfindahlIndex: riskMetrics.herfindahlIndex,
+      numActiveAdapters: riskMetrics.numActiveAdapters,
+      idleAssetsPercent: riskMetrics.idleAssetsPercent,
+      hasLiquidityAdapter: riskMetrics.hasLiquidityAdapter,
+      avgAllocationPercent: riskMetrics.avgAllocationPercent,
+      largestAllocation: riskMetrics.largestAllocation,
+      concentrationScore: riskMetrics.concentrationScore,
+      liquidityScore: riskMetrics.liquidityScore,
+      diversificationScore: riskMetrics.diversificationScore,
+    },
+  });
+}
+
+/**
+ * Process a single vault - upsert, snapshot, transactions, risk metrics.
+ */
+async function processVault(
+  vault: MorphoVaultV2,
+  snapshotTime: Date,
+  options: CollectionOptions
+): Promise<{
+  success: boolean;
+  curatorCreated: boolean;
+  txCount: number;
+  reallocCount: number;
+  changesDetected: number;
+  error?: string;
+}> {
+  try {
+    // Upsert vault record
+    const { vaultId, curatorCreated } = await upsertVault(vault);
+
+    // Create snapshot
+    await createSnapshot(vaultId, vault);
+
+    // Store adapter allocations
+    const allocations = await storeAdapterAllocations(vaultId, vault, snapshotTime);
+
+    // Fetch and store transactions (unless skipped)
+    let txCount = 0;
+    if (!options.skipTransactions) {
+      const transactions = await fetchVaultTransactions(vault.address);
+      txCount = await storeTransactions(vaultId, transactions);
+    }
+
+    // Fetch and store reallocations (unless skipped)
+    let reallocCount = 0;
+    if (!options.skipReallocations) {
+      const reallocations = await fetchVaultReallocations(vault.address);
+      reallocCount = await storeReallocations(vaultId, reallocations);
+    }
+
+    // Create risk snapshot
+    await createRiskSnapshot(vaultId, vault, allocations);
+
+    // Detect and store changes
+    let changesDetected = 0;
+    try {
+      const currentSnapshot = {
+        totalAssets: String(vault.totalAssets),
+        totalAssetsUsd: vault.totalAssetsUsd || 0,
+        sharePrice: vault.sharePrice || 1,
+        avgApy: vault.avgApy || null,
+        timestamp: snapshotTime,
+      };
+
+      const vaultData = {
+        id: vaultId,
+        name: vault.name,
+        symbol: vault.symbol,
+        assetSymbol: vault.asset.symbol,
+        assetDecimals: vault.asset.decimals,
+        curatorAddress: vault.curator?.address ?? "",
+      };
+
+      const changes = await detectChanges(vaultData, currentSnapshot);
+      if (changes.length > 0) {
+        changesDetected = await storeChanges(changes);
+      }
+    } catch {
+      // Changes detection is non-critical, continue
+    }
+
+    return { success: true, curatorCreated, txCount, reallocCount, changesDetected };
+  } catch (error) {
+    return {
+      success: false,
+      curatorCreated: false,
+      txCount: 0,
+      reallocCount: 0,
+      changesDetected: 0,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Process vaults in parallel batches for efficiency.
+ */
+async function processVaultsBatch(
+  vaults: MorphoVaultV2[],
+  snapshotTime: Date,
+  options: CollectionOptions
+): Promise<{
+  processed: number;
+  curatorsCreated: number;
+  txCollected: number;
+  reallocsCollected: number;
+  changesDetected: number;
+  errors: string[];
+}> {
+  let processed = 0;
+  let curatorsCreated = 0;
+  let txCollected = 0;
+  let reallocsCollected = 0;
+  let changesDetected = 0;
+  const errors: string[] = [];
+
+  for (let i = 0; i < vaults.length; i += PARALLEL_BATCH_SIZE) {
+    const batch = vaults.slice(i, i + PARALLEL_BATCH_SIZE);
+
+    const results = await Promise.all(
+      batch.map((vault) => processVault(vault, snapshotTime, options))
+    );
+
+    for (let j = 0; j < results.length; j++) {
+      const result = results[j];
+      const vault = batch[j];
+
+      if (result.success) {
+        processed++;
+        if (result.curatorCreated) curatorsCreated++;
+        txCollected += result.txCount;
+        reallocsCollected += result.reallocCount;
+        changesDetected += result.changesDetected;
+      } else {
+        errors.push(`${vault.name}: ${result.error}`);
+      }
+    }
+
+    if (options.verbose) {
+      log(`  Processed ${Math.min(i + PARALLEL_BATCH_SIZE, vaults.length)}/${vaults.length} vaults`);
+    }
+
+    // Small delay between batches
+    if (i + PARALLEL_BATCH_SIZE < vaults.length) {
+      await sleep(API_DELAY_MS);
+    }
+  }
+
+  return { processed, curatorsCreated, txCollected, reallocsCollected, changesDetected, errors };
+}
+
+/**
+ * Main data collection function.
+ * Fetches all vaults from Morpho API and stores snapshots, transactions, and risk data.
+ */
+export async function collectData(options: CollectionOptions = {}): Promise<CollectionResult> {
+  const startTime = Date.now();
+  const errors: string[] = [];
+  const minTvlUsd = options.minTvlUsd ?? MIN_TVL_USD;
+
+  log("=".repeat(60));
+  log("Starting data collection...");
+  log(`Options: fetchAll=${options.fetchAll ?? true}, minTvl=$${minTvlUsd}, skipTx=${options.skipTransactions ?? false}`);
+
+  try {
+    // Fetch all vaults from API
+    const allVaults = await fetchAllVaults(options);
+
+    // Validate and filter vaults
+    const validVaults: MorphoVaultV2[] = [];
+    let skippedCount = 0;
+
+    for (const vault of allVaults) {
+      const validation = isValidVault(vault, minTvlUsd);
+      if (validation.valid) {
+        validVaults.push(vault);
+      } else {
+        skippedCount++;
+        if (options.verbose) {
+          log(`  Skipped ${vault.name || vault.address}: ${validation.reason}`);
+        }
+      }
+    }
+
+    log(`Processing ${validVaults.length} valid vaults (${skippedCount} skipped)`);
+
+    const snapshotTime = new Date();
+
+    // Process vaults in parallel batches
+    const result = await processVaultsBatch(validVaults, snapshotTime, options);
+    errors.push(...result.errors);
+
+    log(`Processed: ${result.processed}/${validVaults.length} vaults`);
+
+    // Update curator statistics
+    await updateCuratorStats();
+
+    // Print summary
+    const vaultCount = await prisma.vault.count();
+    const curatorCount = await prisma.curator.count();
+    const snapshotCount = await prisma.vaultSnapshot.count();
+    const allocationCount = await prisma.adapterAllocation.count();
+    const txCount = await prisma.vaultTransaction.count();
+    const reallocCount = await prisma.vaultReallocation.count();
+    const riskCount = await prisma.vaultRiskSnapshot.count();
+    const changeCount = await prisma.vaultChange.count();
+
+    log("-".repeat(60));
+    log("Data collection completed!");
+    log(`  Vaults processed: ${result.processed}/${validVaults.length}`);
+    log(`  Vaults skipped: ${skippedCount}`);
+    log(`  Curators created: ${result.curatorsCreated}`);
+    log(`  Transactions collected: ${result.txCollected}`);
+    log(`  Reallocations collected: ${result.reallocsCollected}`);
+    log(`  Changes detected: ${result.changesDetected}`);
+    log("-".repeat(60));
+    log("Database totals:");
+    log(`  Vaults: ${vaultCount}`);
+    log(`  Curators: ${curatorCount}`);
+    log(`  Snapshots: ${snapshotCount}`);
+    log(`  Allocations: ${allocationCount}`);
+    log(`  Transactions: ${txCount}`);
+    log(`  Reallocations: ${reallocCount}`);
+    log(`  Risk Snapshots: ${riskCount}`);
+    log(`  Changes: ${changeCount}`);
+
+    if (errors.length > 0) {
+      log(`  Errors: ${errors.length}`);
+      errors.slice(0, 5).forEach((e) => log(`    - ${e}`));
+      if (errors.length > 5) {
+        log(`    ... and ${errors.length - 5} more`);
+      }
+    }
+
+    const duration = Date.now() - startTime;
+    log(`  Duration: ${(duration / 1000).toFixed(1)}s`);
+    log("=".repeat(60));
+
+    return {
+      success: errors.length === 0,
+      vaultsProcessed: result.processed,
+      vaultsSkipped: skippedCount,
+      curatorsCreated: result.curatorsCreated,
+      snapshotsCreated: result.processed,
+      transactionsCollected: result.txCollected,
+      reallocationsCollected: result.reallocsCollected,
+      riskSnapshotsCreated: result.processed,
+      changesDetected: result.changesDetected,
+      errors,
+      duration,
+    };
+  } catch (error) {
+    const errorMsg = `Critical error during collection: ${error}`;
+    logError(errorMsg);
+    errors.push(errorMsg);
+
+    return {
+      success: false,
+      vaultsProcessed: 0,
+      vaultsSkipped: 0,
+      curatorsCreated: 0,
+      snapshotsCreated: 0,
+      transactionsCollected: 0,
+      reallocationsCollected: 0,
+      riskSnapshotsCreated: 0,
+      changesDetected: 0,
+      errors,
+      duration: Date.now() - startTime,
+    };
+  }
+}
+
+/**
+ * CLI entry point - runs collection and exits.
+ */
+async function main() {
+  // Parse command line arguments
+  const args = process.argv.slice(2);
+  const options: CollectionOptions = {
+    fetchAll: true,
+    skipTransactions: args.includes("--skip-tx"),
+    skipReallocations: args.includes("--skip-realloc"),
+    verbose: args.includes("--verbose") || args.includes("-v"),
+  };
+
+  // Parse --min-tvl=X argument
+  const minTvlArg = args.find((a) => a.startsWith("--min-tvl="));
+  if (minTvlArg) {
+    options.minTvlUsd = parseInt(minTvlArg.split("=")[1], 10);
+  }
+
+  try {
+    const result = await collectData(options);
+
+    if (!result.success) {
+      console.error("Collection completed with errors:", result.errors);
+      process.exit(1);
+    }
+
+    process.exit(0);
+  } catch (error) {
+    console.error("Fatal error:", error);
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+// Only run main() if this file is executed directly
+const isDirectRun = require.main === module;
+if (isDirectRun) {
+  main();
+}

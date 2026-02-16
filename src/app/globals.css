@@ -1,26 +1,198 @@
 @import "tailwindcss";
 
+/* Dark Theme Foundation - Institutional Grade */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Background hierarchy */
+  --background: #0a0a0a;
+  --background-subtle: #141414;
+  --background-elevated: #1a1a1a;
+  --background-hover: #1f1f1f;
+
+  /* Border colors */
+  --border: #262626;
+  --border-subtle: #1a1a1a;
+  --border-strong: #333333;
+
+  /* Text hierarchy */
+  --foreground: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+  --text-tertiary: #737373;
+  --text-muted: #525252;
+
+  /* Accent colors */
+  --accent-blue: #3b82f6;
+  --accent-blue-hover: #2563eb;
+  --accent-green: #10b981;
+  --accent-green-muted: #065f46;
+  --accent-red: #ef4444;
+  --accent-red-muted: #7f1d1d;
+  --accent-yellow: #f59e0b;
+  --accent-yellow-muted: #78350f;
+
+  /* Semantic colors */
+  --positive: #10b981;
+  --negative: #ef4444;
+  --warning: #f59e0b;
+  --info: #3b82f6;
+
+  /* Severity badges */
+  --severity-critical-bg: rgba(239, 68, 68, 0.15);
+  --severity-critical-text: #f87171;
+  --severity-warning-bg: rgba(245, 158, 11, 0.15);
+  --severity-warning-text: #fbbf24;
+  --severity-info-bg: rgba(59, 130, 246, 0.15);
+  --severity-info-text: #60a5fa;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
+  --color-background-elevated: var(--background-elevated);
+  --color-background-hover: var(--background-hover);
+
+  --color-border: var(--border);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
   --color-foreground: var(--foreground);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-text-muted: var(--text-muted);
+
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-hover: var(--accent-blue-hover);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-muted: var(--accent-green-muted);
+  --color-accent-red: var(--accent-red);
+  --color-accent-red-muted: var(--accent-red-muted);
+  --color-accent-yellow: var(--accent-yellow);
+  --color-accent-yellow-muted: var(--accent-yellow-muted);
+
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Scrollbar styling for dark mode */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background-subtle);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #404040;
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(59, 130, 246, 0.3);
+  color: #ffffff;
+}
+
+/* Focus ring styling */
+*:focus-visible {
+  outline: 2px solid var(--accent-blue);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions */
+* {
+  transition-property: background-color, border-color, color, fill, stroke, opacity;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom utility classes */
+.text-positive {
+  color: var(--positive);
+}
+
+.text-negative {
+  color: var(--negative);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.bg-severity-critical {
+  background-color: var(--severity-critical-bg);
+  color: var(--severity-critical-text);
+}
+
+.bg-severity-warning {
+  background-color: var(--severity-warning-bg);
+  color: var(--severity-warning-text);
+}
+
+.bg-severity-info {
+  background-color: var(--severity-info-bg);
+  color: var(--severity-info-text);
+}
+
+/* Table styling */
+.data-table th {
+  background: var(--background-subtle);
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.data-table td {
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.data-table tr:hover td {
+  background: var(--background-hover);
+}
+
+/* Card styling */
+.card {
+  background: var(--background-subtle);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+.card-elevated {
+  background: var(--background-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+}
+
+/* Badge styling */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Number formatting */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

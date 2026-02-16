@@ -1,0 +1,299 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Vault {
+  id              String   @id @default(cuid())
+  address         String   @unique
+  name            String
+  symbol          String
+  chainId         Int      @default(1)
+  assetAddress    String
+  assetSymbol     String
+  assetDecimals   Int
+  curatorAddress  String?
+  curatorId       String?
+  curator         Curator? @relation(fields: [curatorId], references: [id])
+  performanceFee  Float    @default(0)
+  managementFee   Float    @default(0)
+  active          Boolean  @default(true)  // For marking inactive vaults
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  snapshots            VaultSnapshot[]
+  adapterAllocations   AdapterAllocation[]
+  transactions         VaultTransaction[]
+  reallocations        VaultReallocation[]
+  riskSnapshots        VaultRiskSnapshot[]
+  changes              VaultChange[]
+  positions            VaultPosition[]
+  marketAllocations    MarketAllocation[]
+
+  @@index([chainId])
+  @@index([assetSymbol])
+  @@index([curatorId])
+  @@index([curatorAddress])
+  @@index([active])
+  @@index([chainId, active])
+  @@index([updatedAt])
+}
+
+model VaultSnapshot {
+  id             String   @id @default(cuid())
+  vaultId        String
+  vault          Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  totalAssets    String   // BigInt stored as string
+  totalAssetsUsd Float
+  totalSupply    String   // BigInt stored as string
+  sharePrice     Float
+  apy            Float?
+  netApy         Float?
+  avgApy         Float?
+  avgNetApy      Float?
+
+  timestamp      DateTime @default(now())
+
+  @@index([vaultId, timestamp])
+  @@index([timestamp])
+}
+
+model AdapterAllocation {
+  id              String   @id @default(cuid())
+  vaultId         String
+  vault           Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  adapterAddress  String
+  adapterType     String
+  assets          String   // BigInt stored as string
+  assetsUsd       Float
+  allocationPct   Float    // Percentage of vault TVL
+
+  snapshotTime    DateTime @default(now())
+
+  @@index([vaultId, snapshotTime])
+  @@index([adapterAddress])
+}
+
+model VaultTransaction {
+  id          String   @id @default(cuid())
+  vaultId     String
+  vault       Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  txHash      String
+  blockNumber Int
+  timestamp   DateTime
+  type        String   // Deposit, Withdraw, Reallocate, Fee, etc.
+  shares      String?  // Amount in shares
+  assets      String?  // Amount in assets
+  assetsUsd   Float?   // USD value at time of transaction
+
+  createdAt   DateTime @default(now())
+
+  @@unique([vaultId, txHash])
+  @@index([vaultId, timestamp])
+  @@index([txHash])
+}
+
+model VaultReallocation {
+  id          String   @id @default(cuid())
+  vaultId     String
+  vault       Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  timestamp   DateTime
+  txHash      String?
+  type        String?  // Reallocate type (withdraw, supply, etc.)
+  fromAdapter String?  // Adapter money moved FROM
+  toAdapter   String?  // Adapter money moved TO
+  marketId    String?  // Market unique key
+  amount      String   // Amount reallocated
+  amountUsd   Float?   // USD value
+
+  createdAt   DateTime @default(now())
+
+  @@index([vaultId, timestamp])
+}
+
+model VaultRiskSnapshot {
+  id                  String   @id @default(cuid())
+  vaultId             String
+  vault               Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  timestamp           DateTime @default(now())
+
+  // Concentration metrics
+  topAdapterPercent   Float    // % in largest adapter
+  top3AdaptersPercent Float    // % in top 3 adapters
+  herfindahlIndex     Float    // Sum of squared percentages (0-10000)
+  numActiveAdapters   Int
+
+  // Liquidity metrics
+  idleAssetsPercent   Float    // % sitting idle
+  hasLiquidityAdapter Boolean  @default(false)
+
+  // Diversification
+  avgAllocationPercent Float   // Average % per adapter
+  largestAllocation   Float    // Largest single allocation %
+
+  // Overall scores (calculated)
+  concentrationScore  String   // "low" | "medium" | "high"
+  liquidityScore      String   // "low" | "medium" | "high"
+  diversificationScore String  // "good" | "moderate" | "poor"
+
+  createdAt           DateTime @default(now())
+
+  @@index([vaultId, timestamp])
+}
+
+model VaultChange {
+  id            String   @id @default(cuid())
+  vaultId       String
+  vault         Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  changeType    String   // TVL_CHANGE, APY_CHANGE, CONCENTRATION_RISK_CHANGE, etc.
+  severity      String   // info, warning, critical
+  title         String
+  description   String
+
+  oldValue      String?
+  newValue      String?
+  metadata      Json?    // Extra data like txHash, percentChange, etc.
+
+  detectedAt    DateTime
+  viewed        Boolean  @default(false)
+
+  createdAt     DateTime @default(now())
+
+  @@unique([vaultId, changeType, detectedAt])
+  @@index([vaultId, detectedAt])
+  @@index([severity, viewed])
+  @@index([detectedAt])
+}
+
+model Curator {
+  id              String   @id @default(cuid())
+  address         String   @unique
+  name            String?
+
+  // Profile information
+  website         String?
+  twitter         String?
+  discord         String?
+  email           String?
+
+  // Company/Entity info
+  legalName       String?
+  entityType      String?  // LLC, DAO, Corporation, Individual
+  jurisdiction    String?  // US, Cayman Islands, Switzerland, etc.
+  registeredState String?  // Delaware, Wyoming, etc.
+
+  // Regulatory info
+  isRegulated     Boolean  @default(false)
+  regulatoryBody  String?  // SEC, FCA, FINMA, etc.
+  licenses        Json?    // Array of license types
+
+  // Location
+  headquarters    String?  // City, Country
+
+  // Metadata
+  description     String?  @db.Text
+  foundedYear     Int?
+  teamSize        String?  // "1-10", "11-50", "51-200"
+
+  // Social/Community
+  logoUrl         String?
+
+  // Computed stats (updated during data collection)
+  totalAssetsManaged  Float?   @default(0)
+  vaultCount          Int?     @default(0)
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  vaults          Vault[]
+  news            CuratorNews[]
+
+  @@index([address])
+  @@index([name])
+  @@index([jurisdiction])
+  @@index([totalAssetsManaged])
+  @@index([vaultCount])
+}
+
+model CuratorNews {
+  id          String   @id @default(cuid())
+  curatorId   String
+  curator     Curator  @relation(fields: [curatorId], references: [id], onDelete: Cascade)
+
+  title       String
+  summary     String?  @db.Text
+  url         String
+  source      String   // "Twitter", "Medium", "News Site", etc.
+  publishedAt DateTime
+  sentiment   String?  // "positive", "neutral", "negative"
+  category    String?  // "announcement", "partnership", "audit", "incident"
+
+  createdAt   DateTime @default(now())
+
+  @@index([curatorId, publishedAt])
+  @@index([publishedAt])
+}
+
+model VaultPosition {
+  id          String   @id @default(cuid())
+  vaultId     String
+  vault       Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  userAddress String   // Depositor's address
+  assets      String   // Amount in assets (BigInt as string)
+  assetsUsd   Float    // USD value of position
+  shares      String   // Amount in shares (BigInt as string)
+  depositPct  Float    // % of total vault deposits
+
+  // For tracking changes
+  lastUpdated DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@unique([vaultId, userAddress])
+  @@index([vaultId, assetsUsd])
+  @@index([userAddress])
+  @@index([userAddress, assetsUsd])
+}
+
+model MarketAllocation {
+  id              String   @id @default(cuid())
+  vaultId         String
+  vault           Vault    @relation(fields: [vaultId], references: [id], onDelete: Cascade)
+
+  marketUniqueKey String   // Morpho market unique key
+  adapterAddress  String   // Adapter that connects to this market
+
+  // Market info (cached from Morpho API)
+  loanAssetSymbol       String
+  loanAssetAddress      String
+  collateralAssetSymbol String
+  collateralAssetAddress String
+  lltv                  Float    // Liquidation LTV (0-1 or 0-100)
+
+  // Allocation
+  supplyAssets    String   // Amount supplied
+  supplyAssetsUsd Float
+  allocationPct   Float    // % of vault TVL
+
+  // Oracle info
+  oracleAddress   String?
+  oracleType      String?  // chainlink, morpho, uniswap, custom
+
+  snapshotTime    DateTime @default(now())
+
+  @@index([vaultId, snapshotTime])
+  @@index([marketUniqueKey])
+  @@index([collateralAssetSymbol])
+}

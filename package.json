@@ -1,26 +1,41 @@
 {
-  "name": "morpho-vault-analytics",
+  "name": "curatorwatch",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npx prisma generate && next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "collect": "tsx src/scripts/collect-data.ts",
+    "scheduler": "tsx src/scripts/scheduler.ts",
+    "seed:curators": "tsx src/scripts/seed-curators.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.2",
+    "graphql": "^16.12.0",
+    "graphql-request": "^7.4.0",
+    "ioredis": "^5.9.3",
     "next": "16.1.6",
+    "node-cron": "^4.2.1",
+    "prisma": "^6.19.2",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.33",
+    "@types/node-cron": "^3.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
