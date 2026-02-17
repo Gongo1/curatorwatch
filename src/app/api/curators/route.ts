@@ -71,7 +71,15 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
       },
     });
   } catch (error) {
-    console.error("Error fetching curator dashboard:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorStack = error instanceof Error ? error.stack : undefined;
+
+    console.error("Error fetching curator dashboard:", {
+      message: errorMessage,
+      stack: errorStack,
+      hasDbUrl: !!process.env.DATABASE_URL,
+    });
+
     return NextResponse.json(
       {
         success: false,
@@ -90,7 +98,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
             totalPages: 0,
           },
         },
-        error: "Failed to fetch curator dashboard",
+        error: `Failed to fetch curator dashboard: ${errorMessage}`,
       },
       { status: 500 }
     );
