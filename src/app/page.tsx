@@ -3,6 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { CuratorTable, CuratorTableSkeleton } from "@/components/CuratorTable";
+import { TabbedMetricChart } from "@/components/TabbedMetricChart";
+import { StablecoinBreakdown } from "@/components/StablecoinBreakdown";
+import { TopCurators } from "@/components/TopCurators";
+import { TopVaults } from "@/components/TopVaults";
 import { formatTimeAgo, formatCurrency, formatPercentage } from "@/lib/utils/format";
 import type { CuratorDashboardResponse, CuratorDashboardItem, CuratorDashboardStats, PaginationInfo } from "@/lib/types/api";
 
@@ -131,67 +135,60 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="bg-background-subtle border-b border-border sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-accent-blue flex items-center justify-center">
-                <span className="text-white font-bold text-xl">C</span>
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between">
+            <Link href="/" className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-accent-blue flex items-center justify-center">
+                <span className="text-white font-bold text-base">C</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-text-primary tracking-tight">
+                <h1 className="text-lg font-bold text-text-primary tracking-tight leading-tight">
                   CuratorWatch
                 </h1>
-                <p className="text-xs text-text-tertiary">
-                  Track DeFi vault curators
+                <p className="text-[10px] text-text-tertiary leading-tight">
+                  Morpho V2 Vault Analytics
                 </p>
               </div>
             </Link>
-            <nav className="flex items-center gap-6">
-              <Link
-                href="/"
-                className="text-sm font-medium text-accent-blue"
-              >
-                Curators
-              </Link>
-              <Link
-                href="/vaults"
-                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-              >
-                All Vaults
-              </Link>
-              <Link
-                href="/alerts"
-                className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-              >
-                Alerts
-              </Link>
-            </nav>
+            <div className="flex items-center gap-4">
+              <nav className="flex items-center gap-5">
+                <Link href="/" className="text-sm font-medium text-accent-blue">
+                  Dashboard
+                </Link>
+                <Link
+                  href="/vaults"
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Vaults
+                </Link>
+                <Link
+                  href="/alerts"
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Alerts
+                </Link>
+              </nav>
+              {lastUpdated && (
+                <span className="hidden sm:flex items-center gap-1.5 text-xs text-text-tertiary">
+                  <span className="w-1.5 h-1.5 bg-accent-green rounded-full" />
+                  {timeAgo}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Morpho V2 Disclaimer */}
-        <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/30 rounded-lg">
-          <div className="flex items-center gap-3">
-            <svg className="w-5 h-5 text-accent-blue flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-text-secondary">
-              Currently tracking <span className="font-semibold text-accent-blue">Morpho V2 vaults only</span> on Ethereum mainnet. V1 and other protocols coming soon.
-            </p>
-          </div>
-        </div>
-
-        {/* Summary Stats */}
-        {stats && !loading && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-5">
+        {/* Stats Row - Top */}
+        {stats && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
             <StatCard
-              label="Curators Tracked"
+              label="Curators"
               value={stats.totalCurators.toString()}
               icon={
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               }
@@ -201,16 +198,16 @@ export default function Home() {
               value={formatCurrency(stats.totalAUM)}
               highlight
               icon={
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               }
             />
             <StatCard
-              label="Total Vaults"
+              label="Vaults"
               value={stats.totalVaults.toString()}
               icon={
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
                 </svg>
               }
@@ -220,7 +217,7 @@ export default function Home() {
               value={formatPercentage(stats.avgApy)}
               valueClass="text-accent-green"
               icon={
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
               }
@@ -228,11 +225,39 @@ export default function Home() {
           </div>
         )}
 
+        {/* Loading Stats Skeleton */}
+        {!stats && loading && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-background-subtle border border-border rounded-xl p-4">
+                <div className="h-4 w-16 bg-background-elevated rounded animate-pulse mb-2" />
+                <div className="h-7 w-24 bg-background-elevated rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Tabbed Chart - Below Stats */}
+        <div className="mb-5">
+          <TabbedMetricChart />
+        </div>
+
+        {/* Cards Row - Stablecoin + Top Performers */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
+          <div className="lg:col-span-1">
+            <StablecoinBreakdown />
+          </div>
+          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <TopCurators />
+            <TopVaults />
+          </div>
+        </div>
+
         {/* Alerts Bar */}
         {changeSummary && changeSummary.total > 0 && (
           <Link
             href="/alerts"
-            className={`mb-6 flex items-center justify-between p-4 rounded-lg border transition-all hover:scale-[1.01] ${
+            className={`mb-5 flex items-center justify-between p-3 rounded-lg border transition-all hover:scale-[1.005] ${
               changeSummary.critical > 0
                 ? "bg-accent-red-muted/30 border-accent-red/30"
                 : changeSummary.warning > 0
@@ -240,61 +265,70 @@ export default function Home() {
                   : "bg-accent-blue/10 border-accent-blue/30"
             }`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
               {changeSummary.critical > 0 ? (
-                <div className="w-8 h-8 rounded-full bg-accent-red/20 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-7 h-7 rounded-full bg-accent-red/20 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                 </div>
               ) : (
-                <div className="w-8 h-8 rounded-full bg-accent-blue/20 flex items-center justify-center">
-                  <svg className="w-4 h-4 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="w-7 h-7 rounded-full bg-accent-blue/20 flex items-center justify-center">
+                  <svg className="w-3.5 h-3.5 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
               )}
               <div className="text-sm">
                 <span className="font-medium text-text-primary">
-                  {changeSummary.total} change{changeSummary.total !== 1 ? "s" : ""} detected
+                  {changeSummary.total} change{changeSummary.total !== 1 ? "s" : ""}
                 </span>
-                <span className="text-text-secondary ml-2">in the last 24h</span>
-                {(changeSummary.critical > 0 || changeSummary.warning > 0) && (
-                  <span className="text-text-tertiary ml-3">
-                    {changeSummary.critical > 0 && (
-                      <span className="text-accent-red font-medium">
-                        {changeSummary.critical} critical
-                      </span>
-                    )}
-                    {changeSummary.critical > 0 && changeSummary.warning > 0 && " · "}
-                    {changeSummary.warning > 0 && (
-                      <span className="text-accent-yellow font-medium">
-                        {changeSummary.warning} warning{changeSummary.warning !== 1 ? "s" : ""}
-                      </span>
-                    )}
+                <span className="text-text-secondary ml-1.5">in 24h</span>
+                {changeSummary.critical > 0 && (
+                  <span className="text-accent-red font-medium ml-2">
+                    {changeSummary.critical} critical
                   </span>
                 )}
               </div>
             </div>
-            <span className="text-sm font-medium text-text-secondary hover:text-text-primary flex items-center gap-1">
-              View all
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span className="text-xs font-medium text-text-secondary hover:text-text-primary flex items-center gap-1">
+              View
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </span>
           </Link>
         )}
 
+        {/* All Curators Section */}
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <h2 className="text-base font-semibold text-text-primary">All Curators</h2>
+            <p className="text-xs text-text-tertiary">Browse and search vault curators</p>
+          </div>
+          {!loading && (
+            <button
+              onClick={() => fetchData(currentPage, searchQuery)}
+              className="text-xs text-accent-blue hover:text-accent-blue-hover font-medium transition-colors flex items-center gap-1"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh
+            </button>
+          )}
+        </div>
+
         {/* Search and Filter Bar */}
-        <div className="mb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           {/* Search Input */}
-          <div className="relative w-full sm:w-80">
+          <div className="relative w-full sm:w-72">
             <input
               type="text"
-              placeholder="Search curators by name or address..."
+              placeholder="Search curators..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-background-subtle border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue"
+              className="w-full pl-9 pr-4 py-2 text-sm bg-background-subtle border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue"
             />
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
@@ -316,62 +350,38 @@ export default function Home() {
             )}
           </div>
 
-          {/* Sort and Status */}
-          <div className="flex items-center gap-4">
-            {/* Sort Buttons */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-text-tertiary">Sort:</span>
-              <div className="flex rounded-lg border border-border overflow-hidden">
-                {[
-                  { key: "aum", label: "AUM" },
-                  { key: "vaults", label: "Vaults" },
-                  { key: "apy", label: "APY" },
-                  { key: "name", label: "Name" },
-                ].map((option) => (
-                  <button
-                    key={option.key}
-                    onClick={() => handleSortChange(option.key as "aum" | "vaults" | "apy" | "name")}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                      sortBy === option.key
-                        ? "bg-accent-blue text-white"
-                        : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
-                    }`}
-                  >
-                    {option.label}
-                    {sortBy === option.key && (
-                      <span className="ml-1">{sortOrder === "desc" ? "↓" : "↑"}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Status and Refresh */}
-            <div className="text-sm text-text-tertiary hidden sm:flex items-center gap-4">
-              {lastUpdated && (
-                <span className="flex items-center gap-2">
-                  <span className="inline-block w-1.5 h-1.5 bg-accent-green rounded-full" />
-                  Updated {timeAgo}
-                </span>
-              )}
-              {!loading && (
+          {/* Sort Buttons */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-tertiary">Sort:</span>
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              {[
+                { key: "aum", label: "AUM" },
+                { key: "vaults", label: "Vaults" },
+                { key: "apy", label: "APY" },
+                { key: "name", label: "Name" },
+              ].map((option) => (
                 <button
-                  onClick={() => fetchData(currentPage, searchQuery)}
-                  className="text-sm text-accent-blue hover:text-accent-blue-hover font-medium transition-colors flex items-center gap-1"
+                  key={option.key}
+                  onClick={() => handleSortChange(option.key as "aum" | "vaults" | "apy" | "name")}
+                  className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    sortBy === option.key
+                      ? "bg-accent-blue text-white"
+                      : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
+                  }`}
                 >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh
+                  {option.label}
+                  {sortBy === option.key && (
+                    <span className="ml-0.5">{sortOrder === "desc" ? "↓" : "↑"}</span>
+                  )}
                 </button>
-              )}
+              ))}
             </div>
           </div>
         </div>
 
         {/* Search Results Info */}
         {searchQuery && !loading && (
-          <div className="mb-4 text-sm text-text-secondary">
+          <div className="mb-3 text-xs text-text-secondary">
             {pagination?.total === 0 ? (
               <span>No curators found for "{searchQuery}"</span>
             ) : (
@@ -384,19 +394,16 @@ export default function Home() {
 
         {/* Error State */}
         {error && (
-          <div className="mb-6 p-4 bg-accent-red-muted/30 border border-accent-red/30 rounded-lg">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-accent-red" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
+          <div className="mb-4 p-3 bg-accent-red-muted/30 border border-accent-red/30 rounded-lg">
+            <div className="flex items-center gap-2.5">
+              <svg className="h-4 w-4 text-accent-red flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
               <div className="flex-1">
-                <h3 className="text-sm font-medium text-accent-red">Error loading data</h3>
-                <p className="text-sm text-text-secondary mt-1">{error}</p>
+                <p className="text-sm text-text-secondary">{error}</p>
               </div>
-              <button onClick={() => fetchData(currentPage, searchQuery)} className="text-sm text-accent-red hover:text-accent-red font-medium">
-                Try again
+              <button onClick={() => fetchData(currentPage, searchQuery)} className="text-xs text-accent-red hover:text-accent-red font-medium">
+                Retry
               </button>
             </div>
           </div>
@@ -412,46 +419,28 @@ export default function Home() {
 
         {/* Empty State */}
         {!loading && !error && curators.length === 0 && !searchQuery && (
-          <div className="text-center py-16 bg-background-subtle rounded-lg border border-border">
-            <svg className="mx-auto h-12 w-12 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="text-center py-12 bg-background-subtle rounded-lg border border-border">
+            <svg className="mx-auto h-10 w-10 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <h3 className="mt-4 text-sm font-medium text-text-primary">No curators found</h3>
-            <p className="mt-2 text-sm text-text-secondary">
-              Run the data collection script to populate vault data.
+            <h3 className="mt-3 text-sm font-medium text-text-primary">No curators found</h3>
+            <p className="mt-1 text-xs text-text-secondary">
+              Run <code className="bg-background-elevated px-1.5 py-0.5 rounded font-mono text-accent-blue">npm run collect</code> to populate data.
             </p>
-            <div className="mt-4">
-              <code className="text-sm bg-background-elevated px-3 py-1.5 rounded border border-border font-mono text-accent-blue">
-                npm run collect
-              </code>
-            </div>
           </div>
         )}
 
         {/* Pagination Controls */}
         {!loading && !error && pagination && pagination.totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
-            <div className="text-sm text-text-secondary">
-              Showing {(pagination.page - 1) * pagination.pageSize + 1} to{" "}
-              {Math.min(pagination.page * pagination.pageSize, pagination.total)} of{" "}
-              {pagination.total} curators
+          <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+            <div className="text-xs text-text-secondary">
+              {(pagination.page - 1) * pagination.pageSize + 1}-{Math.min(pagination.page * pagination.pageSize, pagination.total)} of {pagination.total}
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => handlePageChange(1)}
-                disabled={pagination.page === 1}
-                className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                title="First page"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                </svg>
-              </button>
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => handlePageChange(pagination.page - 1)}
                 disabled={pagination.page === 1}
-                className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Previous page"
+                className="p-1.5 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -459,15 +448,15 @@ export default function Home() {
               </button>
 
               {/* Page Numbers */}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 {getPageNumbers(pagination.page, pagination.totalPages).map((pageNum, idx) => (
                   pageNum === -1 ? (
-                    <span key={`ellipsis-${idx}`} className="px-2 text-text-muted">...</span>
+                    <span key={`ellipsis-${idx}`} className="px-1.5 text-text-muted text-xs">...</span>
                   ) : (
                     <button
                       key={pageNum}
                       onClick={() => handlePageChange(pageNum)}
-                      className={`min-w-[32px] h-8 px-2 text-sm rounded ${
+                      className={`min-w-[28px] h-7 px-1.5 text-xs rounded ${
                         pageNum === pagination.page
                           ? "bg-accent-blue text-white font-medium"
                           : "text-text-secondary hover:bg-background-elevated"
@@ -482,21 +471,10 @@ export default function Home() {
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={pagination.page === pagination.totalPages}
-                className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Next page"
+                className="p-1.5 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-              <button
-                onClick={() => handlePageChange(pagination.totalPages)}
-                disabled={pagination.page === pagination.totalPages}
-                className="p-2 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Last page"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
                 </svg>
               </button>
             </div>
@@ -506,28 +484,24 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-border bg-background-subtle mt-auto">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div>
-              <p className="text-sm text-text-tertiary">
-                Data from{" "}
-                <a
-                  href="https://api.morpho.org/graphql"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-accent-blue hover:text-accent-blue-hover transition-colors"
-                >
-                  Morpho API
-                </a>
-                {" "}• Updated hourly
-              </p>
-            </div>
-            <div className="flex items-center gap-6 text-sm text-text-tertiary">
-              <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-accent-green" />
-                Live
-              </span>
-            </div>
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between text-xs text-text-tertiary">
+            <p>
+              Data from{" "}
+              <a
+                href="https://api.morpho.org/graphql"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-blue hover:text-accent-blue-hover"
+              >
+                Morpho API
+              </a>
+              {" "}• Updated hourly
+            </p>
+            <span className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+              Live
+            </span>
           </div>
         </div>
       </footer>
@@ -537,29 +511,25 @@ export default function Home() {
 
 // Helper function to generate page numbers with ellipsis
 function getPageNumbers(current: number, total: number): number[] {
-  if (total <= 7) {
+  if (total <= 5) {
     return Array.from({ length: total }, (_, i) => i + 1);
   }
 
   const pages: number[] = [];
-
-  // Always show first page
   pages.push(1);
 
   if (current > 3) {
-    pages.push(-1); // ellipsis
+    pages.push(-1);
   }
 
-  // Show pages around current
   for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
     pages.push(i);
   }
 
   if (current < total - 2) {
-    pages.push(-1); // ellipsis
+    pages.push(-1);
   }
 
-  // Always show last page
   if (total > 1) {
     pages.push(total);
   }
@@ -582,14 +552,14 @@ function StatCard({
 }) {
   return (
     <div
-      className={`rounded-lg border p-4 ${
+      className={`rounded-xl border p-3.5 ${
         highlight
           ? "border-accent-blue/30 bg-accent-blue/5"
           : "border-border bg-background-subtle"
       }`}
     >
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-text-secondary">{label}</p>
+      <div className="flex items-center justify-between mb-1">
+        <p className="text-xs text-text-secondary">{label}</p>
         {icon && (
           <span className={highlight ? "text-accent-blue" : "text-text-muted"}>
             {icon}
@@ -597,7 +567,7 @@ function StatCard({
         )}
       </div>
       <p
-        className={`mt-2 text-2xl font-semibold tabular-nums ${
+        className={`text-xl font-bold tabular-nums ${
           valueClass || (highlight ? "text-accent-blue" : "text-text-primary")
         }`}
       >

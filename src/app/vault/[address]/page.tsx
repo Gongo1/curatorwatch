@@ -12,6 +12,7 @@ import {
   formatAdapterType,
   formatSharePrice,
 } from "@/lib/utils/format";
+import { getMorphoVaultUrl } from "@/lib/utils/morpho";
 import type { VaultDetail, VaultDetailApiResponse } from "@/lib/types/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { ActivityTab } from "@/components/ActivityTab";
@@ -226,6 +227,17 @@ export default function VaultDetailPage({ params }: PageProps) {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <a
+                href={getMorphoVaultUrl(vault.address, vault.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15 transition-colors"
+              >
+                View on Morpho
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                </svg>
+              </a>
               {curatorAddress && (
                 <Link
                   href={`/curator/${curatorAddress}`}
