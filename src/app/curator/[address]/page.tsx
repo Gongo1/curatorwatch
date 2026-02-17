@@ -190,7 +190,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
               )}
               {curator.twitter && (
                 <a
-                  href={curator.twitter}
+                  href={`https://x.com/${curator.twitter}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors"
