@@ -98,10 +98,10 @@ export default function VaultsPage() {
                 All Vaults
               </Link>
               <Link
-                href="/changes"
+                href="/alerts"
                 className="text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
-                Changes
+                Alerts
               </Link>
             </nav>
           </div>

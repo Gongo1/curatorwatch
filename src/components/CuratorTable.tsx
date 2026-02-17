@@ -207,7 +207,7 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                     />
                     <div>
                       <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                        {curator.name || "Unknown Curator"}
+                        {curator.name || `Curator ${curator.curatorAddress.slice(0, 6)}...${curator.curatorAddress.slice(-4)}`}
                       </div>
                       <div className="text-xs text-text-tertiary">
                         {curator.jurisdiction || curator.entityType || ""}

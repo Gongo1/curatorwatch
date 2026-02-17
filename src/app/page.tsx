@@ -160,10 +160,10 @@ export default function Home() {
                 All Vaults
               </Link>
               <Link
-                href="/changes"
+                href="/alerts"
                 className="text-sm text-text-secondary hover:text-text-primary transition-colors"
               >
-                Changes
+                Alerts
               </Link>
             </nav>
           </div>
@@ -228,10 +228,10 @@ export default function Home() {
           </div>
         )}
 
-        {/* Changes Alert Bar */}
+        {/* Alerts Bar */}
         {changeSummary && changeSummary.total > 0 && (
           <Link
-            href="/changes"
+            href="/alerts"
             className={`mb-6 flex items-center justify-between p-4 rounded-lg border transition-all hover:scale-[1.01] ${
               changeSummary.critical > 0
                 ? "bg-accent-red-muted/30 border-accent-red/30"

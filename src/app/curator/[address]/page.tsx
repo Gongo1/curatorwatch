@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import {
   formatCurrency,
   formatPercentage,
@@ -11,6 +12,7 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
+import { CopyAddress } from "@/components/CopyAddress";
 import type { CuratorDetailResponse } from "@/lib/types/api";
 
 interface PageProps {
@@ -144,8 +146,8 @@ export default function CuratorDetailPage({ params }: PageProps) {
               <Link href="/vaults" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
                 All Vaults
               </Link>
-              <Link href="/changes" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Changes
+              <Link href="/alerts" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                Alerts
               </Link>
             </nav>
           </div>
@@ -160,14 +162,14 @@ export default function CuratorDetailPage({ params }: PageProps) {
               />
               <div>
                 <h1 className="text-xl font-semibold text-text-primary tracking-tight">
-                  {curator.name || "Unknown Curator"}
+                  {curator.name && curator.name !== "Unknown" ? curator.name : `Curator ${formatAddress(curator.address)}`}
                 </h1>
                 <p className="text-sm text-text-tertiary">
                   Managing {formatCurrency(totalTVL)} across {vaults.length} vault{vaults.length !== 1 ? "s" : ""}
                 </p>
-                <p className="text-xs text-text-muted font-mono mt-0.5">
-                  {formatAddress(curator.address)}
-                </p>
+                <div className="mt-0.5">
+                  <CopyAddress address={curator.address} />
+                </div>
               </div>
             </div>
 
@@ -382,6 +384,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                               {item.title}
                             </p>
                           </div>
+                          <ExternalLink className="w-4 h-4 text-text-muted group-hover:text-accent-blue transition-colors flex-shrink-0 mt-1" />
                         </a>
                       ))}
                     </div>

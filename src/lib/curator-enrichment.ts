@@ -26,20 +26,7 @@ export interface EnrichedCuratorProfile {
  * Addresses are in lowercase for consistent matching.
  */
 export const ENRICHED_CURATORS: EnrichedCuratorProfile[] = [
-  {
-    address: "0x9e39e0130558cd9a01c1e3c7b2c3803bacb59616",
-    name: "Gauntlet",
-    website: "https://gauntlet.network",
-    twitter: "gaaborian",
-    description:
-      "DeFi-native quantitative risk management firm specializing in market risk optimization and economic security for crypto protocols.",
-    entityType: "Corporation",
-    jurisdiction: "US",
-    headquarters: "New York, US",
-    foundedYear: 2018,
-    teamSize: "51-200",
-    isRegulated: false,
-  },
+  // Note: Gauntlet is defined in CURATOR_PROFILES with correct address 0x9e33faae38ff641094fa68c65c2ce600b3410585
   {
     address: "0x8bcf5b1e6b76e55e9b5db6b6e6f0e8b8e6d4e6c4",
     name: "Steakhouse Financial",

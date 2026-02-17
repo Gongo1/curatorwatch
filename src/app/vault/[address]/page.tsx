@@ -186,8 +186,8 @@ export default function VaultDetailPage({ params }: PageProps) {
               <Link href="/vaults" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
                 All Vaults
               </Link>
-              <Link href="/changes" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Changes
+              <Link href="/alerts" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                Alerts
               </Link>
             </nav>
           </div>
@@ -274,7 +274,7 @@ export default function VaultDetailPage({ params }: PageProps) {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
             <TabsTrigger value="risk">Risk Analysis</TabsTrigger>
-            <TabsTrigger value="changes">Changes</TabsTrigger>
+            <TabsTrigger value="alerts">Alerts</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="pt-6 space-y-6">
@@ -480,14 +480,14 @@ export default function VaultDetailPage({ params }: PageProps) {
             <RiskTab vaultAddress={vault.address} />
           </TabsContent>
 
-          <TabsContent value="changes" className="pt-6">
+          <TabsContent value="alerts" className="pt-6">
             <section className="bg-background-subtle rounded-lg border border-border">
               <div className="px-6 py-4 border-b border-border">
                 <h2 className="text-base font-semibold text-text-primary">
-                  Recent Changes
+                  Recent Alerts
                 </h2>
                 <p className="text-sm text-text-tertiary">
-                  Significant changes detected in the last 7 days
+                  Significant alerts detected in the last 7 days
                 </p>
               </div>
               <div className="p-6">

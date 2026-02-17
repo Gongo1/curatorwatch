@@ -85,6 +85,7 @@ export function CuratorAvatar({
           src={logoUrl}
           alt={name || "Curator"}
           className="w-full h-full object-cover"
+          loading="lazy"
           onError={() => setImageError(true)}
         />
       </div>

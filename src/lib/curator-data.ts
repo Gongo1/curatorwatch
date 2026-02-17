@@ -43,7 +43,7 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
   "0x9e33faae38ff641094fa68c65c2ce600b3410585": {
     name: "Gauntlet",
     website: "https://www.gauntlet.xyz",
-    twitter: "https://twitter.com/gauntletxyz",
+    twitter: "https://twitter.com/gauntlet_xyz",
     discord: "https://discord.gg/gauntlet",
     legalName: "Gauntlet Networks Inc.",
     entityType: "Corporation",
@@ -55,7 +55,7 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     foundedYear: 2018,
     teamSize: "51-200",
     isRegulated: false,
-    logoUrl: "https://www.gauntlet.xyz/favicon.ico",
+    logoUrl: "https://cdn.prod.website-files.com/648bdc0d4b8ce322f27da0af/6493db42eaf0cb93c00119c9_icon%20Gauntlet%20logomark.svg",
   },
 
   // Steakhouse Financial - RWA and treasury specialists
@@ -74,6 +74,7 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     foundedYear: 2022,
     teamSize: "11-50",
     isRegulated: false,
+    logoUrl: "https://cdn.sanity.io/images/jveqxmzu/production/95097d97693583ef7a8807f23d2492e80f3e7399-400x100.svg",
   },
 
   // Re7 Labs / Re7 Capital - DeFi-native asset manager
@@ -89,6 +90,7 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     foundedYear: 2023,
     teamSize: "1-10",
     isRegulated: false,
+    logoUrl: "https://re7.capital/img/share.jpg",
   },
 
   // August Digital - Institutional DeFi asset management
@@ -106,22 +108,23 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     foundedYear: 2021,
     teamSize: "11-50",
     isRegulated: false,
-    logoUrl: "https://august.digital/favicon.ico",
+    logoUrl: "https://www.augustdigital.io/_next/static/media/august-logo-black.0bd609fc.svg",
   },
 
-  // Sentora - Risk management platform
+  // Sentora (formerly IntoTheBlock) - Institutional DeFi Layer
   // Actual address from Morpho vaults: 0x9e396dE3312D373b87F9BD8763fb48184b42aac0
   "0x9e396de3312d373b87f9bd8763fb48184b42aac0": {
     name: "Sentora",
-    website: "https://sentora.xyz",
-    twitter: "https://twitter.com/sentoraio",
+    website: "https://sentora.com",
+    twitter: "https://x.com/SentoraHQ",
     entityType: "Corporation",
     jurisdiction: "United States",
     description:
-      "Sentora provides risk management and yield optimization services for DeFi protocols. They specialize in data-driven strategies with a focus on security and transparency.",
-    foundedYear: 2023,
-    teamSize: "11-50",
+      "Sentora (formerly IntoTheBlock) is the Institutional DeFi Layer, providing advanced DeFi strategies, robust risk management, and enterprise-grade security. They integrate analytics and structured liquidity solutions to offer a unified interface for multi-chain protocol interactions.",
+    foundedYear: 2019,
+    teamSize: "51-200",
     isRegulated: false,
+    logoUrl: "https://framerusercontent.com/images/j7qnPiM5o9JXWuRJfLnXBJqzcw.png",
   },
 
   // gtsy (Unknown curator from vault data)
@@ -207,10 +210,21 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
   // Gauntlet news (actual address: 0x9e33faae38ff641094fa68c65c2ce600b3410585)
   {
     curatorAddress: "0x9e33faae38ff641094fa68c65c2ce600b3410585",
+    title: "Gauntlet Launches VaultBook: Comprehensive Vault Curation Guide",
+    summary:
+      "Gauntlet releases VaultBook, an educational resource demystifying vault curation with in-depth analysis of risk management and strategy optimization.",
+    url: "https://vaultbook.gauntlet.xyz/",
+    source: "Website",
+    publishedAt: new Date("2025-02-01"),
+    sentiment: "positive",
+    category: "announcement",
+  },
+  {
+    curatorAddress: "0x9e33faae38ff641094fa68c65c2ce600b3410585",
     title: "Gauntlet Expands Morpho Blue Vault Management",
     summary:
       "Gauntlet announces expansion of their Morpho Blue vault offerings, adding new USDC and USDT strategies with optimized risk parameters.",
-    url: "https://twitter.com/gauntletxyz",
+    url: "https://x.com/gauntlet_xyz",
     source: "Twitter",
     publishedAt: new Date("2025-01-15"),
     sentiment: "positive",
@@ -221,22 +235,11 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
     title: "Gauntlet Risk Framework Update Q1 2025",
     summary:
       "Quarterly update to Gauntlet's risk management framework incorporating new market conditions and protocol upgrades.",
-    url: "https://medium.com/@gauntlet",
-    source: "Medium",
+    url: "https://www.gauntlet.xyz/resources",
+    source: "Website",
     publishedAt: new Date("2025-01-10"),
     sentiment: "neutral",
     category: "update",
-  },
-  {
-    curatorAddress: "0x9e33faae38ff641094fa68c65c2ce600b3410585",
-    title: "Gauntlet Vaults Pass Trail of Bits Audit",
-    summary:
-      "All Gauntlet-managed MetaMorpho vaults have completed security review by Trail of Bits with no critical findings.",
-    url: "https://www.gauntlet.xyz/audits",
-    source: "Website",
-    publishedAt: new Date("2024-12-20"),
-    sentiment: "positive",
-    category: "audit",
   },
 
   // Steakhouse Financial news (actual address: 0x827e86072b06674a077f592a531dce4590adecdb)
@@ -245,8 +248,8 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
     title: "Steakhouse Financial Launches RWA-Backed USDC Vault",
     summary:
       "New vault strategy incorporating tokenized US Treasuries for enhanced yield with real-world asset backing.",
-    url: "https://medium.com/@steakhousefinancial",
-    source: "Medium",
+    url: "https://www.steakhouse.financial/",
+    source: "Website",
     publishedAt: new Date("2025-01-20"),
     sentiment: "positive",
     category: "announcement",
@@ -256,7 +259,7 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
     title: "Steakhouse Partners with Centrifuge for RWA Integration",
     summary:
       "Strategic partnership to bring more real-world asset exposure to DeFi yield strategies.",
-    url: "https://twitter.com/SteakhouseFi",
+    url: "https://x.com/SteakhouseFi",
     source: "Twitter",
     publishedAt: new Date("2025-01-05"),
     sentiment: "positive",
@@ -266,24 +269,46 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
   // Re7 Labs news (actual address: 0x72882eb5d27c7088dfa6dde941dd42e5d184f0ef)
   {
     curatorAddress: "0x72882eb5d27c7088dfa6dde941dd42e5d184f0ef",
-    title: "Re7 Labs Achieves 10% APY on WETH Vault",
+    title: "Re7 Labs Achieves Strong APY Performance on WETH Vault",
     summary:
       "Re7's aggressive yield strategy delivers above-market returns through optimized allocation across multiple lending markets.",
-    url: "https://twitter.com/re7labs",
-    source: "Twitter",
+    url: "https://re7.capital/",
+    source: "Website",
     publishedAt: new Date("2025-01-18"),
     sentiment: "positive",
     category: "announcement",
+  },
+  {
+    curatorAddress: "0x72882eb5d27c7088dfa6dde941dd42e5d184f0ef",
+    title: "Re7 Capital Expands Morpho Vault Strategies",
+    summary:
+      "Re7 Capital announces new vault strategies targeting diversified yield opportunities across DeFi protocols.",
+    url: "https://x.com/re7labs",
+    source: "Twitter",
+    publishedAt: new Date("2025-01-05"),
+    sentiment: "positive",
+    category: "update",
   },
 
   // August Digital news (actual address: 0xa81ae7d57d68fd6ef76a3082134bd2f3019aec24)
   {
     curatorAddress: "0xa81ae7d57d68fd6ef76a3082134bd2f3019aec24",
+    title: "August Digital: On-Chain Prime Brokerage for Institutions",
+    summary:
+      "August delivers institutional-grade on-chain infrastructure with secure smart contract accounts and sophisticated risk engines.",
+    url: "https://www.augustdigital.io/",
+    source: "Website",
+    publishedAt: new Date("2025-02-01"),
+    sentiment: "positive",
+    category: "announcement",
+  },
+  {
+    curatorAddress: "0xa81ae7d57d68fd6ef76a3082134bd2f3019aec24",
     title: "August Digital Releases Enhanced Risk Dashboard",
     summary:
       "New analytics features provide deeper insights into vault risk metrics and allocation strategies.",
-    url: "https://august.digital/blog",
-    source: "Website",
+    url: "https://x.com/august_digital",
+    source: "Twitter",
     publishedAt: new Date("2025-01-12"),
     sentiment: "positive",
     category: "update",
@@ -292,12 +317,23 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
   // Sentora news (actual address: 0x9e396de3312d373b87f9bd8763fb48184b42aac0)
   {
     curatorAddress: "0x9e396de3312d373b87f9bd8763fb48184b42aac0",
-    title: "Sentora Launches PYUSD Vault on Morpho",
+    title: "Sentora Introduces Institutional DeFi Research Platform",
     summary:
-      "New vault strategy for PayPal's PYUSD stablecoin offering optimized yields through Morpho Blue markets.",
-    url: "https://twitter.com/sentoraio",
+      "Sentora Research launches with curated on-chain data dashboards, research reports, and in-depth articles for institutional investors.",
+    url: "https://sentora.com/",
+    source: "Website",
+    publishedAt: new Date("2025-02-10"),
+    sentiment: "positive",
+    category: "announcement",
+  },
+  {
+    curatorAddress: "0x9e396de3312d373b87f9bd8763fb48184b42aac0",
+    title: "Sentora Expands Morpho Vault Management",
+    summary:
+      "Sentora (formerly IntoTheBlock) announces expansion of vault strategies with institutional-grade risk management.",
+    url: "https://x.com/SentoraHQ",
     source: "Twitter",
-    publishedAt: new Date("2025-01-12"),
+    publishedAt: new Date("2025-01-15"),
     sentiment: "positive",
     category: "announcement",
   },
@@ -308,8 +344,8 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
     title: "MEV Capital Vault Strategy Optimization",
     summary:
       "Enhanced MEV extraction strategies implemented across all managed vaults for improved returns.",
-    url: "https://twitter.com/meaboratory",
-    source: "Twitter",
+    url: "https://mev.capital/",
+    source: "Website",
     publishedAt: new Date("2025-01-08"),
     sentiment: "positive",
     category: "update",
