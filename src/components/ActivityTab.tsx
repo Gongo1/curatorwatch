@@ -9,6 +9,7 @@ import {
 } from "@/lib/utils/format";
 import { UserDistribution } from "./UserDistribution";
 import { CollateralExposure } from "./CollateralExposure";
+import { TransactionVolumeChart } from "./TransactionVolumeChart";
 
 interface ActivityItem {
   id: string;
@@ -200,6 +201,9 @@ export function ActivityTab({
 
       {/* Collateral Exposure Section */}
       <CollateralExposure vaultAddress={vaultAddress} />
+
+      {/* Transaction Volume Chart */}
+      <TransactionVolumeChart vaultAddress={vaultAddress} />
 
       {/* Transaction Feed Section */}
       <section className="bg-background-subtle rounded-lg border border-border">

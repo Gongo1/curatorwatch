@@ -533,39 +533,96 @@ export async function getCuratorSummaryStats(): Promise<CuratorSummaryStats> {
 }
 
 /**
- * Classify curator strategy based on vault risk profiles
+ * Classify curator strategy based on vault risk profiles and behavior
+ *
+ * Conservative: Low concentration, diversified, steady management, liquidity buffer
+ * Moderate: Balanced risk-return profile
+ * Aggressive: High concentration, active management, yield-focused
  */
 function classifyCuratorStrategy(
   vaults: Array<{
     riskSnapshots: Array<{
       concentrationScore: string;
       liquidityScore: string;
+      topAdapterPercent?: number;
+      idleAssetsPercent?: number;
     }>;
     reallocations: Array<{ timestamp: Date }>;
   }>,
   riskScores: string[]
 ): "Conservative" | "Moderate" | "Aggressive" {
-  // Count risk score distribution
+  if (vaults.length === 0) return "Moderate";
+
+  // Scoring system: track conservative and aggressive signals
+  let conservativeScore = 0;
+  let aggressiveScore = 0;
+
+  // Factor 1: Risk score distribution
   const highRiskCount = riskScores.filter((s) => s === "high").length;
   const lowRiskCount = riskScores.filter((s) => s === "low").length;
 
-  // Count reallocations in last 30 days
+  if (lowRiskCount >= vaults.length * 0.6) {
+    conservativeScore += 2;
+  } else if (highRiskCount >= vaults.length * 0.4) {
+    aggressiveScore += 2;
+  }
+
+  // Factor 2: Average concentration across vaults
+  const concentrations = vaults
+    .map((v) => v.riskSnapshots[0]?.topAdapterPercent)
+    .filter((c): c is number => c !== undefined && c !== null);
+
+  if (concentrations.length > 0) {
+    const avgConcentration =
+      concentrations.reduce((a, b) => a + b, 0) / concentrations.length;
+
+    if (avgConcentration < 40) {
+      conservativeScore += 2; // Well diversified
+    } else if (avgConcentration > 70) {
+      aggressiveScore += 2; // Highly concentrated
+    }
+  }
+
+  // Factor 3: Reallocation frequency (per month)
   const totalReallocations = vaults.reduce(
     (sum, v) => sum + v.reallocations.length,
     0
   );
-  const reallocationFreqPerWeek = (totalReallocations / 30) * 7;
+  const reallocationFreqPerMonth = totalReallocations; // Already filtered to 30 days
 
-  // Classification logic
-  if (
-    lowRiskCount >= vaults.length * 0.7 &&
-    reallocationFreqPerWeek < 2
-  ) {
+  if (reallocationFreqPerMonth < 4) {
+    conservativeScore += 1; // Less than 1/week - steady approach
+  } else if (reallocationFreqPerMonth > 15) {
+    aggressiveScore += 2; // More than 3/week - active management
+  }
+
+  // Factor 4: Idle assets (liquidity buffer)
+  const idlePercents = vaults
+    .map((v) => v.riskSnapshots[0]?.idleAssetsPercent)
+    .filter((i): i is number => i !== undefined && i !== null);
+
+  if (idlePercents.length > 0) {
+    const avgIdleAssets =
+      idlePercents.reduce((a, b) => a + b, 0) / idlePercents.length;
+
+    if (avgIdleAssets > 15) {
+      conservativeScore += 1; // High liquidity buffer
+    } else if (avgIdleAssets < 5) {
+      aggressiveScore += 1; // Fully deployed - yield maximizing
+    }
+  }
+
+  // Factor 5: Vault count (diversification across strategies)
+  if (vaults.length >= 5) {
+    conservativeScore += 1; // Well diversified curator
+  } else if (vaults.length <= 2) {
+    aggressiveScore += 1; // Concentrated in few vaults
+  }
+
+  // Classification based on scores
+  if (conservativeScore >= 4 && aggressiveScore < 2) {
     return "Conservative";
-  } else if (
-    highRiskCount >= vaults.length * 0.5 ||
-    reallocationFreqPerWeek > 5
-  ) {
+  } else if (aggressiveScore >= 4 && conservativeScore < 2) {
     return "Aggressive";
   } else {
     return "Moderate";
