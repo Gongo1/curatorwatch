@@ -13,4 +13,5 @@ export const prisma =
         : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Cache the client in all environments (including production/serverless)
+if (!globalForPrisma.prisma) globalForPrisma.prisma = prisma;
