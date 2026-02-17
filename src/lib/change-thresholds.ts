@@ -1,60 +1,98 @@
 /**
- * Change detection thresholds configuration
- * These values determine when changes are flagged as warnings or critical alerts
+ * Alert type definitions and threshold constants
+ *
+ * Philosophy: Only 4 alert types that matter to institutional allocators
+ * Each alert represents a statistically significant event (<5% frequency)
  */
 
-export const THRESHOLDS = {
-  // TVL (Total Value Locked) changes
-  TVL: {
-    WARNING: 10, // % change triggers warning
-    CRITICAL: 20, // % change triggers critical alert
-  },
-
-  // APY (Annual Percentage Yield) changes
-  APY: {
-    WARNING: 15, // % relative change triggers warning
-    CRITICAL: 25, // % relative change triggers critical alert
-  },
-
-  // Large transaction detection
-  LARGE_TRANSACTION: {
-    PERCENT_OF_TVL: 5, // Transaction > 5% of vault TVL
-    CRITICAL_PERCENT: 10, // Transaction > 10% of vault TVL is critical
-  },
-
-  // Allocation shift detection
-  ALLOCATION_SHIFT: {
-    WARNING: 10, // Percentage points change in adapter allocation
-    CRITICAL: 20, // Percentage points change is critical
-  },
-
-  // Share price deviation
-  SHARE_PRICE: {
-    WARNING: 2, // % change in share price
-    CRITICAL: 5, // Critical if share price moves > 5%
-  },
-
-  // Time windows (in hours)
-  TIME_WINDOWS: {
-    RECENT_TRANSACTIONS: 1, // Look back 1 hour for recent transactions
-    RECENT_REALLOCATIONS: 1, // Look back 1 hour for recent reallocations
-  },
+// The only 4 alert types we track
+export const ALERT_TYPES = {
+  APY_CHANGE: "APY_CHANGE",               // Yield volatility
+  LARGE_FLOW: "LARGE_FLOW",               // Capital movement
+  VAULT_LAUNCH: "VAULT_LAUNCH",           // New vault
+  VAULT_SHUTDOWN: "VAULT_SHUTDOWN",       // Vault closing
+  CONCENTRATION_SPIKE: "CONCENTRATION_SPIKE", // Risk regime change
 } as const;
 
-// Change types for classification
-export const CHANGE_TYPES = {
-  TVL_CHANGE: "TVL_CHANGE",
-  APY_CHANGE: "APY_CHANGE",
-  CONCENTRATION_RISK_CHANGE: "CONCENTRATION_RISK_CHANGE",
-  LIQUIDITY_RISK_CHANGE: "LIQUIDITY_RISK_CHANGE",
-  DIVERSIFICATION_CHANGE: "DIVERSIFICATION_CHANGE",
-  LARGE_DEPOSIT: "LARGE_DEPOSIT",
-  LARGE_WITHDRAWAL: "LARGE_WITHDRAWAL",
-  REALLOCATION: "REALLOCATION",
-  ALLOCATION_SHIFT: "ALLOCATION_SHIFT",
-  SHARE_PRICE_CHANGE: "SHARE_PRICE_CHANGE",
-  CURATOR_CHANGE: "CURATOR_CHANGE",
-} as const;
-
-export type ChangeType = (typeof CHANGE_TYPES)[keyof typeof CHANGE_TYPES];
+export type AlertType = (typeof ALERT_TYPES)[keyof typeof ALERT_TYPES];
 export type Severity = "info" | "warning" | "critical";
+
+// Threshold configuration
+export const THRESHOLDS = {
+  // APY Changes - compared to 7-day moving average
+  APY: {
+    WARNING: 20,   // 20-30% change from average
+    CRITICAL: 30,  // >30% change from average
+  },
+
+  // Large Flows - as percentage of vault TVL
+  LARGE_FLOW: {
+    WARNING: 10,   // 10-20% of TVL
+    CRITICAL: 20,  // >20% of TVL
+  },
+
+  // Vault Lifecycle - TVL thresholds
+  VAULT_LIFECYCLE: {
+    LAUNCH_MIN_TVL: 1_000_000,     // $1M to be considered "launched"
+    SHUTDOWN_PREV_MIN: 100_000,    // Previous TVL must be >$100k
+    SHUTDOWN_CURR_MAX: 10_000,     // Current TVL must be <$10k
+  },
+
+  // Concentration Spikes - percentage point increase in 24h
+  CONCENTRATION: {
+    WARNING: 15,   // 15-25 percentage point increase
+    CRITICAL: 25,  // >25 percentage point increase
+  },
+
+  // Time windows
+  TIME_WINDOWS: {
+    APY_AVERAGE_DAYS: 7,           // 7-day moving average for APY
+    LOOKBACK_HOURS: 24,            // Look back 24h for changes
+    TRANSACTION_LOOKBACK_HOURS: 24, // Check transactions from last 24h
+  },
+} as const;
+
+// Alert type metadata for UI
+export const ALERT_METADATA: Record<
+  AlertType,
+  {
+    label: string;
+    color: string;
+    description: string;
+  }
+> = {
+  APY_CHANGE: {
+    label: "APY Change",
+    color: "blue",
+    description:
+      "Alerts when APY deviates >20% from 7-day average. Only 5% of daily APY changes exceed this threshold.",
+  },
+  LARGE_FLOW: {
+    label: "Large Flow",
+    color: "green",
+    description:
+      "Deposits/withdrawals exceeding 10% of vault TVL. These represent the top 5% largest transactions.",
+  },
+  VAULT_LAUNCH: {
+    label: "Vault Launch",
+    color: "purple",
+    description:
+      "New vault launches when TVL goes from $0 to >$1M in initial deposits.",
+  },
+  VAULT_SHUTDOWN: {
+    label: "Vault Shutdown",
+    color: "red",
+    description:
+      "Vault shutdown detected when TVL drops from >$100k to near-zero.",
+  },
+  CONCENTRATION_SPIKE: {
+    label: "Concentration Spike",
+    color: "yellow",
+    description:
+      "Rapid increases in single-adapter allocation (>15 percentage points in 24h).",
+  },
+};
+
+// Legacy exports for backwards compatibility (deprecated)
+export const CHANGE_TYPES = ALERT_TYPES;
+export type ChangeType = AlertType;

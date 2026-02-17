@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
-import { getRecentChanges, getChangeSummary } from "@/lib/change-detector";
+import { prisma } from "@/lib/db";
 import type { Severity } from "@/lib/change-thresholds";
+
+interface GetChangesOptions {
+  hours?: number;
+  severity?: Severity;
+  vaultId?: string;
+  limit?: number;
+  offset?: number;
+}
 
 export async function GET(request: Request) {
   try {
@@ -11,17 +19,59 @@ export async function GET(request: Request) {
     const limit = parseInt(url.searchParams.get("limit") || "50");
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
-    // Get changes with pagination
-    const { changes, pagination } = await getRecentChanges({
-      hours,
-      severity: severity || undefined,
-      vaultId: vaultId || undefined,
-      limit,
-      offset,
-    });
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-    // Get summary counts
-    const summary = await getChangeSummary(hours);
+    // Build where clause
+    const where: {
+      detectedAt: { gte: Date };
+      severity?: Severity;
+      vaultId?: string;
+    } = {
+      detectedAt: { gte: since },
+    };
+
+    if (severity) {
+      where.severity = severity;
+    }
+
+    if (vaultId) {
+      where.vaultId = vaultId;
+    }
+
+    // Get changes with pagination
+    const [changes, total, summaryCounts] = await Promise.all([
+      prisma.vaultChange.findMany({
+        where,
+        orderBy: { detectedAt: "desc" },
+        take: limit,
+        skip: offset,
+        include: {
+          vault: {
+            select: { name: true, symbol: true, address: true },
+          },
+        },
+      }),
+      prisma.vaultChange.count({ where }),
+      prisma.vaultChange.groupBy({
+        by: ["severity"],
+        where: { detectedAt: { gte: since } },
+        _count: { severity: true },
+      }),
+    ]);
+
+    // Build summary
+    const summary = {
+      critical: 0,
+      warning: 0,
+      info: 0,
+      total,
+    };
+
+    for (const count of summaryCounts) {
+      if (count.severity === "critical") summary.critical = count._count.severity;
+      if (count.severity === "warning") summary.warning = count._count.severity;
+      if (count.severity === "info") summary.info = count._count.severity;
+    }
 
     // Format for response
     const formattedChanges = changes.map((change) => ({
@@ -48,13 +98,26 @@ export async function GET(request: Request) {
       data: {
         changes: formattedChanges,
         summary,
-        pagination,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + changes.length < total,
+        },
       },
     });
   } catch (error) {
     console.error("Error fetching changes:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch changes" },
+      {
+        success: false,
+        data: {
+          changes: [],
+          summary: { critical: 0, warning: 0, info: 0, total: 0 },
+          pagination: { total: 0, limit: 50, offset: 0, hasMore: false },
+        },
+        error: "Failed to fetch changes"
+      },
       { status: 500 }
     );
   }

@@ -254,6 +254,47 @@ export default function AlertsPage() {
       </header>
 
       <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* How Alerts Work - Explanation */}
+        <div className="bg-background-elevated border border-border rounded-lg p-6 mb-6">
+          <h2 className="text-base font-semibold text-text-primary mb-3">How Alerts Work</h2>
+          <p className="text-sm text-text-secondary mb-4">
+            CuratorWatch only alerts on statistically significant events—changes that happen
+            less than 5% of the time. This ensures you see signal, not noise.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
+              <h3 className="font-medium text-accent-blue text-sm mb-1.5">APY Changes</h3>
+              <p className="text-xs text-text-tertiary leading-relaxed">
+                Alerts when APY deviates &gt;20% from 7-day average. Only 5% of daily APY
+                changes exceed this threshold.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
+              <h3 className="font-medium text-accent-green text-sm mb-1.5">Large Flows</h3>
+              <p className="text-xs text-text-tertiary leading-relaxed">
+                Deposits/withdrawals exceeding 10% of vault TVL. These represent the
+                top 5% largest transactions.
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
+              <h3 className="font-medium text-purple-400 text-sm mb-1.5">Vault Lifecycle</h3>
+              <p className="text-xs text-text-tertiary leading-relaxed">
+                New vault launches (TVL $0→$1M+) or shutdowns (TVL drops to near-zero).
+              </p>
+            </div>
+
+            <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
+              <h3 className="font-medium text-accent-yellow text-sm mb-1.5">Concentration Spikes</h3>
+              <p className="text-xs text-text-tertiary leading-relaxed">
+                Rapid increases in single-adapter allocation (&gt;15 percentage points in 24h).
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-4 mb-6">
           {/* Severity filter */}
