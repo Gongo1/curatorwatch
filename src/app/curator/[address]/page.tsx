@@ -238,8 +238,14 @@ export default function CuratorDetailPage({ params }: PageProps) {
           />
           <StatCard
             label="Strategy"
-            value="Moderate"
-            valueClass="text-purple-400"
+            value={curator.strategyType || "Moderate"}
+            valueClass={
+              curator.strategyType === "Conservative"
+                ? "text-accent-blue"
+                : curator.strategyType === "Aggressive"
+                  ? "text-accent-red"
+                  : "text-purple-400"
+            }
           />
           <StatCard
             label="Founded"
@@ -797,8 +803,14 @@ export default function CuratorDetailPage({ params }: PageProps) {
               {/* Strategy Classification */}
               <section className="bg-background-subtle rounded-lg border border-border p-6 text-center">
                 <h2 className="text-sm font-semibold text-text-primary mb-4">Strategy Classification</h2>
-                <div className="inline-flex items-center px-4 py-2 rounded-full text-lg font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/20">
-                  Moderate
+                <div className={`inline-flex items-center px-4 py-2 rounded-full text-lg font-semibold border ${
+                  curator.strategyType === "Conservative"
+                    ? "bg-accent-blue/15 text-accent-blue border-accent-blue/20"
+                    : curator.strategyType === "Aggressive"
+                      ? "bg-accent-red/15 text-accent-red border-accent-red/20"
+                      : "bg-purple-500/15 text-purple-400 border-purple-500/20"
+                }`}>
+                  {curator.strategyType || "Moderate"}
                 </div>
                 <p className="mt-4 text-xs text-text-tertiary">
                   Based on concentration levels, liquidity, and reallocation frequency

@@ -15,7 +15,8 @@
     "scheduler": "tsx src/scripts/scheduler.ts",
     "seed:curators": "tsx src/scripts/seed-curators.ts",
     "fix:curator-names": "tsx src/scripts/fix-curator-names.ts",
-    "backfill:tx-usd": "tsx src/scripts/backfill-transaction-usd.ts"
+    "backfill:tx-usd": "tsx src/scripts/backfill-transaction-usd.ts",
+    "update:curators": "tsx src/scripts/merge-and-update-curators.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

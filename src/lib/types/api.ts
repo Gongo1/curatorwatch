@@ -153,6 +153,8 @@ export interface CuratorProfile {
   vaultCount: number;
   createdAt: string;
   updatedAt: string;
+  strategyType?: "Conservative" | "Moderate" | "Aggressive";
+  riskScore?: "low" | "medium" | "high";
 }
 
 export interface CuratorNewsItem {

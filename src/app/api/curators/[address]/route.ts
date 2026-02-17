@@ -7,6 +7,102 @@ import type {
   CuratorVaultSummary,
 } from "@/lib/types/api";
 
+/**
+ * Classify curator strategy based on vault risk profiles
+ */
+function classifyStrategy(
+  vaults: Array<{
+    riskSnapshots: Array<{
+      concentrationScore: string;
+      topAdapterPercent: number;
+      idleAssetsPercent: number;
+    }>;
+    reallocations: Array<{ id: string }>;
+  }>
+): { strategyType: "Conservative" | "Moderate" | "Aggressive"; riskScore: "low" | "medium" | "high" } {
+  if (vaults.length === 0) return { strategyType: "Moderate", riskScore: "medium" };
+
+  const riskScores = vaults
+    .map((v) => v.riskSnapshots[0]?.concentrationScore)
+    .filter(Boolean);
+
+  // Calculate risk score
+  const highRiskCount = riskScores.filter((s) => s === "high").length;
+  const medRiskCount = riskScores.filter((s) => s === "medium").length;
+  const lowRiskCount = riskScores.filter((s) => s === "low").length;
+
+  const riskScore: "low" | "medium" | "high" =
+    highRiskCount > vaults.length / 2
+      ? "high"
+      : highRiskCount > 0 || medRiskCount > vaults.length / 2
+        ? "medium"
+        : "low";
+
+  // Strategy scoring
+  let conservativeScore = 0;
+  let aggressiveScore = 0;
+
+  // Factor 1: Risk score distribution
+  if (lowRiskCount >= vaults.length * 0.6) {
+    conservativeScore += 2;
+  } else if (highRiskCount >= vaults.length * 0.4) {
+    aggressiveScore += 2;
+  }
+
+  // Factor 2: Average concentration
+  const concentrations = vaults
+    .map((v) => v.riskSnapshots[0]?.topAdapterPercent)
+    .filter((c): c is number => c !== undefined && c !== null);
+
+  if (concentrations.length > 0) {
+    const avgConcentration = concentrations.reduce((a, b) => a + b, 0) / concentrations.length;
+    if (avgConcentration < 40) {
+      conservativeScore += 2;
+    } else if (avgConcentration > 70) {
+      aggressiveScore += 2;
+    }
+  }
+
+  // Factor 3: Reallocation frequency
+  const totalReallocations = vaults.reduce((sum, v) => sum + v.reallocations.length, 0);
+  if (totalReallocations < 4) {
+    conservativeScore += 1;
+  } else if (totalReallocations > 15) {
+    aggressiveScore += 2;
+  }
+
+  // Factor 4: Idle assets
+  const idlePercents = vaults
+    .map((v) => v.riskSnapshots[0]?.idleAssetsPercent)
+    .filter((i): i is number => i !== undefined && i !== null);
+
+  if (idlePercents.length > 0) {
+    const avgIdleAssets = idlePercents.reduce((a, b) => a + b, 0) / idlePercents.length;
+    if (avgIdleAssets > 15) {
+      conservativeScore += 1;
+    } else if (avgIdleAssets < 5) {
+      aggressiveScore += 1;
+    }
+  }
+
+  // Factor 5: Vault count
+  if (vaults.length >= 5) {
+    conservativeScore += 1;
+  } else if (vaults.length <= 2) {
+    aggressiveScore += 1;
+  }
+
+  // Classification
+  const strategyType: "Conservative" | "Moderate" | "Aggressive" =
+    conservativeScore >= 4 && aggressiveScore < 2
+      ? "Conservative"
+      : aggressiveScore >= 4 && conservativeScore < 2
+        ? "Aggressive"
+        : "Moderate";
+
+  return { strategyType, riskScore };
+}
+
 interface RouteParams {
   params: Promise<{ address: string }>;
 }
@@ -18,7 +114,7 @@ export async function GET(
   try {
     const { address } = await params;
 
-    // Fetch curator by address
+    // Fetch curator by address with risk data for strategy calculation
     const curator = await prisma.curator.findUnique({
       where: { address: address.toLowerCase() },
       include: {
@@ -31,6 +127,17 @@ export async function GET(
             snapshots: {
               orderBy: { timestamp: "desc" },
               take: 1,
+            },
+            riskSnapshots: {
+              orderBy: { timestamp: "desc" },
+              take: 1,
+            },
+            reallocations: {
+              where: {
+                timestamp: {
+                  gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+                },
+              },
             },
           },
         },
@@ -51,6 +158,9 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    // Calculate strategy and risk score
+    const { strategyType, riskScore } = classifyStrategy(curator.vaults);
 
     // Transform curator data
     const curatorData: CuratorProfile = {
@@ -77,6 +187,8 @@ export async function GET(
       vaultCount: curator.vaultCount ?? 0,
       createdAt: curator.createdAt.toISOString(),
       updatedAt: curator.updatedAt.toISOString(),
+      strategyType,
+      riskScore,
     };
 
     // Transform vaults data
