@@ -18,6 +18,7 @@ export const GET_VAULTS_V2_PAGINATED = gql`
         totalAssetsUsd
         totalSupply
         sharePrice
+        liquidity
         apy
         netApy
         avgApy
@@ -62,6 +63,7 @@ export const GET_TOP_VAULTS_V2 = gql`
         totalAssetsUsd
         totalSupply
         sharePrice
+        liquidity
         apy
         netApy
         avgApy
@@ -100,6 +102,7 @@ export const GET_VAULT_V2_BY_ADDRESS = gql`
       totalAssetsUsd
       totalSupply
       sharePrice
+      liquidity
       apy
       netApy
       avgApy

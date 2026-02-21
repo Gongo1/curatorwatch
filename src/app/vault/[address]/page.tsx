@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   formatCurrency,
   formatPercentage,
@@ -17,8 +18,10 @@ import type { VaultDetail, VaultDetailApiResponse } from "@/lib/types/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { ActivityTab } from "@/components/ActivityTab";
 import { RiskTab } from "@/components/RiskTab";
+import { StrategyIntelligence } from "@/components/StrategyIntelligence";
 import { RecentChanges } from "@/components/RecentChanges";
 import { CuratorSection, CuratorPlaceholder } from "@/components/CuratorSection";
+import { FeesCard } from "@/components/FeesCard";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -142,9 +145,7 @@ export default function VaultDetailPage({ params }: PageProps) {
             {/* Logo + Breadcrumb */}
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-accent-blue flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">C</span>
-                </div>
+                <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
               </Link>
               <nav className="flex items-center gap-2 text-sm">
                 <Link href="/" className="text-text-tertiary hover:text-text-primary transition-colors">
@@ -259,11 +260,15 @@ export default function VaultDetailPage({ params }: PageProps) {
 
       <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           <MetricCard
-            label="Total Value Locked"
+            label="Total Deposits"
             value={formatCurrency(snapshot?.totalAssetsUsd)}
             highlight
+          />
+          <MetricCard
+            label="Liquidity"
+            value={formatCurrency(snapshot?.liquidityUsd)}
           />
           <MetricCard
             label="APY"
@@ -280,12 +285,60 @@ export default function VaultDetailPage({ params }: PageProps) {
           />
         </div>
 
+        {/* Yield Payouts */}
+        {vault.yield && (
+          <div className="mb-6 p-4 bg-accent-green/5 border border-accent-green/20 rounded-xl">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-8 h-8 rounded-lg bg-accent-green/20 flex items-center justify-center">
+                <svg className="w-4 h-4 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-text-primary">Yield Payouts</h3>
+                <p className="text-xs text-text-tertiary">Estimated yield generated for depositors</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <p className="text-xs text-text-secondary mb-0.5">Daily</p>
+                <p className="text-lg font-bold text-accent-green tabular-nums">
+                  {formatCurrency(vault.yield.dailyYield)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary mb-0.5">Weekly</p>
+                <p className="text-lg font-bold text-accent-green tabular-nums">
+                  {formatCurrency(vault.yield.weeklyYield)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary mb-0.5">Monthly</p>
+                <p className="text-lg font-bold text-accent-green tabular-nums">
+                  {formatCurrency(vault.yield.monthlyYield)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-text-secondary mb-0.5">Annualized</p>
+                <p className="text-lg font-bold text-accent-green tabular-nums">
+                  {formatCurrency(vault.yield.annualizedYield)}
+                </p>
+              </div>
+            </div>
+            {vault.yield.vaultAgeDays > 0 && (
+              <p className="mt-3 text-xs text-text-tertiary">
+                Vault age: {vault.yield.vaultAgeDays} days • Est. total yield since launch: {formatCurrency(vault.yield.estimatedTotalYield)}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Tabbed Content */}
         <Tabs defaultValue="overview">
           <TabsList className="rounded-t-lg">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="activity">Activity</TabsTrigger>
-            <TabsTrigger value="risk">Risk Analysis</TabsTrigger>
+            <TabsTrigger value="strategy">Strategy Intelligence</TabsTrigger>
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
           </TabsList>
 
@@ -478,6 +531,9 @@ export default function VaultDetailPage({ params }: PageProps) {
                 </dl>
               </div>
             </section>
+
+            {/* Fee Analysis */}
+            <FeesCard vaultAddress={vault.address} />
           </TabsContent>
 
           <TabsContent value="activity" className="pt-6">
@@ -488,8 +544,8 @@ export default function VaultDetailPage({ params }: PageProps) {
             />
           </TabsContent>
 
-          <TabsContent value="risk" className="pt-6">
-            <RiskTab vaultAddress={vault.address} />
+          <TabsContent value="strategy" className="pt-6">
+            <StrategyIntelligence vaultAddress={vault.address} />
           </TabsContent>
 
           <TabsContent value="alerts" className="pt-6">
@@ -509,6 +565,27 @@ export default function VaultDetailPage({ params }: PageProps) {
           </TabsContent>
         </Tabs>
       </main>
+
+      <footer className="border-t border-border bg-background-subtle mt-auto">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between text-xs text-text-tertiary">
+            <p>
+              Data from{" "}
+              <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
+              {" "}• Updated hourly
+            </p>
+            <div className="flex items-center gap-3">
+              <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+              </a>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                Live
+              </span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -543,6 +620,7 @@ function MetricCard({
     </div>
   );
 }
+
 
 function ConfigItem({
   label,

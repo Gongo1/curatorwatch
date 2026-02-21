@@ -296,6 +296,18 @@ function calculateSharePrice(vault: MorphoVaultV2): number {
 async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
   const sharePrice = calculateSharePrice(vault);
 
+  // Calculate liquidityUsd from liquidity (raw asset units) and price
+  let liquidityUsd: number | null = null;
+  if (vault.liquidity && vault.totalAssets && vault.totalAssetsUsd) {
+    const totalAssets = BigInt(vault.totalAssets);
+    const liquidity = BigInt(vault.liquidity);
+    if (totalAssets > 0n) {
+      // Calculate price per unit: totalAssetsUsd / totalAssets
+      // Then: liquidityUsd = liquidity * (totalAssetsUsd / totalAssets)
+      liquidityUsd = Number(liquidity) * (vault.totalAssetsUsd / Number(totalAssets));
+    }
+  }
+
   await prisma.vaultSnapshot.create({
     data: {
       vaultId,
@@ -303,6 +315,8 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
       totalAssetsUsd: vault.totalAssetsUsd ?? 0,
       totalSupply: String(vault.totalSupply),
       sharePrice,
+      liquidity: vault.liquidity ? String(vault.liquidity) : null,
+      liquidityUsd,
       apy: vault.apy,
       netApy: vault.netApy,
       avgApy: vault.avgApy,

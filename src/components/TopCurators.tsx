@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
+import { CuratorRating } from "@/components/CuratorRating";
 import { formatCurrency } from "@/lib/utils/format";
 
 interface TopCurator {
@@ -90,6 +91,9 @@ export function TopCurators() {
               <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
                 {curator.name || `Curator ${curator.curatorAddress.slice(0, 6)}...`}
               </p>
+              <div className="mt-0.5">
+                <CuratorRating curatorAddress={curator.curatorAddress} compact />
+              </div>
             </div>
             <span className="text-sm font-semibold text-text-primary tabular-nums">
               {formatCurrency(curator.totalAUM)}

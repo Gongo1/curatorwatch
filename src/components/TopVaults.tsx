@@ -16,6 +16,24 @@ interface TopVault {
     totalAssetsUsd: number;
     avgNetApy: number | null;
   } | null;
+  riskAssessment?: {
+    overallRisk: string;
+    overallScore: number;
+  };
+}
+
+function RiskBadge({ risk }: { risk: string }) {
+  const config: Record<string, { color: string; bg: string; label: string }> = {
+    "Low Risk": { color: "text-accent-green", bg: "bg-accent-green/10", label: "Low" },
+    "Moderate Risk": { color: "text-accent-yellow", bg: "bg-accent-yellow/10", label: "Med" },
+    "High Risk": { color: "text-accent-red", bg: "bg-accent-red/10", label: "High" },
+  };
+  const { color, bg, label } = config[risk] || { color: "text-text-muted", bg: "bg-background-elevated", label: "N/A" };
+  return (
+    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${color} ${bg}`}>
+      {label}
+    </span>
+  );
 }
 
 export function TopVaults() {
@@ -104,9 +122,12 @@ export function TopVaults() {
               <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
                 {vault.name}
               </p>
-              <p className="text-xs text-text-tertiary truncate">
-                {vault.symbol}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-xs text-text-tertiary">{vault.symbol}</span>
+                {vault.riskAssessment && (
+                  <RiskBadge risk={vault.riskAssessment.overallRisk} />
+                )}
+              </div>
             </div>
             <div className="text-right">
               <p className="text-sm font-semibold text-text-primary tabular-nums">

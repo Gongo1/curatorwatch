@@ -11,11 +11,22 @@ export interface VaultFees {
   management: number;
 }
 
+export interface VaultYield {
+  dailyYield: number;
+  weeklyYield: number;
+  monthlyYield: number;
+  annualizedYield: number;
+  estimatedTotalYield: number;
+  vaultAgeDays: number;
+}
+
 export interface VaultSnapshot {
   totalAssets: string;
   totalAssetsUsd: number;
   totalSupply: string;
   sharePrice: number;
+  liquidity: string | null;
+  liquidityUsd: number | null;
   apy: number | null;
   netApy: number | null;
   avgApy: number | null;
@@ -31,6 +42,11 @@ export interface VaultAdapter {
   allocationPct: number;
 }
 
+export interface VaultRiskSummary {
+  overallRisk: "Low Risk" | "Moderate Risk" | "High Risk";
+  overallScore: number;
+}
+
 export interface VaultData {
   id: string;
   address: string;
@@ -40,8 +56,10 @@ export interface VaultData {
   asset: VaultAsset;
   curatorAddress: string | null;
   fees: VaultFees;
+  yield?: VaultYield;
   latestSnapshot: VaultSnapshot | null;
   adapters: VaultAdapter[];
+  riskAssessment?: VaultRiskSummary;
   updatedAt: string;
 }
 
@@ -112,6 +130,27 @@ export interface VaultCurator {
   otherVaults: CuratorOtherVault[];
 }
 
+// Risk assessment types
+export interface RiskCategory {
+  level: "Low Risk" | "Moderate Risk" | "High Risk";
+  score: number;
+  factors: string[];
+  recommendations: string[];
+}
+
+export interface InstitutionalRiskAssessment {
+  overallRisk: "Low Risk" | "Moderate Risk" | "High Risk";
+  overallScore: number;
+  categories: {
+    smartContract: RiskCategory;
+    oracle: RiskCategory;
+    collateral: RiskCategory;
+    lltv: RiskCategory;
+    operational: RiskCategory;
+  };
+  lastUpdated: string;
+}
+
 // Full vault detail response
 export interface VaultDetail extends VaultData {
   snapshotHistory: SnapshotHistoryEntry[];
@@ -120,6 +159,7 @@ export interface VaultDetail extends VaultData {
   idleAssetsUsd: number;
   curator: VaultCurator | null;
   createdAt: string;
+  riskAssessment: InstitutionalRiskAssessment;
 }
 
 export interface VaultDetailApiResponse {

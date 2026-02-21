@@ -25,6 +25,7 @@ export interface MorphoVaultV2 {
   totalAssetsUsd: number;
   totalSupply: string; // BigInt as string
   sharePrice: number;
+  liquidity: string | null; // BigInt as string - available for withdrawal
   apy: number | null;
   netApy: number | null;
   avgApy: number | null;
@@ -68,6 +69,8 @@ export interface VaultSnapshotRecord {
   totalAssetsUsd: number;
   totalSupply: string;
   sharePrice: number;
+  liquidity: string | null; // Raw liquidity in asset units
+  liquidityUsd: number | null; // Liquidity in USD
   apy: number | null;
   netApy: number | null;
   avgApy: number | null;

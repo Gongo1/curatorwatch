@@ -210,6 +210,8 @@ export async function GET(
               totalAssetsUsd: snapshot.totalAssetsUsd,
               totalSupply: snapshot.totalSupply,
               sharePrice: snapshot.sharePrice,
+              liquidity: snapshot.liquidity,
+              liquidityUsd: snapshot.liquidityUsd,
               apy: snapshot.apy,
               netApy: snapshot.netApy,
               avgApy: snapshot.avgApy,

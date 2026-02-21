@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData } from "@/scripts/collect-data";
 
-export const maxDuration = 300; // 5 minutes max for Vercel Pro
+export const maxDuration = 60; // Vercel Pro max
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
@@ -24,19 +24,25 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Check if this is a full collection request
+  const fullCollection = request.nextUrl.searchParams.get("full") === "true";
+
   try {
-    console.log("[CRON] Starting scheduled data collection...");
+    console.log(`[CRON] Starting ${fullCollection ? "full" : "light"} data collection...`);
 
     const result = await collectData({
       fetchAll: true,
       minTvlUsd: 1000,
-      skipTransactions: false,
+      // Light collection: skip transactions and reallocations for speed
+      skipTransactions: !fullCollection,
+      skipReallocations: !fullCollection,
       verbose: false,
     });
 
     console.log("[CRON] Collection complete:", {
       vaults: result.vaultsProcessed,
       curators: result.curatorsCreated,
+      snapshots: result.snapshotsCreated,
       transactions: result.transactionsCollected,
       duration: `${result.duration}s`,
     });
@@ -46,7 +52,9 @@ export async function GET(request: NextRequest) {
       message: "Data collected successfully",
       result: {
         vaultsProcessed: result.vaultsProcessed,
+        vaultsSkipped: result.vaultsSkipped,
         curatorsCreated: result.curatorsCreated,
+        snapshotsCreated: result.snapshotsCreated,
         transactionsCollected: result.transactionsCollected,
         changesDetected: result.changesDetected,
         duration: result.duration,

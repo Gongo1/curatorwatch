@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ExternalLink } from "lucide-react";
 import {
   formatCurrency,
@@ -13,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
 import { CopyAddress } from "@/components/CopyAddress";
+import { CuratorRating } from "@/components/CuratorRating";
 import type { CuratorDetailResponse } from "@/lib/types/api";
 
 interface PageProps {
@@ -134,9 +136,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center gap-6 mb-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-accent-blue flex items-center justify-center">
-                <span className="text-white font-bold text-sm">C</span>
-              </div>
+              <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
               <span className="text-sm font-bold text-text-primary hidden sm:inline">CuratorWatch</span>
             </Link>
             <nav className="flex items-center gap-4 ml-auto">
@@ -221,7 +221,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <StatCard
             label="Total AUM"
             value={formatCurrency(totalTVL)}
@@ -235,17 +235,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
             label="Avg APY"
             value={formatPercentage(avgApy)}
             valueClass="text-accent-green"
-          />
-          <StatCard
-            label="Strategy"
-            value={curator.strategyType || "Moderate"}
-            valueClass={
-              curator.strategyType === "Conservative"
-                ? "text-accent-blue"
-                : curator.strategyType === "Aggressive"
-                  ? "text-accent-red"
-                  : "text-purple-400"
-            }
           />
           <StatCard
             label="Founded"
@@ -432,7 +421,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                           Asset
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                          TVL
+                          Deposits
                         </th>
                         <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
                           APY
@@ -799,86 +788,31 @@ export default function CuratorDetailPage({ params }: PageProps) {
 
           {/* Risk Profile Tab */}
           <TabsContent value="risk" className="pt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Strategy Classification */}
-              <section className="bg-background-subtle rounded-lg border border-border p-6 text-center">
-                <h2 className="text-sm font-semibold text-text-primary mb-4">Strategy Classification</h2>
-                <div className={`inline-flex items-center px-4 py-2 rounded-full text-lg font-semibold border ${
-                  curator.strategyType === "Conservative"
-                    ? "bg-accent-blue/15 text-accent-blue border-accent-blue/20"
-                    : curator.strategyType === "Aggressive"
-                      ? "bg-accent-red/15 text-accent-red border-accent-red/20"
-                      : "bg-purple-500/15 text-purple-400 border-purple-500/20"
-                }`}>
-                  {curator.strategyType || "Moderate"}
-                </div>
-                <p className="mt-4 text-xs text-text-tertiary">
-                  Based on concentration levels, liquidity, and reallocation frequency
-                </p>
-              </section>
-
-              {/* Risk Metrics */}
-              <section className="bg-background-subtle rounded-lg border border-border p-6">
-                <h2 className="text-sm font-semibold text-text-primary mb-4">Risk Metrics</h2>
-                <dl className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <dt className="text-sm text-text-tertiary">Concentration Risk</dt>
-                    <dd className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-yellow" />
-                      Medium
-                    </dd>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <dt className="text-sm text-text-tertiary">Liquidity Risk</dt>
-                    <dd className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-                      Low
-                    </dd>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <dt className="text-sm text-text-tertiary">Diversification</dt>
-                    <dd className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/20">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-                      Good
-                    </dd>
-                  </div>
-                </dl>
-              </section>
-
-              {/* Management Style */}
-              <section className="bg-background-subtle rounded-lg border border-border p-6">
-                <h2 className="text-sm font-semibold text-text-primary mb-4">Management Style</h2>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-accent-blue mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-text-secondary">
-                      Manages {vaults.length} vault{vaults.length !== 1 ? "s" : ""} with diversified allocations
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-accent-blue mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-text-secondary">
-                      {assetDistribution.length} different asset{assetDistribution.length !== 1 ? "s" : ""} under management
-                    </span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <svg className="w-4 h-4 text-accent-blue mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="text-text-secondary">
-                      {curator.jurisdiction ? `Operates from ${curator.jurisdiction}` : "Jurisdiction not specified"}
-                    </span>
-                  </li>
-                </ul>
-              </section>
-            </div>
+            <CuratorRating curatorAddress={curator.address} />
           </TabsContent>
         </Tabs>
       </main>
+
+      <footer className="border-t border-border bg-background-subtle mt-auto">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between text-xs text-text-tertiary">
+            <p>
+              Data from{" "}
+              <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
+              {" "}• Updated hourly
+            </p>
+            <div className="flex items-center gap-3">
+              <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+              </a>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                Live
+              </span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

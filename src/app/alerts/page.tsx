@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { formatTimeAgo } from "@/lib/utils/format";
 
 interface VaultInfo {
@@ -199,9 +200,7 @@ export default function AlertsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <Link href="/" className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-lg bg-accent-blue flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">C</span>
-                </div>
+                <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
                 <span className="text-lg font-semibold text-text-primary">CuratorWatch</span>
               </Link>
               <h1 className="text-xl font-semibold text-text-primary tracking-tight">
@@ -274,7 +273,7 @@ export default function AlertsPage() {
             <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
               <h3 className="font-medium text-accent-green text-sm mb-1.5">Large Flows</h3>
               <p className="text-xs text-text-tertiary leading-relaxed">
-                Deposits/withdrawals exceeding 10% of vault TVL. These represent the
+                Deposits/withdrawals exceeding 10% of vault deposits. These represent the
                 top 5% largest transactions.
               </p>
             </div>
@@ -282,7 +281,7 @@ export default function AlertsPage() {
             <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
               <h3 className="font-medium text-purple-400 text-sm mb-1.5">Vault Lifecycle</h3>
               <p className="text-xs text-text-tertiary leading-relaxed">
-                New vault launches (TVL $0→$1M+) or shutdowns (TVL drops to near-zero).
+                New vault launches (deposits $0→$1M+) or shutdowns (deposits drop to near-zero).
               </p>
             </div>
 
@@ -457,6 +456,27 @@ export default function AlertsPage() {
           </div>
         )}
       </main>
+
+      <footer className="border-t border-border bg-background-subtle mt-auto">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between text-xs text-text-tertiary">
+            <p>
+              Data from{" "}
+              <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
+              {" "}• Updated hourly
+            </p>
+            <div className="flex items-center gap-3">
+              <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+              </a>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                Live
+              </span>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

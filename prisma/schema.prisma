@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Vault {
@@ -52,6 +53,8 @@ model VaultSnapshot {
   totalAssetsUsd Float
   totalSupply    String   // BigInt stored as string
   sharePrice     Float
+  liquidity      String?  // Available liquidity in raw asset units
+  liquidityUsd   Float?   // Available liquidity in USD
   apy            Float?
   netApy         Float?
   avgApy         Float?

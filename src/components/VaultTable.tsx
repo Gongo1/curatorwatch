@@ -10,7 +10,7 @@ import {
 } from "@/lib/utils/format";
 import { ChangeCountBadge } from "./RecentChanges";
 
-type SortField = "name" | "asset" | "tvl" | "apy" | "netApy" | "curator";
+type SortField = "name" | "asset" | "tvl" | "apy" | "netApy" | "risk" | "curator";
 type SortDirection = "asc" | "desc";
 
 interface VaultTableProps {
@@ -72,6 +72,10 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
         case "netApy":
           aValue = a.latestSnapshot?.avgNetApy ?? 0;
           bValue = b.latestSnapshot?.avgNetApy ?? 0;
+          break;
+        case "risk":
+          aValue = a.riskAssessment?.overallScore ?? 0;
+          bValue = b.riskAssessment?.overallScore ?? 0;
           break;
         case "curator":
           aValue = a.curatorAddress?.toLowerCase() ?? "";
@@ -150,9 +154,10 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
           <tr>
             <HeaderCell field="name">Vault</HeaderCell>
             <HeaderCell field="asset">Asset</HeaderCell>
-            <HeaderCell field="tvl" align="right">TVL</HeaderCell>
+            <HeaderCell field="tvl" align="right">Deposits</HeaderCell>
             <HeaderCell field="apy" align="right">APY</HeaderCell>
             <HeaderCell field="netApy" align="right">Net APY</HeaderCell>
+            <HeaderCell field="risk" align="right">Risk</HeaderCell>
             <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-center">
               Changes
             </th>
@@ -202,6 +207,9 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
                   {formatPercentage(vault.latestSnapshot?.avgNetApy)}
                 </span>
               </td>
+              <td className="px-4 py-4 whitespace-nowrap text-right">
+                <RiskBadge riskAssessment={vault.riskAssessment} />
+              </td>
               <td className="px-4 py-4 whitespace-nowrap text-center">
                 <ChangeCountBadge vaultAddress={vault.address} />
               </td>
@@ -218,6 +226,66 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// Risk badge component for the vault table
+function RiskBadge({
+  riskAssessment,
+}: {
+  riskAssessment?: {
+    overallRisk: "Low Risk" | "Moderate Risk" | "High Risk";
+    overallScore: number;
+  };
+}) {
+  if (!riskAssessment) {
+    return <span className="text-sm text-text-muted">-</span>;
+  }
+
+  const { overallRisk, overallScore } = riskAssessment;
+
+  const getRiskStyles = (risk: string) => {
+    switch (risk) {
+      case "Low Risk":
+        return {
+          bg: "bg-accent-green/15",
+          border: "border-accent-green/30",
+          text: "text-accent-green",
+          dot: "bg-accent-green",
+        };
+      case "Moderate Risk":
+        return {
+          bg: "bg-accent-yellow/15",
+          border: "border-accent-yellow/30",
+          text: "text-accent-yellow",
+          dot: "bg-accent-yellow",
+        };
+      case "High Risk":
+        return {
+          bg: "bg-accent-red/15",
+          border: "border-accent-red/30",
+          text: "text-accent-red",
+          dot: "bg-accent-red",
+        };
+      default:
+        return {
+          bg: "bg-background-elevated",
+          border: "border-border",
+          text: "text-text-secondary",
+          dot: "bg-text-muted",
+        };
+    }
+  };
+
+  const styles = getRiskStyles(overallRisk);
+  const label = overallRisk.replace(" Risk", "");
+
+  return (
+    <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border ${styles.bg} ${styles.border}`}>
+      <div className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} />
+      <span className={`text-xs font-medium ${styles.text}`}>{label}</span>
+      <span className={`text-xs ${styles.text} opacity-70`}>({overallScore})</span>
     </div>
   );
 }

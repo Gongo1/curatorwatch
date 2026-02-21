@@ -4,11 +4,14 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// Serverless-optimized Prisma client with single connection
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     log: ["error"],
   });
 
-// Cache the client in all environments (including production/serverless)
-if (!globalForPrisma.prisma) globalForPrisma.prisma = prisma;
+// Cache the client globally to prevent connection leaks
+if (!globalForPrisma.prisma) {
+  globalForPrisma.prisma = prisma;
+}

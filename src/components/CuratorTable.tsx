@@ -9,61 +9,13 @@ import {
   formatTimeAgo,
 } from "@/lib/utils/format";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
+import { CuratorRating } from "@/components/CuratorRating";
 
-type SortField = "name" | "aum" | "vaults" | "apy" | "strategy" | "risk" | "change";
+type SortField = "name" | "aum" | "vaults" | "apy" | "change";
 type SortDirection = "asc" | "desc";
 
 interface CuratorTableProps {
   curators: CuratorDashboardItem[];
-}
-
-function getRiskBadge(risk: "low" | "medium" | "high") {
-  switch (risk) {
-    case "low":
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-          Low
-        </span>
-      );
-    case "medium":
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-yellow" />
-          Med
-        </span>
-      );
-    case "high":
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-red/15 text-accent-red border border-accent-red/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-red" />
-          High
-        </span>
-      );
-  }
-}
-
-function getStrategyBadge(strategy: "Conservative" | "Moderate" | "Aggressive") {
-  switch (strategy) {
-    case "Conservative":
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-accent-blue/10 text-accent-blue border border-accent-blue/20">
-          Conservative
-        </span>
-      );
-    case "Moderate":
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
-          Moderate
-        </span>
-      );
-    case "Aggressive":
-      return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-accent-red/10 text-accent-red border border-accent-red/20">
-          Aggressive
-        </span>
-      );
-  }
 }
 
 export function CuratorTable({ curators }: CuratorTableProps) {
@@ -91,16 +43,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
         case "apy":
           aValue = a.avgNetApy;
           bValue = b.avgNetApy;
-          break;
-        case "strategy":
-          const strategyOrder = { Conservative: 0, Moderate: 1, Aggressive: 2 };
-          aValue = strategyOrder[a.strategyType];
-          bValue = strategyOrder[b.strategyType];
-          break;
-        case "risk":
-          const riskOrder = { low: 0, medium: 1, high: 2 };
-          aValue = riskOrder[a.riskScore];
-          bValue = riskOrder[b.riskScore];
           break;
         case "change":
           aValue = a.tvlChangePct30d;
@@ -173,107 +115,152 @@ export function CuratorTable({ curators }: CuratorTableProps) {
   );
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-background-subtle">
-      <table className="min-w-full">
-        <thead className="bg-background-elevated border-b border-border">
-          <tr>
-            <HeaderCell field="name">Curator</HeaderCell>
-            <HeaderCell field="aum" align="right">Total AUM</HeaderCell>
-            <HeaderCell field="vaults" align="right"># Vaults</HeaderCell>
-            <HeaderCell field="apy" align="right">Avg APY</HeaderCell>
-            <HeaderCell field="strategy" align="center">Strategy</HeaderCell>
-            <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-left">
-              Assets
-            </th>
-            <HeaderCell field="risk" align="center">Risk</HeaderCell>
-            <HeaderCell field="change" align="right">30d Change</HeaderCell>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-subtle">
-          {sortedCurators.map((curator) => (
-            <tr
-              key={curator.curatorId}
-              className="hover:bg-background-hover transition-colors"
-            >
-              {/* Curator Name */}
-              <td className="px-4 py-4 whitespace-nowrap">
-                <Link href={`/curator/${curator.curatorAddress}`} className="block group">
-                  <div className="flex items-center gap-3">
-                    <CuratorAvatar
-                      address={curator.curatorAddress}
-                      name={curator.name}
-                      logoUrl={curator.logoUrl}
-                      size="sm"
-                    />
-                    <div>
-                      <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                        {curator.name || `Curator ${curator.curatorAddress.slice(0, 6)}...${curator.curatorAddress.slice(-4)}`}
-                      </div>
-                      <div className="text-xs text-text-tertiary">
-                        {curator.jurisdiction || curator.entityType || ""}
+    <>
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto rounded-lg border border-border bg-background-subtle">
+        <table className="min-w-full">
+          <thead className="bg-background-elevated border-b border-border">
+            <tr>
+              <HeaderCell field="name">Curator</HeaderCell>
+              <HeaderCell field="aum" align="right">Total AUM</HeaderCell>
+              <HeaderCell field="vaults" align="right"># Vaults</HeaderCell>
+              <HeaderCell field="apy" align="right">Avg APY</HeaderCell>
+              <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-left">
+                Assets
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-center">
+                Rating
+              </th>
+              <HeaderCell field="change" align="right">30d Change</HeaderCell>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-subtle">
+            {sortedCurators.map((curator) => (
+              <tr
+                key={curator.curatorId}
+                className="hover:bg-background-hover transition-colors"
+              >
+                {/* Curator Name */}
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <Link href={`/curator/${curator.curatorAddress}`} className="block group">
+                    <div className="flex items-center gap-3">
+                      <CuratorAvatar
+                        address={curator.curatorAddress}
+                        name={curator.name}
+                        logoUrl={curator.logoUrl}
+                        size="sm"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                          {curator.name || `Curator ${curator.curatorAddress.slice(0, 6)}...${curator.curatorAddress.slice(-4)}`}
+                        </div>
+                        <div className="text-xs text-text-tertiary">
+                          {curator.jurisdiction || curator.entityType || ""}
+                        </div>
                       </div>
                     </div>
+                  </Link>
+                </td>
+
+                {/* Total AUM */}
+                <td className="px-4 py-4 whitespace-nowrap text-right">
+                  <span className="text-sm font-semibold text-text-primary tabular-nums">
+                    {formatCurrency(curator.totalAUM)}
+                  </span>
+                </td>
+
+                {/* # Vaults */}
+                <td className="px-4 py-4 whitespace-nowrap text-right">
+                  <span className="text-sm text-text-secondary tabular-nums">
+                    {curator.vaultCount}
+                  </span>
+                </td>
+
+                {/* Avg APY */}
+                <td className="px-4 py-4 whitespace-nowrap text-right">
+                  <span className="text-sm font-medium text-accent-green tabular-nums">
+                    {formatPercentage(curator.avgNetApy)}
+                  </span>
+                </td>
+
+                {/* Asset Distribution */}
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <div className="flex items-center gap-1">
+                    {curator.assetDistribution.slice(0, 3).map((asset, i) => (
+                      <span
+                        key={asset.symbol}
+                        className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-background-elevated border border-border text-text-secondary"
+                        title={`${asset.symbol}: ${formatCurrency(asset.amountUsd)} (${asset.percentage.toFixed(0)}%)`}
+                      >
+                        {asset.symbol}
+                        <span className="ml-1 text-text-muted">{asset.percentage.toFixed(0)}%</span>
+                      </span>
+                    ))}
+                    {curator.assetDistribution.length > 3 && (
+                      <span className="text-xs text-text-muted">
+                        +{curator.assetDistribution.length - 3}
+                      </span>
+                    )}
                   </div>
-                </Link>
-              </td>
+                </td>
 
-              {/* Total AUM */}
-              <td className="px-4 py-4 whitespace-nowrap text-right">
-                <span className="text-sm font-semibold text-text-primary tabular-nums">
-                  {formatCurrency(curator.totalAUM)}
-                </span>
-              </td>
+                {/* Curator Rating */}
+                <td className="px-4 py-4 whitespace-nowrap text-center">
+                  <CuratorRating curatorAddress={curator.curatorAddress} compact />
+                </td>
 
-              {/* # Vaults */}
-              <td className="px-4 py-4 whitespace-nowrap text-right">
-                <span className="text-sm text-text-secondary tabular-nums">
-                  {curator.vaultCount}
-                </span>
-              </td>
-
-              {/* Avg APY */}
-              <td className="px-4 py-4 whitespace-nowrap text-right">
-                <span className="text-sm font-medium text-accent-green tabular-nums">
-                  {formatPercentage(curator.avgNetApy)}
-                </span>
-              </td>
-
-              {/* Strategy */}
-              <td className="px-4 py-4 whitespace-nowrap text-center">
-                {getStrategyBadge(curator.strategyType)}
-              </td>
-
-              {/* Asset Distribution */}
-              <td className="px-4 py-4 whitespace-nowrap">
-                <div className="flex items-center gap-1">
-                  {curator.assetDistribution.slice(0, 3).map((asset, i) => (
+                {/* 30d Change */}
+                <td className="px-4 py-4 whitespace-nowrap text-right">
+                  <div className="flex flex-col items-end">
                     <span
-                      key={asset.symbol}
-                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-background-elevated border border-border text-text-secondary"
-                      title={`${asset.symbol}: ${formatCurrency(asset.amountUsd)} (${asset.percentage.toFixed(0)}%)`}
+                      className={`text-sm font-medium tabular-nums ${
+                        curator.tvlChangePct30d >= 0
+                          ? "text-accent-green"
+                          : "text-accent-red"
+                      }`}
                     >
-                      {asset.symbol}
-                      <span className="ml-1 text-text-muted">{asset.percentage.toFixed(0)}%</span>
+                      {curator.tvlChangePct30d >= 0 ? "+" : ""}
+                      {curator.tvlChangePct30d.toFixed(1)}%
                     </span>
-                  ))}
-                  {curator.assetDistribution.length > 3 && (
-                    <span className="text-xs text-text-muted">
-                      +{curator.assetDistribution.length - 3}
+                    <span className="text-xs text-text-muted tabular-nums">
+                      {curator.tvlChange30d >= 0 ? "+" : ""}
+                      {formatCurrency(curator.tvlChange30d)}
                     </span>
-                  )}
-                </div>
-              </td>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
-              {/* Risk Score */}
-              <td className="px-4 py-4 whitespace-nowrap text-center">
-                {getRiskBadge(curator.riskScore)}
-              </td>
-
-              {/* 30d Change */}
-              <td className="px-4 py-4 whitespace-nowrap text-right">
-                <div className="flex flex-col items-end">
+      {/* Mobile Card Layout */}
+      <div className="md:hidden space-y-3">
+        {sortedCurators.map((curator) => (
+          <Link
+            key={curator.curatorId}
+            href={`/curator/${curator.curatorAddress}`}
+            className="block bg-background-subtle border border-border rounded-lg p-4 hover:bg-background-hover transition-colors"
+          >
+            <div className="flex items-start gap-3">
+              <CuratorAvatar
+                address={curator.curatorAddress}
+                name={curator.name}
+                logoUrl={curator.logoUrl}
+                size="sm"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-medium text-text-primary truncate">
+                      {curator.name || `Curator ${curator.curatorAddress.slice(0, 6)}...`}
+                    </h3>
+                    <p className="text-xs text-text-tertiary">
+                      {curator.jurisdiction || curator.entityType || `${curator.vaultCount} vaults`}
+                    </p>
+                  </div>
                   <span
-                    className={`text-sm font-medium tabular-nums ${
+                    className={`text-xs font-medium tabular-nums flex-shrink-0 ${
                       curator.tvlChangePct30d >= 0
                         ? "text-accent-green"
                         : "text-accent-red"
@@ -282,73 +269,141 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                     {curator.tvlChangePct30d >= 0 ? "+" : ""}
                     {curator.tvlChangePct30d.toFixed(1)}%
                   </span>
-                  <span className="text-xs text-text-muted tabular-nums">
-                    {curator.tvlChange30d >= 0 ? "+" : ""}
-                    {formatCurrency(curator.tvlChange30d)}
-                  </span>
                 </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <div>
+                    <p className="text-xs text-text-muted">AUM</p>
+                    <p className="text-sm font-semibold text-text-primary tabular-nums">
+                      {formatCurrency(curator.totalAUM)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-muted">Vaults</p>
+                    <p className="text-sm text-text-secondary tabular-nums">
+                      {curator.vaultCount}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-muted">APY</p>
+                    <p className="text-sm font-medium text-accent-green tabular-nums">
+                      {formatPercentage(curator.avgNetApy)}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center gap-1 flex-wrap">
+                  {curator.assetDistribution.slice(0, 2).map((asset) => (
+                    <span
+                      key={asset.symbol}
+                      className="inline-flex items-center px-1.5 py-0.5 rounded text-xs bg-background-elevated border border-border text-text-secondary"
+                    >
+                      {asset.symbol}
+                    </span>
+                  ))}
+                  {curator.assetDistribution.length > 2 && (
+                    <span className="text-xs text-text-muted">
+                      +{curator.assetDistribution.length - 2}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }
 
 export function CuratorTableSkeleton() {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border bg-background-subtle animate-pulse">
-      <table className="min-w-full">
-        <thead className="bg-background-elevated border-b border-border">
-          <tr>
-            {["Curator", "Total AUM", "# Vaults", "Avg APY", "Strategy", "Assets", "Risk", "30d Change"].map((header) => (
-              <th key={header} className="px-4 py-3 text-left">
-                <div className="h-3 w-16 bg-background-elevated rounded" />
-              </th>
+    <>
+      {/* Desktop Table Skeleton */}
+      <div className="hidden md:block overflow-x-auto rounded-lg border border-border bg-background-subtle animate-pulse">
+        <table className="min-w-full">
+          <thead className="bg-background-elevated border-b border-border">
+            <tr>
+              {["Curator", "Total AUM", "# Vaults", "Avg APY", "Assets", "Rating", "30d Change"].map((header) => (
+                <th key={header} className="px-4 py-3 text-left">
+                  <div className="h-3 w-16 bg-background-elevated rounded" />
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-subtle">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <tr key={i}>
+                <td className="px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-background-elevated rounded-lg" />
+                    <div>
+                      <div className="h-4 w-24 bg-background-elevated rounded mb-1" />
+                      <div className="h-3 w-16 bg-background-elevated/50 rounded" />
+                    </div>
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <div className="h-4 w-20 bg-background-elevated rounded ml-auto" />
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <div className="h-4 w-8 bg-background-elevated rounded ml-auto" />
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <div className="h-4 w-12 bg-background-elevated rounded ml-auto" />
+                </td>
+                <td className="px-4 py-4">
+                  <div className="flex gap-1">
+                    <div className="h-5 w-14 bg-background-elevated rounded" />
+                    <div className="h-5 w-14 bg-background-elevated rounded" />
+                  </div>
+                </td>
+                <td className="px-4 py-4 text-center">
+                  <div className="h-6 w-14 bg-background-elevated rounded mx-auto" />
+                </td>
+                <td className="px-4 py-4 text-right">
+                  <div className="h-4 w-12 bg-background-elevated rounded ml-auto" />
+                </td>
+              </tr>
             ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-subtle">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <tr key={i}>
-              <td className="px-4 py-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 bg-background-elevated rounded-lg" />
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile Card Skeleton */}
+      <div className="md:hidden space-y-3 animate-pulse">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
+            key={i}
+            className="bg-background-subtle border border-border rounded-lg p-4"
+          >
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 bg-background-elevated rounded-lg flex-shrink-0" />
+              <div className="flex-1">
+                <div className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="h-4 w-24 bg-background-elevated rounded mb-1" />
+                    <div className="h-4 w-28 bg-background-elevated rounded mb-1" />
                     <div className="h-3 w-16 bg-background-elevated/50 rounded" />
                   </div>
+                  <div className="h-4 w-10 bg-background-elevated rounded" />
                 </div>
-              </td>
-              <td className="px-4 py-4 text-right">
-                <div className="h-4 w-20 bg-background-elevated rounded ml-auto" />
-              </td>
-              <td className="px-4 py-4 text-right">
-                <div className="h-4 w-8 bg-background-elevated rounded ml-auto" />
-              </td>
-              <td className="px-4 py-4 text-right">
-                <div className="h-4 w-12 bg-background-elevated rounded ml-auto" />
-              </td>
-              <td className="px-4 py-4 text-center">
-                <div className="h-5 w-20 bg-background-elevated rounded mx-auto" />
-              </td>
-              <td className="px-4 py-4">
-                <div className="flex gap-1">
-                  <div className="h-5 w-14 bg-background-elevated rounded" />
-                  <div className="h-5 w-14 bg-background-elevated rounded" />
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <div>
+                    <div className="h-3 w-8 bg-background-elevated/50 rounded mb-1" />
+                    <div className="h-4 w-14 bg-background-elevated rounded" />
+                  </div>
+                  <div>
+                    <div className="h-3 w-10 bg-background-elevated/50 rounded mb-1" />
+                    <div className="h-4 w-6 bg-background-elevated rounded" />
+                  </div>
+                  <div>
+                    <div className="h-3 w-6 bg-background-elevated/50 rounded mb-1" />
+                    <div className="h-4 w-10 bg-background-elevated rounded" />
+                  </div>
                 </div>
-              </td>
-              <td className="px-4 py-4 text-center">
-                <div className="h-5 w-12 bg-background-elevated rounded mx-auto" />
-              </td>
-              <td className="px-4 py-4 text-right">
-                <div className="h-4 w-12 bg-background-elevated rounded ml-auto" />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }
