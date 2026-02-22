@@ -217,6 +217,12 @@ export default function Home() {
                 >
                   Alerts
                 </Link>
+                <Link
+                  href="/changelog"
+                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Changelog
+                </Link>
               </nav>
               {/* Mobile Navigation */}
               <nav className="flex sm:hidden items-center gap-2">
@@ -240,6 +246,12 @@ export default function Home() {
                   className="px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
                 >
                   Alerts
+                </Link>
+                <Link
+                  href="/changelog"
+                  className="px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  Log
                 </Link>
               </nav>
               {lastUpdated && (

@@ -1,0 +1,189 @@
+import Link from "next/link";
+import Image from "next/image";
+
+type Category = "Feature" | "Fix" | "Improvement";
+
+interface ChangelogItem {
+  category: Category;
+  text: string;
+}
+
+interface ChangelogEntry {
+  date: string;
+  items: ChangelogItem[];
+}
+
+const categoryStyles: Record<Category, string> = {
+  Feature: "bg-accent-blue/20 text-accent-blue",
+  Fix: "bg-accent-red/20 text-accent-red",
+  Improvement: "bg-accent-yellow/20 text-accent-yellow",
+};
+
+const entries: ChangelogEntry[] = [
+  {
+    date: "February 22, 2026",
+    items: [
+      {
+        category: "Fix",
+        text: 'Corrected fee calculations \u2014 Morpho and curator fee estimates were displaying significantly lower than actual values',
+      },
+      {
+        category: "Improvement",
+        text: 'Removed "Avg" prefix from APY labels across all pages for cleaner presentation',
+      },
+      {
+        category: "Improvement",
+        text: "Removed APY stat card from homepage",
+      },
+    ],
+  },
+  {
+    date: "February 21, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "Redesigned alert system \u2014 deposits now show as positive (green) events, withdrawals as warnings (red/orange)",
+      },
+      {
+        category: "Fix",
+        text: "Enabled full data collection on daily cron to ensure transaction-based alerts fire correctly",
+      },
+    ],
+  },
+  {
+    date: "February 20, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "Consolidated multi-address curators \u2014 curators using multiple on-chain addresses (KPK, Gauntlet, Morpho Association) now appear as a single entity with combined AUM and vault counts",
+      },
+      {
+        category: "Feature",
+        text: "Added fees analysis, yields dashboard, share page, curator ratings, and strategy intelligence",
+      },
+      {
+        category: "Improvement",
+        text: "Added X/Twitter link in footer",
+      },
+    ],
+  },
+];
+
+export default function ChangelogPage() {
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+
+      <main className="max-w-[800px] mx-auto px-4 sm:px-6 py-6">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-text-primary mb-1">Changelog</h1>
+          <p className="text-sm text-text-secondary">
+            Recent updates and improvements to CuratorWatch
+          </p>
+        </div>
+
+        <div className="space-y-10">
+          {entries.map((entry) => (
+            <section key={entry.date}>
+              <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-4">
+                {entry.date}
+              </h2>
+              <div className="space-y-3">
+                {entry.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 p-3 rounded-lg bg-background-subtle border border-border"
+                  >
+                    <span
+                      className={`flex-shrink-0 px-2 py-0.5 text-[11px] font-semibold rounded ${categoryStyles[item.category]}`}
+                    >
+                      {item.category}
+                    </span>
+                    <p className="text-sm text-text-primary leading-relaxed">
+                      {item.text}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </main>
+
+      <footer className="border-t border-border bg-background-subtle mt-auto">
+        <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-4">
+          <div className="flex items-center justify-between text-xs text-text-tertiary">
+            <p>
+              Data from{" "}
+              <a
+                href="https://api.morpho.org/graphql"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-blue hover:text-accent-blue-hover"
+              >
+                Morpho API
+              </a>
+              {" "}&bull; Updated hourly
+            </p>
+            <div className="flex items-center gap-3">
+              <a
+                href="https://x.com/curator_watch"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-text-tertiary hover:text-text-primary transition-colors"
+                title="Follow us on X"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                Live
+              </span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+function Header() {
+  return (
+    <header className="bg-background-subtle border-b border-border sticky top-0 z-50">
+      <div className="max-w-[800px] mx-auto px-4 sm:px-6 py-3">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
+            <div>
+              <h1 className="text-lg font-bold text-text-primary tracking-tight leading-tight">
+                CuratorWatch
+              </h1>
+              <p className="text-[10px] text-text-tertiary leading-tight">
+                Morpho V2 Vault Analytics
+              </p>
+            </div>
+          </Link>
+          <nav className="flex items-center gap-5">
+            <Link
+              href="/"
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/vaults"
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Vaults
+            </Link>
+            <Link href="/changelog" className="text-sm font-medium text-accent-blue">
+              Changelog
+            </Link>
+          </nav>
+        </div>
+      </div>
+    </header>
+  );
+}

@@ -401,6 +401,12 @@ function Header() {
             >
               Alerts
             </Link>
+            <Link
+              href="/changelog"
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Changelog
+            </Link>
           </nav>
         </div>
       </div>
