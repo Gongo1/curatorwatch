@@ -6,6 +6,7 @@
  */
 
 import type { StrategyArchetype } from "@/lib/strategy-classifier";
+import { resolveCuratorAddress } from "@/lib/curator-aliases";
 
 export interface CuratorIntelligence {
   name: string;
@@ -179,7 +180,7 @@ export const CURATOR_INTELLIGENCE: Record<string, CuratorIntelligence> = {
  * Get curator intelligence by address
  */
 export function getCuratorIntelligence(address: string): CuratorIntelligence | null {
-  return CURATOR_INTELLIGENCE[address.toLowerCase()] ?? null;
+  return CURATOR_INTELLIGENCE[resolveCuratorAddress(address)] ?? null;
 }
 
 /**

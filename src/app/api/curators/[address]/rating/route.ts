@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { calculateCuratorRating } from "@/lib/curator-rating";
+import { resolveCuratorAddress } from "@/lib/curator-aliases";
 
 interface RouteParams {
   params: Promise<{ address: string }>;
@@ -8,8 +9,9 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { address } = await params;
+    const resolvedAddress = resolveCuratorAddress(address);
 
-    const rating = await calculateCuratorRating(address);
+    const rating = await calculateCuratorRating(resolvedAddress);
 
     return NextResponse.json({
       success: true,

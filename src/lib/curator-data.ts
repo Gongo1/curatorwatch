@@ -3,6 +3,8 @@
  * This data is manually researched and maintained
  */
 
+import { resolveCuratorAddress } from "@/lib/curator-aliases";
+
 export interface CuratorProfile {
   name: string;
   website?: string;
@@ -153,7 +155,8 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
   },
 
   // Morpho Association - Protocol native curator
-  "0x0000000000000000000000000000000000000000": {
+  // Primary address (alias 0x0000...0000 resolves here via curator-aliases)
+  "0x3e95e07fd5fa55b6f1f72ed2f9b5c0e4c6ff4d5a": {
     name: "Morpho Association",
     website: "https://morpho.org",
     twitter: "https://twitter.com/MorphoLabs",
@@ -356,15 +359,16 @@ export const CURATOR_NEWS: Array<CuratorNewsItem & { curatorAddress: string }> =
  * Get curator profile by address (case-insensitive)
  */
 export function getCuratorProfile(address: string): CuratorProfile | null {
-  return CURATOR_PROFILES[address.toLowerCase()] || null;
+  return CURATOR_PROFILES[resolveCuratorAddress(address)] || null;
 }
 
 /**
  * Get curator news by address (case-insensitive)
  */
 export function getCuratorNews(address: string, limit?: number): CuratorNewsItem[] {
+  const resolved = resolveCuratorAddress(address);
   const news = CURATOR_NEWS
-    .filter((n) => n.curatorAddress.toLowerCase() === address.toLowerCase())
+    .filter((n) => n.curatorAddress.toLowerCase() === resolved)
     .sort((a, b) => b.publishedAt.getTime() - a.publishedAt.getTime());
 
   return limit ? news.slice(0, limit) : news;
@@ -374,7 +378,7 @@ export function getCuratorNews(address: string, limit?: number): CuratorNewsItem
  * Check if we have profile data for a curator
  */
 export function hasCuratorProfile(address: string): boolean {
-  return address.toLowerCase() in CURATOR_PROFILES;
+  return resolveCuratorAddress(address) in CURATOR_PROFILES;
 }
 
 /**
