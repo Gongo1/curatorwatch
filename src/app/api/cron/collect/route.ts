@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData } from "@/scripts/collect-data";
 
-export const maxDuration = 60; // Vercel Pro max
+export const maxDuration = 300; // 5 minutes for full collection with transactions
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
