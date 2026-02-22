@@ -239,53 +239,9 @@ function RiskBadge({
     overallScore: number;
   };
 }) {
-  if (!riskAssessment) {
-    return <span className="text-sm text-text-muted">-</span>;
-  }
-
-  const { overallRisk, overallScore } = riskAssessment;
-
-  const getRiskStyles = (risk: string) => {
-    switch (risk) {
-      case "Low Risk":
-        return {
-          bg: "bg-accent-green/15",
-          border: "border-accent-green/30",
-          text: "text-accent-green",
-          dot: "bg-accent-green",
-        };
-      case "Moderate Risk":
-        return {
-          bg: "bg-accent-yellow/15",
-          border: "border-accent-yellow/30",
-          text: "text-accent-yellow",
-          dot: "bg-accent-yellow",
-        };
-      case "High Risk":
-        return {
-          bg: "bg-accent-red/15",
-          border: "border-accent-red/30",
-          text: "text-accent-red",
-          dot: "bg-accent-red",
-        };
-      default:
-        return {
-          bg: "bg-background-elevated",
-          border: "border-border",
-          text: "text-text-secondary",
-          dot: "bg-text-muted",
-        };
-    }
-  };
-
-  const styles = getRiskStyles(overallRisk);
-  const label = overallRisk.replace(" Risk", "");
-
   return (
-    <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border ${styles.bg} ${styles.border}`}>
-      <div className={`w-1.5 h-1.5 rounded-full ${styles.dot}`} />
-      <span className={`text-xs font-medium ${styles.text}`}>{label}</span>
-      <span className={`text-xs ${styles.text} opacity-70`}>({overallScore})</span>
+    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-background-elevated">
+      <span className="text-xs font-medium text-text-muted">In Progress</span>
     </div>
   );
 }

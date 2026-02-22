@@ -616,22 +616,17 @@ export default function CuratorDetailPage({ params }: PageProps) {
                       </div>
                       <div className="bg-background-elevated rounded-lg p-4 text-center">
                         <p className="text-xs text-text-tertiary mb-1">Diversification</p>
-                        <p className={`text-2xl font-bold ${vaults.length >= 5 ? "text-accent-green" : vaults.length >= 3 ? "text-accent-yellow" : "text-accent-red"}`}>
-                          {vaults.length >= 5 ? "High" : vaults.length >= 3 ? "Medium" : "Low"}
+                        <p className="text-2xl font-bold text-text-muted">
+                          --
                         </p>
-                        <p className="text-xs text-text-muted">{vaults.length} vault{vaults.length !== 1 ? "s" : ""}</p>
+                        <p className="text-xs text-text-muted">In Progress</p>
                       </div>
                       <div className="bg-background-elevated rounded-lg p-4 text-center">
                         <p className="text-xs text-text-tertiary mb-1">Risk Grade</p>
-                        <p className={`text-2xl font-bold ${
-                          avgApy > 10 && vaults.length >= 3 ? "text-accent-green" :
-                          avgApy > 5 ? "text-accent-blue" : "text-accent-yellow"
-                        }`}>
-                          {avgApy > 10 && vaults.length >= 3 ? "A" :
-                           avgApy > 8 ? "B" :
-                           avgApy > 5 ? "C" : "D"}
+                        <p className="text-2xl font-bold text-text-muted">
+                          --
                         </p>
-                        <p className="text-xs text-text-muted">overall grade</p>
+                        <p className="text-xs text-text-muted">In Progress</p>
                       </div>
                     </div>
                   </div>

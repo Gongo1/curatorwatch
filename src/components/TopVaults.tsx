@@ -23,15 +23,9 @@ interface TopVault {
 }
 
 function RiskBadge({ risk }: { risk: string }) {
-  const config: Record<string, { color: string; bg: string; label: string }> = {
-    "Low Risk": { color: "text-accent-green", bg: "bg-accent-green/10", label: "Low" },
-    "Moderate Risk": { color: "text-accent-yellow", bg: "bg-accent-yellow/10", label: "Med" },
-    "High Risk": { color: "text-accent-red", bg: "bg-accent-red/10", label: "High" },
-  };
-  const { color, bg, label } = config[risk] || { color: "text-text-muted", bg: "bg-background-elevated", label: "N/A" };
   return (
-    <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${color} ${bg}`}>
-      {label}
+    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded text-text-muted bg-background-elevated">
+      In Progress
     </span>
   );
 }
