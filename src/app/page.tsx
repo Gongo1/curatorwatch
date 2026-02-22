@@ -374,17 +374,6 @@ export default function Home() {
               }
             />
             <StatCard
-              label="APY"
-              value={formatPercentage(stats.avgApy)}
-              tooltip="AUM-weighted Net APY across all vaults (after fees)"
-              valueClass="text-accent-green"
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              }
-            />
-            <StatCard
               label="Yield Paid (30d)"
               value={yieldStats ? formatCurrency(yieldStats.yield30d) : "-"}
               tooltip="Total yield generated for depositors over the past 30 days"
