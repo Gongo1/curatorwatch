@@ -22,10 +22,10 @@ export const CURATOR_ALIAS_GROUPS: CuratorAliasGroup[] = [
     curatorName: "KPK",
     primaryAddress: "0xc266b1181a80e84edc2c6596718e88e8115c1eaa",
     aliasAddresses: [
-      "0xee21e29237acf9e750a0625232a886e7bad47171",
-      "0xb0888577fa9ae5bcc3e57dcc5d2a10c9b5c3374a",
-      "0x79f54616fe18e92728ba22fba4e7d0febb1afa2d",
-      "0xe8a0eb7b71b9e352ac56d3e94f5fa804b02fd491",
+      "0xf8182e5827c06a47a985ec565a3bcd56437a97be",
+      "0x7e43df1c1c5a2245858b60d4655fda83704e4171",
+      "0xe5aec7d0e795456f90cebefba56470f0e5dfc075",
+      "0xd15f11b334e1e233127302e5f759c17da1260df5",
     ],
   },
   {
