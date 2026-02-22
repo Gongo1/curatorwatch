@@ -18,7 +18,7 @@ import {
 
 const CHAIN_ID = 1; // Ethereum mainnet
 const BATCH_SIZE = 100; // Vaults per API request
-const PARALLEL_BATCH_SIZE = 10; // Vaults processed in parallel
+const PARALLEL_BATCH_SIZE = 3; // Vaults processed in parallel
 const TRANSACTIONS_PER_VAULT = 50;
 const MIN_TVL_USD = 1000; // Skip vaults below $1000 TVL
 const API_DELAY_MS = 100; // Delay between API calls to respect rate limits

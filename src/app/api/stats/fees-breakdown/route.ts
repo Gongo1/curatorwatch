@@ -131,7 +131,8 @@ export async function GET() {
         ? (netApy + managementFee) / (1 - performanceFee)
         : netApy;
 
-      const grossYield = grossApy / 100;
+      // grossApy is already a decimal (e.g. 0.05 = 5%), no need to divide by 100
+      const grossYield = grossApy;
 
       // Calculate estimated fees for the period the vault has been active
       const estimatedManagementFees = tvl * managementFee * vaultAgeYears;

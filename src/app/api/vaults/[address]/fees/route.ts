@@ -55,7 +55,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     const performanceFee = vault.performanceFee || 0;
     const managementFee = vault.managementFee || 0;
     const grossApy = performanceFee > 0 ? apy / (1 - performanceFee) : apy;
-    const grossYield = grossApy / 100;
+    // grossApy is already a decimal (e.g. 0.05 = 5%), no need to divide by 100
+    const grossYield = grossApy;
 
     // Calculate estimated fees
     // Management fees: TVL × managementFee × time

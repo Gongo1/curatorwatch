@@ -48,8 +48,9 @@ export async function GET() {
       const operatingYears = Math.min(vaultAge, 1);
 
       // Estimated gross APY (before fees)
+      // apy is already a decimal (e.g. 0.05 = 5%), no need to divide by 100
       const grossApy = performanceFee > 0 ? apy / (1 - performanceFee) : apy;
-      const grossYield = grossApy / 100;
+      const grossYield = grossApy;
 
       // Calculate estimated fees for period
       const estimatedManagementFees = tvl * managementFee * operatingYears;
