@@ -222,6 +222,9 @@ export default function VaultsPage() {
               </a>
             </p>
             <div className="flex items-center gap-4 text-sm text-text-tertiary">
+              <Link href="/changelog" className="text-text-tertiary hover:text-text-primary transition-colors">
+                Changelog
+              </Link>
               <a
                 href="https://x.com/curator_watch"
                 target="_blank"

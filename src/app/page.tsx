@@ -649,6 +649,9 @@ export default function Home() {
               {" "}• Updated hourly
             </p>
             <div className="flex items-center gap-3">
+              <Link href="/changelog" className="text-text-tertiary hover:text-text-primary transition-colors">
+                Changelog
+              </Link>
               <a
                 href="https://x.com/curator_watch"
                 target="_blank"
