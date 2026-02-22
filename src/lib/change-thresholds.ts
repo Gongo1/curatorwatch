@@ -5,10 +5,12 @@
  * Each alert represents a statistically significant event (<5% frequency)
  */
 
-// The only 4 alert types we track
+// Alert types we track
 export const ALERT_TYPES = {
   APY_CHANGE: "APY_CHANGE",               // Yield volatility
-  LARGE_FLOW: "LARGE_FLOW",               // Capital movement
+  LARGE_FLOW: "LARGE_FLOW",               // Capital movement (legacy)
+  LARGE_DEPOSIT: "LARGE_DEPOSIT",         // Capital inflow (positive)
+  LARGE_WITHDRAWAL: "LARGE_WITHDRAWAL",   // Capital outflow (warning)
   VAULT_LAUNCH: "VAULT_LAUNCH",           // New vault
   VAULT_SHUTDOWN: "VAULT_SHUTDOWN",       // Vault closing
   CONCENTRATION_SPIKE: "CONCENTRATION_SPIKE", // Risk regime change
@@ -72,6 +74,18 @@ export const ALERT_METADATA: Record<
     color: "green",
     description:
       "Deposits/withdrawals exceeding 10% of vault TVL. These represent the top 5% largest transactions.",
+  },
+  LARGE_DEPOSIT: {
+    label: "Capital Inflow",
+    color: "green",
+    description:
+      "Significant deposits exceeding 10% of vault TVL. These represent strong capital inflows.",
+  },
+  LARGE_WITHDRAWAL: {
+    label: "Large Withdrawal",
+    color: "red",
+    description:
+      "Withdrawals exceeding 10% of vault TVL. These may indicate changing investor sentiment.",
   },
   VAULT_LAUNCH: {
     label: "Vault Launch",

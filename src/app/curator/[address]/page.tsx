@@ -232,7 +232,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
             value={vaults.length.toString()}
           />
           <StatCard
-            label="Avg APY"
+            label="APY"
             value={formatPercentage(avgApy)}
             valueClass="text-accent-green"
           />
@@ -488,7 +488,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                   <p className="text-xl font-semibold text-accent-blue tabular-nums">{formatCurrency(totalTVL)}</p>
                 </div>
                 <div className="bg-background-subtle rounded-lg border border-border p-4">
-                  <p className="text-xs text-text-tertiary mb-1">Weighted Avg APY</p>
+                  <p className="text-xs text-text-tertiary mb-1">Weighted APY</p>
                   <p className="text-xl font-semibold text-accent-green tabular-nums">{formatPercentage(avgApy)}</p>
                 </div>
                 <div className="bg-background-subtle rounded-lg border border-border p-4">
@@ -574,7 +574,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                             <span className="text-sm font-semibold text-text-primary tabular-nums">{formatPercentage(maxApy - minApy)}</span>
                           </div>
                           <div className="flex justify-between items-center py-2">
-                            <span className="text-sm text-text-tertiary">Weighted Avg APY</span>
+                            <span className="text-sm text-text-tertiary">Weighted APY</span>
                             <span className="text-sm font-semibold text-accent-blue tabular-nums">{formatPercentage(avgApy)}</span>
                           </div>
                         </>

@@ -212,12 +212,18 @@ async function detectLargeFlows(
 
     const pctOfTVL = (txSize / currentTVL) * 100;
     const txType = tx.type || "Transaction";
+    const isDeposit = txType.toLowerCase().includes("deposit");
 
-    // Check if we already alerted on this transaction
+    // Determine alert type based on deposit vs withdrawal
+    const alertType = isDeposit
+      ? ALERT_TYPES.LARGE_DEPOSIT
+      : ALERT_TYPES.LARGE_WITHDRAWAL;
+
+    // Check if we already alerted on this transaction (check both old and new types)
     const existingAlert = await prisma.vaultChange.findFirst({
       where: {
         vaultId: vault.id,
-        changeType: ALERT_TYPES.LARGE_FLOW,
+        changeType: { in: [ALERT_TYPES.LARGE_FLOW, alertType] },
         metadata: {
           path: ["txHash"],
           equals: tx.txHash,
@@ -227,40 +233,80 @@ async function detectLargeFlows(
 
     if (existingAlert) continue;
 
-    if (pctOfTVL > THRESHOLDS.LARGE_FLOW.CRITICAL) {
-      alerts.push({
-        vaultId: vault.id,
-        changeType: ALERT_TYPES.LARGE_FLOW,
-        severity: "critical",
-        title: `Major ${txType}: ${formatCurrency(txSize)}`,
-        description: `${txType} of ${formatCurrency(txSize)} (${pctOfTVL.toFixed(1)}% of vault TVL). Transactions this large happen <2% of the time.`,
-        oldValue: undefined,
-        newValue: formatCurrency(txSize),
-        detectedAt: tx.timestamp,
-        metadata: {
-          txHash: tx.txHash,
-          pctOfTVL,
-          type: txType,
-          amount: txSize,
-        },
-      });
-    } else if (pctOfTVL > THRESHOLDS.LARGE_FLOW.WARNING) {
-      alerts.push({
-        vaultId: vault.id,
-        changeType: ALERT_TYPES.LARGE_FLOW,
-        severity: "warning",
-        title: `Large ${txType}: ${formatCurrency(txSize)}`,
-        description: `${txType} representing ${pctOfTVL.toFixed(1)}% of vault TVL in ${vault.name}.`,
-        oldValue: undefined,
-        newValue: formatCurrency(txSize),
-        detectedAt: tx.timestamp,
-        metadata: {
-          txHash: tx.txHash,
-          pctOfTVL,
-          type: txType,
-          amount: txSize,
-        },
-      });
+    if (isDeposit) {
+      // Deposits use "info" severity with positive language
+      if (pctOfTVL > THRESHOLDS.LARGE_FLOW.CRITICAL) {
+        alerts.push({
+          vaultId: vault.id,
+          changeType: ALERT_TYPES.LARGE_DEPOSIT,
+          severity: "info",
+          title: `Significant deposit: ${formatCurrency(txSize)}`,
+          description: `Capital inflow of ${formatCurrency(txSize)} (${pctOfTVL.toFixed(1)}% of vault TVL) into ${vault.name}. Strong growth signal.`,
+          oldValue: undefined,
+          newValue: formatCurrency(txSize),
+          detectedAt: tx.timestamp,
+          metadata: {
+            txHash: tx.txHash,
+            pctOfTVL,
+            type: txType,
+            amount: txSize,
+          },
+        });
+      } else if (pctOfTVL > THRESHOLDS.LARGE_FLOW.WARNING) {
+        alerts.push({
+          vaultId: vault.id,
+          changeType: ALERT_TYPES.LARGE_DEPOSIT,
+          severity: "info",
+          title: `Capital inflow: ${formatCurrency(txSize)}`,
+          description: `Deposit of ${formatCurrency(txSize)} (${pctOfTVL.toFixed(1)}% of vault TVL) into ${vault.name}.`,
+          oldValue: undefined,
+          newValue: formatCurrency(txSize),
+          detectedAt: tx.timestamp,
+          metadata: {
+            txHash: tx.txHash,
+            pctOfTVL,
+            type: txType,
+            amount: txSize,
+          },
+        });
+      }
+    } else {
+      // Withdrawals keep warning/critical severity
+      if (pctOfTVL > THRESHOLDS.LARGE_FLOW.CRITICAL) {
+        alerts.push({
+          vaultId: vault.id,
+          changeType: ALERT_TYPES.LARGE_WITHDRAWAL,
+          severity: "critical",
+          title: `Major withdrawal: ${formatCurrency(txSize)}`,
+          description: `Withdrawal of ${formatCurrency(txSize)} (${pctOfTVL.toFixed(1)}% of vault TVL). Transactions this large happen <2% of the time.`,
+          oldValue: undefined,
+          newValue: formatCurrency(txSize),
+          detectedAt: tx.timestamp,
+          metadata: {
+            txHash: tx.txHash,
+            pctOfTVL,
+            type: txType,
+            amount: txSize,
+          },
+        });
+      } else if (pctOfTVL > THRESHOLDS.LARGE_FLOW.WARNING) {
+        alerts.push({
+          vaultId: vault.id,
+          changeType: ALERT_TYPES.LARGE_WITHDRAWAL,
+          severity: "warning",
+          title: `Large withdrawal: ${formatCurrency(txSize)}`,
+          description: `Withdrawal of ${formatCurrency(txSize)} (${pctOfTVL.toFixed(1)}% of vault TVL) from ${vault.name}.`,
+          oldValue: undefined,
+          newValue: formatCurrency(txSize),
+          detectedAt: tx.timestamp,
+          metadata: {
+            txHash: tx.txHash,
+            pctOfTVL,
+            type: txType,
+            amount: txSize,
+          },
+        });
+      }
     }
   }
 

@@ -124,7 +124,7 @@ export function CuratorTable({ curators }: CuratorTableProps) {
               <HeaderCell field="name">Curator</HeaderCell>
               <HeaderCell field="aum" align="right">Total AUM</HeaderCell>
               <HeaderCell field="vaults" align="right"># Vaults</HeaderCell>
-              <HeaderCell field="apy" align="right">Avg APY</HeaderCell>
+              <HeaderCell field="apy" align="right">APY</HeaderCell>
               <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-left">
                 Assets
               </th>
@@ -176,7 +176,7 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                   </span>
                 </td>
 
-                {/* Avg APY */}
+                {/* APY */}
                 <td className="px-4 py-4 whitespace-nowrap text-right">
                   <span className="text-sm font-medium text-accent-green tabular-nums">
                     {formatPercentage(curator.avgNetApy)}
@@ -322,7 +322,7 @@ export function CuratorTableSkeleton() {
         <table className="min-w-full">
           <thead className="bg-background-elevated border-b border-border">
             <tr>
-              {["Curator", "Total AUM", "# Vaults", "Avg APY", "Assets", "Grade", "30d Change"].map((header) => (
+              {["Curator", "Total AUM", "# Vaults", "APY", "Assets", "Grade", "30d Change"].map((header) => (
                 <th key={header} className="px-4 py-3 text-left">
                   <div className="h-3 w-16 bg-background-elevated rounded" />
                 </th>

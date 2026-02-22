@@ -374,9 +374,9 @@ export default function Home() {
               }
             />
             <StatCard
-              label="Avg APY"
+              label="APY"
               value={formatPercentage(stats.avgApy)}
-              tooltip="AUM-weighted average Net APY across all vaults (after fees)"
+              tooltip="AUM-weighted Net APY across all vaults (after fees)"
               valueClass="text-accent-green"
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

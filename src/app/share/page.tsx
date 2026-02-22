@@ -107,7 +107,7 @@ export default function SharePage() {
                   value={stats?.totalCurators?.toString() || "0"}
                 />
                 <StatBox
-                  label="Avg Net APY"
+                  label="Net APY"
                   value={formatPercentage(stats?.avgApy || 0)}
                   valueColor="text-emerald-400"
                 />
@@ -255,7 +255,7 @@ export default function SharePage() {
                   <p className="text-white text-2xl font-bold">{formatCurrency(stats?.totalAUM || 0)}</p>
                 </div>
                 <div className="px-6 py-4 bg-white/5 rounded-xl border border-white/10">
-                  <p className="text-neutral-400 text-sm mb-1">Avg APY</p>
+                  <p className="text-neutral-400 text-sm mb-1">APY</p>
                   <p className="text-emerald-400 text-2xl font-bold">{formatPercentage(stats?.avgApy || 0)}</p>
                 </div>
                 <div className="px-6 py-4 bg-white/5 rounded-xl border border-white/10">

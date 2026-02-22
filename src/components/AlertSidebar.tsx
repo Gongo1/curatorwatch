@@ -39,7 +39,15 @@ interface ChangesResponse {
   };
 }
 
-function getSeverityColor(severity: string) {
+function isDepositChange(change: ChangesResponse["data"]["changes"][0]) {
+  return (
+    change.changeType === "LARGE_DEPOSIT" ||
+    (change.changeType === "LARGE_FLOW" && change.metadata?.type?.toString().toLowerCase().includes("deposit"))
+  );
+}
+
+function getSeverityColor(severity: string, change?: ChangesResponse["data"]["changes"][0]) {
+  if (change && isDepositChange(change)) return "text-green-400";
   switch (severity) {
     case "critical":
       return "text-red-400";
@@ -50,7 +58,8 @@ function getSeverityColor(severity: string) {
   }
 }
 
-function getSeverityDot(severity: string) {
+function getSeverityDot(severity: string, change?: ChangesResponse["data"]["changes"][0]) {
+  if (change && isDepositChange(change)) return "bg-green-500";
   switch (severity) {
     case "critical":
       return "bg-red-500";
@@ -80,12 +89,20 @@ function formatAlertTitle(change: ChangesResponse["data"]["changes"][0]): string
   switch (change.changeType) {
     case "APY_CHANGE":
       return "APY";
+    case "LARGE_DEPOSIT":
+      return "IN";
+    case "LARGE_WITHDRAWAL":
+      return "OUT";
     case "LARGE_FLOW":
-      return "FLOW";
+      return isDepositChange(change) ? "IN" : "OUT";
     case "CONCENTRATION_CHANGE":
+    case "CONCENTRATION_SPIKE":
       return "CONC";
     case "NEW_VAULT":
+    case "VAULT_LAUNCH":
       return "NEW";
+    case "VAULT_SHUTDOWN":
+      return "END";
     default:
       return change.changeType.slice(0, 4);
   }
@@ -188,14 +205,14 @@ export function AlertSidebar() {
                   <span className="text-[9px] font-mono text-gray-600">
                     {formatTimeAgo(new Date(alert.detectedAt))}
                   </span>
-                  <span className={`text-[9px] font-mono font-bold ${getSeverityColor(alert.severity)}`}>
+                  <span className={`text-[9px] font-mono font-bold ${getSeverityColor(alert.severity, alert)}`}>
                     {formatAlertTitle(alert)}
                   </span>
                 </div>
 
                 {/* Content */}
                 <div className="flex items-start gap-1">
-                  <span className={`w-1 h-1 rounded-full mt-1 flex-shrink-0 ${getSeverityDot(alert.severity)}`} />
+                  <span className={`w-1 h-1 rounded-full mt-1 flex-shrink-0 ${getSeverityDot(alert.severity, alert)}`} />
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] text-gray-300 font-mono truncate leading-tight">
                       {alert.vault?.symbol || alert.vault?.name?.slice(0, 12)}
@@ -204,7 +221,7 @@ export function AlertSidebar() {
                       {alert.title?.slice(0, 20) || "Alert"}
                     </div>
                   </div>
-                  <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${getSeverityColor(alert.severity)}`}>
+                  <span className={`text-[10px] font-mono font-bold flex-shrink-0 ${getSeverityColor(alert.severity, alert)}`}>
                     {alert.newValue || ""}
                   </span>
                 </div>

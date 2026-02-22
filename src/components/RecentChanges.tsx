@@ -62,7 +62,15 @@ export function RecentChanges({
     }
   }
 
-  const getSeverityDot = (severity: Change["severity"]) => {
+  const isDepositChange = (change: Change) =>
+    change.changeType === "LARGE_DEPOSIT" ||
+    (change.changeType === "LARGE_FLOW" && change.metadata?.type?.toString().toLowerCase().includes("deposit"));
+
+  const getSeverityDot = (change: Change) => {
+    if (isDepositChange(change)) {
+      return <span className="w-2 h-2 rounded-full bg-accent-green flex-shrink-0" />;
+    }
+
     const colors = {
       critical: "bg-accent-red",
       warning: "bg-accent-yellow",
@@ -71,12 +79,20 @@ export function RecentChanges({
 
     return (
       <span
-        className={`w-2 h-2 rounded-full ${colors[severity]} flex-shrink-0`}
+        className={`w-2 h-2 rounded-full ${colors[change.severity]} flex-shrink-0`}
       />
     );
   };
 
-  const getSeverityBadge = (severity: Change["severity"]) => {
+  const getSeverityBadge = (change: Change) => {
+    if (isDepositChange(change)) {
+      return (
+        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/30">
+          activity
+        </span>
+      );
+    }
+
     const classes = {
       critical: "bg-accent-red/15 text-accent-red border border-accent-red/30",
       warning: "bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/30",
@@ -85,9 +101,9 @@ export function RecentChanges({
 
     return (
       <span
-        className={`px-1.5 py-0.5 rounded text-xs font-medium ${classes[severity]}`}
+        className={`px-1.5 py-0.5 rounded text-xs font-medium ${classes[change.severity]}`}
       >
-        {severity}
+        {change.severity}
       </span>
     );
   };
@@ -145,7 +161,7 @@ export function RecentChanges({
       <div className="space-y-2">
         {changes.map((change) => (
           <div key={change.id} className="flex items-center gap-2">
-            {getSeverityDot(change.severity)}
+            {getSeverityDot(change)}
             <span className="text-sm text-text-primary truncate flex-1">
               {change.title}
             </span>
@@ -163,7 +179,7 @@ export function RecentChanges({
       {changes.map((change) => (
         <div key={change.id} className="py-3 first:pt-0 last:pb-0">
           <div className="flex items-start gap-3">
-            <div className="mt-1">{getSeverityDot(change.severity)}</div>
+            <div className="mt-1">{getSeverityDot(change)}</div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 {showVaultName && change.vault && (
@@ -174,7 +190,7 @@ export function RecentChanges({
                     {change.vault.name}
                   </Link>
                 )}
-                {getSeverityBadge(change.severity)}
+                {getSeverityBadge(change)}
               </div>
               <p className="text-sm font-medium text-text-primary mt-1">{change.title}</p>
               <p className="text-xs text-text-secondary mt-0.5">{change.description}</p>

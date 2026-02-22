@@ -51,7 +51,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
         </p>
         {payload.map((entry, index) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.dataKey === "aum" ? "Total AUM: " : "Avg APY: "}
+            {entry.dataKey === "aum" ? "Total AUM: " : "APY: "}
             <span className="font-semibold">
               {entry.dataKey === "aum"
                 ? formatCurrency(entry.value)
@@ -187,7 +187,7 @@ export function AUMGrowthChart() {
               wrapperStyle={{ paddingTop: "10px" }}
               formatter={(value) => (
                 <span className="text-xs text-text-secondary">
-                  {value === "aum" ? "Total AUM" : "Avg APY"}
+                  {value === "aum" ? "Total AUM" : "APY"}
                 </span>
               )}
             />

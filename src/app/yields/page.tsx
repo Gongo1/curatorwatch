@@ -154,7 +154,7 @@ export default function YieldsPage() {
               subtext="Earned per day"
             />
             <SummaryCard
-              label="Avg Net APY"
+              label="Net APY"
               value={`${summary.avgNetApy.toFixed(2)}%`}
               subtext={`Across ${summary.totalVaults} vaults`}
               valueColor="text-accent-green"
@@ -247,7 +247,7 @@ export default function YieldsPage() {
                       Vaults
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Avg Net APY
+                      Net APY
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
                       {timeFrameLabels[timeFrame]} Yield

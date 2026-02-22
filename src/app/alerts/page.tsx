@@ -110,8 +110,33 @@ export default function AlertsPage() {
     }
   }
 
-  const getSeverityIcon = (severity: Alert["severity"]) => {
-    switch (severity) {
+  const isDepositAlert = (alert: Alert) =>
+    alert.changeType === "LARGE_DEPOSIT" ||
+    (alert.changeType === "LARGE_FLOW" && alert.metadata?.type?.toString().toLowerCase().includes("deposit"));
+
+  const getSeverityIcon = (alert: Alert) => {
+    // Deposits always get green icon
+    if (isDepositAlert(alert)) {
+      return (
+        <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-green/15">
+          <svg
+            className="w-5 h-5 text-accent-green"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            />
+          </svg>
+        </span>
+      );
+    }
+
+    switch (alert.severity) {
       case "critical":
         return (
           <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-red/15">
@@ -170,7 +195,16 @@ export default function AlertsPage() {
     }
   };
 
-  const getSeverityBadge = (severity: Alert["severity"]) => {
+  const getSeverityBadge = (alert: Alert) => {
+    // Deposits get a green "Activity" badge
+    if (isDepositAlert(alert)) {
+      return (
+        <span className="px-2 py-0.5 rounded text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/30">
+          Activity
+        </span>
+      );
+    }
+
     const classes = {
       critical: "bg-accent-red/15 text-accent-red border border-accent-red/30",
       warning: "bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/30",
@@ -185,9 +219,9 @@ export default function AlertsPage() {
 
     return (
       <span
-        className={`px-2 py-0.5 rounded text-xs font-medium ${classes[severity]}`}
+        className={`px-2 py-0.5 rounded text-xs font-medium ${classes[alert.severity]}`}
       >
-        {labels[severity]}
+        {labels[alert.severity]}
       </span>
     );
   };
@@ -271,10 +305,10 @@ export default function AlertsPage() {
             </div>
 
             <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
-              <h3 className="font-medium text-accent-green text-sm mb-1.5">Large Flows</h3>
+              <h3 className="font-medium text-accent-green text-sm mb-1.5">Capital Flows</h3>
               <p className="text-xs text-text-tertiary leading-relaxed">
-                Deposits/withdrawals exceeding 10% of vault deposits. These represent the
-                top 5% largest transactions.
+                Deposits (green) and withdrawals (red/orange) exceeding 10% of vault TVL.
+                Deposits signal growth; large withdrawals may need attention.
               </p>
             </div>
 
@@ -385,7 +419,7 @@ export default function AlertsPage() {
                 key={alert.id}
                 className="flex items-start gap-4 p-4 hover:bg-background-hover transition-colors"
               >
-                {getSeverityIcon(alert.severity)}
+                {getSeverityIcon(alert)}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Link
@@ -394,7 +428,7 @@ export default function AlertsPage() {
                     >
                       {alert.vault.name}
                     </Link>
-                    {getSeverityBadge(alert.severity)}
+                    {getSeverityBadge(alert)}
                     <span className="text-xs text-text-muted font-mono">
                       {alert.vault.address.slice(0, 6)}...{alert.vault.address.slice(-4)}
                     </span>
