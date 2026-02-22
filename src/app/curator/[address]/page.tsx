@@ -631,7 +631,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                            avgApy > 8 ? "B" :
                            avgApy > 5 ? "C" : "D"}
                         </p>
-                        <p className="text-xs text-text-muted">overall rating</p>
+                        <p className="text-xs text-text-muted">overall grade</p>
                       </div>
                     </div>
                   </div>

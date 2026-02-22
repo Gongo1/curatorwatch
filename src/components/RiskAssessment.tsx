@@ -15,73 +15,31 @@ interface RiskAssessmentCardProps {
 }
 
 export function RiskAssessmentCard({ assessment, compact = false }: RiskAssessmentCardProps) {
-  const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
-  const overallColors = getRiskLevelColors(assessment.overallRisk);
-
   if (compact) {
     return <CompactRiskBadge assessment={assessment} />;
   }
 
   return (
     <div className="space-y-4">
-      {/* Overall Risk Summary */}
-      <div className={`p-5 rounded-xl border ${overallColors.bg} ${overallColors.border}`}>
+      {/* Overall Risk Summary - In Progress */}
+      <div className="p-5 rounded-xl border border-border bg-background-subtle">
         <div className="flex items-center justify-between mb-3">
           <div>
             <h3 className="text-base font-semibold text-text-primary">
               Institutional Risk Assessment
             </h3>
             <p className="text-xs text-text-tertiary mt-0.5">
-              Based on 5 risk categories • Updated {formatTimeAgo(assessment.lastUpdated)}
+              Risk assessment methodology is being refined
             </p>
           </div>
-          <div className={`px-3 py-1.5 rounded-lg border font-semibold text-sm ${overallColors.badge}`}>
-            {assessment.overallRisk}
+          <div className="px-3 py-1.5 rounded-lg border border-border bg-background-elevated font-semibold text-sm text-text-muted">
+            In Progress
           </div>
         </div>
 
-        {/* Score Bar */}
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs mb-1.5">
-            <span className="text-text-tertiary">Risk Score</span>
-            <span className={`font-medium ${overallColors.text}`}>
-              {assessment.overallScore}/100
-            </span>
-          </div>
-          <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-            <div
-              className={`h-full transition-all duration-500 ${getScoreBarColor(assessment.overallScore)}`}
-              style={{ width: `${assessment.overallScore}%` }}
-            />
-          </div>
-          <div className="flex justify-between text-[10px] text-text-muted mt-1">
-            <span>High Risk</span>
-            <span>Low Risk</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Category Breakdown */}
-      <div className="grid grid-cols-1 gap-3">
-        {(Object.entries(assessment.categories) as [keyof typeof assessment.categories, RiskCategory][]).map(
-          ([key, category]) => (
-            <RiskCategoryCard
-              key={key}
-              categoryKey={key}
-              category={category}
-              expanded={expandedCategory === key}
-              onToggle={() => setExpandedCategory(expandedCategory === key ? null : key)}
-            />
-          )
-        )}
-      </div>
-
-      {/* Methodology Note */}
-      <div className="p-3 rounded-lg bg-background-elevated border border-border-subtle">
-        <p className="text-xs text-text-tertiary leading-relaxed">
-          <span className="font-medium text-text-secondary">Methodology:</span> Risk assessment based on
-          institutional due diligence frameworks and historical DeFi failure modes (Rari, Cream, Inverse, Celsius).
-          Categories weighted: Smart Contract 25%, Oracle 20%, Collateral 20%, Operational 20%, LLTV 15%.
+        <p className="text-sm text-text-tertiary mt-2">
+          We are developing our institutional risk assessment framework to provide accurate,
+          actionable risk grades for each vault. This will be available soon.
         </p>
       </div>
     </div>
@@ -180,13 +138,9 @@ function RiskCategoryCard({ categoryKey, category, expanded, onToggle }: RiskCat
  * Compact badge for use in tables/lists
  */
 export function CompactRiskBadge({ assessment }: { assessment: RiskAssessment }) {
-  const colors = getRiskLevelColors(assessment.overallRisk);
-
   return (
-    <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border ${colors.badge}`}>
-      <div className={`w-2 h-2 rounded-full ${colors.text.replace("text-", "bg-")}`} />
-      <span className="text-xs font-medium">{assessment.overallRisk.replace(" Risk", "")}</span>
-      <span className="text-xs opacity-70">({assessment.overallScore})</span>
+    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-border bg-background-elevated">
+      <span className="text-xs font-medium text-text-muted">In Progress</span>
     </div>
   );
 }
@@ -195,13 +149,11 @@ export function CompactRiskBadge({ assessment }: { assessment: RiskAssessment })
  * Mini risk indicator for compact displays
  */
 export function RiskIndicator({ level, score }: { level: RiskLevel; score: number }) {
-  const colors = getRiskLevelColors(level);
-
   return (
     <div className="flex items-center gap-1.5">
-      <div className={`w-2 h-2 rounded-full ${colors.text.replace("text-", "bg-")}`} />
-      <span className={`text-xs font-medium ${colors.text}`}>
-        {level.replace(" Risk", "")}
+      <div className="w-2 h-2 rounded-full bg-text-muted" />
+      <span className="text-xs font-medium text-text-muted">
+        In Progress
       </span>
     </div>
   );

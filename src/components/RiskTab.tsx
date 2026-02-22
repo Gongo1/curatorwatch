@@ -101,39 +101,12 @@ export function RiskTab({ vaultAddress, riskAssessment }: RiskTabProps) {
   const getScoreBadge = (
     score: string
   ): { color: string; bgColor: string; borderColor: string; label: string } => {
-    switch (score.toLowerCase()) {
-      case "low":
-      case "good":
-        return {
-          color: "text-accent-green",
-          bgColor: "bg-accent-green/15",
-          borderColor: "border-accent-green/30",
-          label: score === "low" ? "Low Risk" : "Good",
-        };
-      case "medium":
-      case "moderate":
-        return {
-          color: "text-accent-yellow",
-          bgColor: "bg-accent-yellow/15",
-          borderColor: "border-accent-yellow/30",
-          label: "Moderate",
-        };
-      case "high":
-      case "poor":
-        return {
-          color: "text-accent-red",
-          bgColor: "bg-accent-red/15",
-          borderColor: "border-accent-red/30",
-          label: score === "high" ? "High Risk" : "Poor",
-        };
-      default:
-        return {
-          color: "text-text-secondary",
-          bgColor: "bg-background-elevated",
-          borderColor: "border-border",
-          label: "Unknown",
-        };
-    }
+    return {
+      color: "text-text-muted",
+      bgColor: "bg-background-elevated",
+      borderColor: "border-border",
+      label: "In Progress",
+    };
   };
 
   // Convert API response to RiskAssessment format expected by component

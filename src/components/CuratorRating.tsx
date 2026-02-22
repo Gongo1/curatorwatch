@@ -46,11 +46,21 @@ export function CuratorRating({ curatorAddress, rating: initialRating, compact =
 
   if (error || !rating) {
     if (compact) {
-      return <span className="text-[10px] text-text-muted">-</span>;
+      return <span className="text-[10px] font-medium text-text-muted">In Progress</span>;
     }
     return (
-      <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 text-center text-sm">
-        <p className="text-accent-red">{error || "Rating not available"}</p>
+      <div className="rounded-xl border-2 border-border p-6 bg-background-subtle">
+        <div className="flex items-baseline gap-4 mb-4">
+          <span className="text-4xl font-bold text-text-muted">--</span>
+          <div>
+            <div className="text-xl font-semibold text-text-muted">In Progress</div>
+            <div className="text-sm text-text-tertiary">Curator grade is being developed</div>
+          </div>
+        </div>
+        <p className="text-sm text-text-tertiary">
+          We are refining our grading methodology to provide accurate, institutional-quality curator assessments.
+          Grades will be available soon.
+        </p>
       </div>
     );
   }
@@ -64,105 +74,39 @@ export function CuratorRating({ curatorAddress, rating: initialRating, compact =
 
 // Compact badge - minimal subscript
 function CompactRating({ rating }: { rating: CuratorRiskRating }) {
-  const tierColor = getTierColor(rating.tier);
-
   return (
-    <span
-      className="text-[10px] font-semibold"
-      style={{ color: tierColor }}
-    >
-      {rating.tier}
+    <span className="text-[10px] font-medium text-text-muted">
+      In Progress
     </span>
   );
 }
 
-// Full rating display
+// Full grade display - currently in progress
 function FullRating({ rating }: { rating: CuratorRiskRating }) {
-  const tierColor = getTierColor(rating.tier);
-  const tierDescription = getTierDescription(rating.tier);
-
   return (
     <div className="space-y-6">
-      {/* Rating Header */}
-      <div
-        className="rounded-xl border-2 p-6"
-        style={{
-          background: `linear-gradient(135deg, ${tierColor}10 0%, ${tierColor}05 100%)`,
-          borderColor: `${tierColor}40`
-        }}
-      >
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+      {/* Grade Header */}
+      <div className="rounded-xl border-2 border-border p-6 bg-background-subtle">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div className="flex items-baseline gap-4">
-            <span
-              className="text-6xl font-bold"
-              style={{ color: tierColor }}
-            >
-              {rating.tier}
+            <span className="text-4xl font-bold text-text-muted">
+              --
             </span>
             <div>
-              <div className="text-2xl font-semibold text-text-primary">
-                {rating.score}/100
+              <div className="text-xl font-semibold text-text-muted">
+                In Progress
               </div>
               <div className="text-sm text-text-tertiary">
-                Top {100 - rating.percentileRank}% of curators
+                Curator grade is being developed
               </div>
-            </div>
-          </div>
-
-          <div className="text-left sm:text-right">
-            <div className="text-sm text-text-tertiary">Tier Classification</div>
-            <div
-              className="text-lg font-semibold"
-              style={{ color: tierColor }}
-            >
-              {tierDescription}
             </div>
           </div>
         </div>
 
         <p className="text-sm text-text-tertiary">
-          {rating.methodology}
+          We are refining our grading methodology to provide accurate, institutional-quality curator assessments.
+          Grades will be available soon.
         </p>
-      </div>
-
-      {/* Red Flags */}
-      {rating.redFlags.length > 0 && (
-        <div className="bg-accent-red/5 border border-accent-red/20 rounded-lg p-5">
-          <h4 className="font-semibold text-accent-red mb-4 flex items-center gap-2">
-            <AlertTriangleIcon className="w-5 h-5" />
-            Risk Flags ({rating.redFlags.length})
-          </h4>
-          <ul className="space-y-3">
-            {rating.redFlags.map((flag, i) => (
-              <RedFlagItem key={i} flag={flag} />
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Green Flags */}
-      {rating.greenFlags.length > 0 && (
-        <div className="bg-accent-green/5 border border-accent-green/20 rounded-lg p-5">
-          <h4 className="font-semibold text-accent-green mb-4 flex items-center gap-2">
-            <CheckCircleIcon className="w-5 h-5" />
-            Strengths ({rating.greenFlags.length})
-          </h4>
-          <ul className="space-y-3">
-            {rating.greenFlags.map((flag, i) => (
-              <GreenFlagItem key={i} flag={flag} />
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Stream Finance Lesson */}
-      <div className="p-4 bg-accent-yellow/5 rounded-lg border-l-4 border-accent-yellow">
-        <div className="text-sm text-text-secondary">
-          <strong className="text-accent-yellow">Lesson from Stream Finance Collapse (Nov 2025):</strong>{" "}
-          $285M in bad debt spread across curators who accepted synthetic xUSD without proper due diligence.
-          Steakhouse Financial survived with zero exposure due to conservative collateral standards.
-          This rating system encodes those failure patterns.
-        </div>
       </div>
     </div>
   );
