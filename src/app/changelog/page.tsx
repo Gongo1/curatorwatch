@@ -24,6 +24,10 @@ const entries: ChangelogEntry[] = [
     date: "February 22, 2026",
     items: [
       {
+        category: "Feature",
+        text: "Added changelog page accessible from the top navigation bar",
+      },
+      {
         category: "Fix",
         text: 'Corrected fee calculations \u2014 Morpho and curator fee estimates were displaying significantly lower than actual values',
       },
