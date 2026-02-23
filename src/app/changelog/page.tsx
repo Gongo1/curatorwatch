@@ -24,6 +24,10 @@ const entries: ChangelogEntry[] = [
     date: "February 22, 2026",
     items: [
       {
+        category: "Fix",
+        text: "Fixed AUM chart showing an 18% drop caused by a partial data collection \u2014 a database connection failure resulted in only 4 of 75 vaults being snapshotted, skewing the daily aggregate",
+      },
+      {
         category: "Improvement",
         text: "Removed misleading curator-level APY \u2014 averaging APY across different asset types and risk profiles was meaningless. APY is now only shown at the vault level where it\u2019s accurate",
       },
