@@ -24,6 +24,14 @@ const entries: ChangelogEntry[] = [
     date: "February 22, 2026",
     items: [
       {
+        category: "Improvement",
+        text: "Removed misleading curator-level APY \u2014 averaging APY across different asset types and risk profiles was meaningless. APY is now only shown at the vault level where it\u2019s accurate",
+      },
+      {
+        category: "Improvement",
+        text: "Vaults on curator detail pages are now grouped by asset type (USDC, WETH, etc.) so each vault\u2019s APY is shown in proper context",
+      },
+      {
         category: "Feature",
         text: "Added changelog page accessible from the top navigation bar",
       },
