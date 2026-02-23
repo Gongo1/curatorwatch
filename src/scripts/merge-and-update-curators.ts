@@ -445,7 +445,7 @@ async function splitVaultOverrides() {
     }
 
     // Find or create the target curator
-    const slugAddress = profileKey.replace(/\s+/g, "-");
+    const slugAddress = profileKey.replace(/\s+/g, "");
     const legacyAddress = `override-${profileKey}`;
     let targetCurator = await prisma.curator.findFirst({
       where: {
