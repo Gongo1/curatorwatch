@@ -61,7 +61,7 @@ interface CuratorWithVaults extends CuratorYieldData {
 type ViewMode = "curators" | "vaults";
 type TimeFrame = "daily" | "weekly" | "monthly" | "annualized";
 type SortDir = "asc" | "desc";
-type CuratorSortKey = "name" | "vaults" | "yieldRange" | "avgFee" | "yield";
+type CuratorSortKey = "name" | "vaults" | "tvl" | "yieldRange" | "avgFee" | "yield";
 type VaultSortKey = "name" | "curator" | "tvl" | "grossApy" | "netApy" | "fee" | "yield";
 
 export default function YieldsPage() {
@@ -156,6 +156,8 @@ export default function YieldsPage() {
           return dir * a.curatorName.localeCompare(b.curatorName);
         case "vaults":
           return dir * (a.vaultCount - b.vaultCount);
+        case "tvl":
+          return dir * (a.totalAUM - b.totalAUM);
         case "yieldRange":
           return dir * (a.maxNetApy - b.maxNetApy);
         case "avgFee":
@@ -384,6 +386,7 @@ export default function YieldsPage() {
                 <thead>
                   <tr className="border-b border-border bg-background-elevated/50">
                     <SortableHeader label="Curator" sortKey="name" currentSort={curatorSort} onSort={toggleCuratorSort} align="left" />
+                    <SortableHeader label="TVL" sortKey="tvl" currentSort={curatorSort} onSort={toggleCuratorSort} />
                     <SortableHeader label="Vaults" sortKey="vaults" currentSort={curatorSort} onSort={toggleCuratorSort} />
                     <SortableHeader label="Yield Range" sortKey="yieldRange" currentSort={curatorSort} onSort={toggleCuratorSort} />
                     <SortableHeader label="Avg Fee" sortKey="avgFee" currentSort={curatorSort} onSort={toggleCuratorSort} />
@@ -590,6 +593,11 @@ function CuratorRow({
           </div>
         </td>
         <td className="text-right px-4 py-3">
+          <span className="font-medium text-text-primary tabular-nums">
+            {formatCurrency(curator.totalAUM)}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
           <span className="text-text-secondary">{curator.vaultCount}</span>
         </td>
         <td className="text-right px-4 py-3">
@@ -624,7 +632,7 @@ function CuratorRow({
       {/* Expanded vault breakdown */}
       {isExpanded && (
         <tr>
-          <td colSpan={6} className="p-0">
+          <td colSpan={7} className="p-0">
             <div className="bg-background-elevated/40 border-t border-border px-6 py-4">
               <div className="space-y-4">
                 {assetKeys.map((asset) => {
