@@ -362,6 +362,8 @@ const VAULT_CURATOR_OVERRIDES: Record<string, string> = {
   "0xae9a5aa54ae43bb8811435f02a29e9d2b43cdc7c": "clearstar", // Clearstar Reactor ETH
   // Re Ecosystem is a separate entity from Re7 Labs
   "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": "re ecosystem", // Re Ecosystem Vault USDC
+  // Kabu is a separate entity from API3
+  "0x54210d3f1a066413891af9e17210e787d5c6e3f4": "kabu", // Kabu USDC
 };
 
 async function findMatchingProfile(
