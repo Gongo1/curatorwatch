@@ -39,6 +39,10 @@ const entries: ChangelogEntry[] = [
         category: "Fix",
         text: "Fixed curator search bar \u2014 eliminated full skeleton flash on every keystroke, made address search case-insensitive, and trimmed whitespace from search input",
       },
+      {
+        category: "Improvement",
+        text: "Alerts and data collection now run hourly instead of daily \u2014 vault changes, large flows, and APY shifts are detected within the hour",
+      },
     ],
   },
   {
