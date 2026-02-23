@@ -445,22 +445,32 @@ async function splitVaultOverrides() {
     }
 
     // Find or create the target curator
-    const placeholderAddress = `override-${profileKey}`;
+    const slugAddress = profileKey.replace(/\s+/g, "-");
+    const legacyAddress = `override-${profileKey}`;
     let targetCurator = await prisma.curator.findFirst({
       where: {
         OR: [
           { name: profile.canonicalName },
-          { address: placeholderAddress },
+          { address: slugAddress },
+          { address: legacyAddress },
         ],
       },
     });
 
+    // Migrate legacy override- addresses to clean slugs
+    if (targetCurator && targetCurator.address === legacyAddress) {
+      targetCurator = await prisma.curator.update({
+        where: { id: targetCurator.id },
+        data: { address: slugAddress },
+      });
+      log(`  Migrated address: ${legacyAddress} → ${slugAddress}`);
+    }
+
     if (!targetCurator) {
-      // Create a new curator for this entity using the first vault's curator address as a placeholder
-      // We'll use a deterministic address derived from the profile key
+      // Create a new curator for this entity using a clean slug as the address
       targetCurator = await prisma.curator.create({
         data: {
-          address: placeholderAddress,
+          address: slugAddress,
           name: profile.canonicalName,
           website: profile.website,
           twitter: profile.twitter,

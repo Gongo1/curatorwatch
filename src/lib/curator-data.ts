@@ -95,8 +95,8 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     logoUrl: "https://re7.capital/img/share.jpg",
   },
 
-  // Clearstar Labs AG - Split from Re7 Labs (uses synthetic address from vault override)
-  "override-clearstar": {
+  // Clearstar Labs AG - Split from Re7 Labs
+  "clearstar": {
     name: "Clearstar Labs AG",
     twitter: "https://twitter.com/ClearstarFi",
     legalName: "Clearstar Labs AG",
