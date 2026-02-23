@@ -1,18 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { formatCurrency, formatPercentage } from "@/lib/utils/format";
+import { formatCurrency } from "@/lib/utils/format";
 
 interface VaultYieldData {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
   assetSymbol: string;
+  curatorId: string | null;
   curatorName: string | null;
+  curatorAddress: string | null;
   tvl: number;
   netApy: number;
+  grossApy: number;
+  performanceFee: number;
+  managementFee: number;
   dailyYield: number;
   weeklyYield: number;
   monthlyYield: number;
@@ -45,6 +50,14 @@ interface YieldSummary {
   };
 }
 
+interface CuratorWithVaults extends CuratorYieldData {
+  vaults: VaultYieldData[];
+  minNetApy: number;
+  maxNetApy: number;
+  avgFee: number;
+  vaultsByAsset: Record<string, VaultYieldData[]>;
+}
+
 type ViewMode = "curators" | "vaults";
 type TimeFrame = "daily" | "weekly" | "monthly" | "annualized";
 
@@ -55,6 +68,7 @@ export default function YieldsPage() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("curators");
   const [timeFrame, setTimeFrame] = useState<TimeFrame>("annualized");
+  const [expandedCurator, setExpandedCurator] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -75,12 +89,78 @@ export default function YieldsPage() {
     fetchData();
   }, []);
 
-  const getYieldForTimeFrame = (item: CuratorYieldData | VaultYieldData) => {
+  // Build curator rows with vault breakdowns
+  const curatorRows = useMemo(() => {
+    const curatorMap = new Map<string, CuratorWithVaults>();
+
+    // Start with curator-level data
+    for (const curator of curatorYields) {
+      curatorMap.set(curator.curatorId, {
+        ...curator,
+        vaults: [],
+        minNetApy: Infinity,
+        maxNetApy: -Infinity,
+        avgFee: 0,
+        vaultsByAsset: {},
+      });
+    }
+
+    // Attach vaults to their curators
+    for (const vault of vaultYields) {
+      const key = vault.curatorId || "unknown";
+      const curator = curatorMap.get(key);
+      if (!curator) continue;
+
+      curator.vaults.push(vault);
+
+      if (vault.netApy < curator.minNetApy) curator.minNetApy = vault.netApy;
+      if (vault.netApy > curator.maxNetApy) curator.maxNetApy = vault.netApy;
+
+      // Group by asset
+      if (!curator.vaultsByAsset[vault.assetSymbol]) {
+        curator.vaultsByAsset[vault.assetSymbol] = [];
+      }
+      curator.vaultsByAsset[vault.assetSymbol].push(vault);
+    }
+
+    // Calculate avg fee and sort vaults within each asset group
+    for (const curator of curatorMap.values()) {
+      if (curator.vaults.length > 0) {
+        const totalFee = curator.vaults.reduce(
+          (sum, v) => sum + v.performanceFee,
+          0
+        );
+        curator.avgFee = totalFee / curator.vaults.length;
+      }
+      if (curator.minNetApy === Infinity) curator.minNetApy = 0;
+      if (curator.maxNetApy === -Infinity) curator.maxNetApy = 0;
+
+      // Sort vaults within each asset group by TVL descending
+      for (const asset of Object.keys(curator.vaultsByAsset)) {
+        curator.vaultsByAsset[asset].sort((a, b) => b.tvl - a.tvl);
+      }
+    }
+
+    return Array.from(curatorMap.values()).sort(
+      (a, b) => b.annualizedYield - a.annualizedYield
+    );
+  }, [curatorYields, vaultYields]);
+
+  const getVaultYieldForTimeFrame = (vault: VaultYieldData) => {
     switch (timeFrame) {
-      case "daily": return item.dailyYield;
-      case "weekly": return item.weeklyYield;
-      case "monthly": return item.monthlyYield;
-      case "annualized": return item.annualizedYield;
+      case "daily": return vault.dailyYield;
+      case "weekly": return vault.weeklyYield;
+      case "monthly": return vault.monthlyYield;
+      case "annualized": return vault.annualizedYield;
+    }
+  };
+
+  const getCuratorYieldForTimeFrame = (curator: CuratorYieldData) => {
+    switch (timeFrame) {
+      case "daily": return curator.dailyYield;
+      case "weekly": return curator.weeklyYield;
+      case "monthly": return curator.monthlyYield;
+      case "annualized": return curator.annualizedYield;
     }
   };
 
@@ -165,7 +245,7 @@ export default function YieldsPage() {
         {/* Explainer */}
         <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/20 rounded-xl">
           <p className="text-sm text-text-secondary">
-            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault's current TVL and Net APY.
+            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and Net APY.
             Net APY is the return depositors receive after all fees (curator + protocol). These are projected yields based on current rates.
           </p>
         </div>
@@ -230,7 +310,7 @@ export default function YieldsPage() {
           </span>
         </div>
 
-        {/* Curator Yields Table */}
+        {/* Curator Yields Table — Expandable */}
         {viewMode === "curators" && (
           <div className="bg-background-subtle border border-border rounded-xl overflow-hidden">
             <div className="overflow-x-auto">
@@ -241,60 +321,40 @@ export default function YieldsPage() {
                       Curator
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Total Deposits
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
                       Vaults
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Net APY
+                      Yield Range
+                    </th>
+                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                      Avg Fee
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
                       {timeFrameLabels[timeFrame]} Yield
                     </th>
+                    <th className="w-10 px-2" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {curatorYields.map((curator, index) => (
-                    <tr key={curator.curatorId} className="hover:bg-background-elevated/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                            index === 0 ? "bg-yellow-500 text-black" :
-                            index === 1 ? "bg-neutral-300 text-black" :
-                            index === 2 ? "bg-amber-700 text-white" :
-                            "bg-neutral-700 text-white"
-                          }`}>
-                            {index + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium text-text-primary">{curator.curatorName}</p>
-                            <p className="text-xs text-text-tertiary font-mono">
-                              {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="font-medium text-text-primary tabular-nums">
-                          {formatCurrency(curator.totalAUM)}
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="text-text-secondary">{curator.vaultCount}</span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="text-accent-green font-medium tabular-nums">
-                          {curator.avgNetApy.toFixed(2)}%
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="font-bold text-accent-green tabular-nums text-lg">
-                          {formatCurrency(getYieldForTimeFrame(curator))}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                  {curatorRows.map((curator) => {
+                    const isExpanded = expandedCurator === curator.curatorId;
+                    const assetKeys = Object.keys(curator.vaultsByAsset).sort();
+                    return (
+                      <CuratorRow
+                        key={curator.curatorId}
+                        curator={curator}
+                        isExpanded={isExpanded}
+                        assetKeys={assetKeys}
+                        timeFrame={timeFrame}
+                        timeFrameLabels={timeFrameLabels}
+                        getCuratorYieldForTimeFrame={getCuratorYieldForTimeFrame}
+                        getVaultYieldForTimeFrame={getVaultYieldForTimeFrame}
+                        onToggle={() =>
+                          setExpandedCurator(isExpanded ? null : curator.curatorId)
+                        }
+                      />
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -315,10 +375,16 @@ export default function YieldsPage() {
                       Curator
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Total Deposits
+                      TVL
+                    </th>
+                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                      Gross APY
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
                       Net APY
+                    </th>
+                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
+                      Fee
                     </th>
                     <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
                       {timeFrameLabels[timeFrame]} Yield
@@ -358,13 +424,23 @@ export default function YieldsPage() {
                         </span>
                       </td>
                       <td className="text-right px-4 py-3">
+                        <span className="text-text-secondary tabular-nums">
+                          {vault.grossApy.toFixed(2)}%
+                        </span>
+                      </td>
+                      <td className="text-right px-4 py-3">
                         <span className="text-accent-green font-medium tabular-nums">
                           {vault.netApy.toFixed(2)}%
                         </span>
                       </td>
                       <td className="text-right px-4 py-3">
+                        <span className="text-text-muted tabular-nums text-sm">
+                          {vault.performanceFee.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="text-right px-4 py-3">
                         <span className="font-bold text-accent-green tabular-nums text-lg">
-                          {formatCurrency(getYieldForTimeFrame(vault))}
+                          {formatCurrency(getVaultYieldForTimeFrame(vault))}
                         </span>
                       </td>
                     </tr>
@@ -400,6 +476,146 @@ export default function YieldsPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function CuratorRow({
+  curator,
+  isExpanded,
+  assetKeys,
+  timeFrame,
+  timeFrameLabels,
+  getCuratorYieldForTimeFrame,
+  getVaultYieldForTimeFrame,
+  onToggle,
+}: {
+  curator: CuratorWithVaults;
+  isExpanded: boolean;
+  assetKeys: string[];
+  timeFrame: TimeFrame;
+  timeFrameLabels: Record<TimeFrame, string>;
+  getCuratorYieldForTimeFrame: (c: CuratorYieldData) => number;
+  getVaultYieldForTimeFrame: (v: VaultYieldData) => number;
+  onToggle: () => void;
+}) {
+  const yieldRangeText =
+    curator.vaultCount === 1
+      ? `${curator.minNetApy.toFixed(2)}%`
+      : `${curator.minNetApy.toFixed(2)}% – ${curator.maxNetApy.toFixed(2)}%`;
+
+  return (
+    <>
+      {/* Curator summary row */}
+      <tr
+        className="hover:bg-background-elevated/30 transition-colors cursor-pointer"
+        onClick={onToggle}
+      >
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-3">
+            <div>
+              <p className="font-medium text-text-primary">{curator.curatorName}</p>
+              <p className="text-xs text-text-tertiary font-mono">
+                {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
+              </p>
+            </div>
+          </div>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="text-text-secondary">{curator.vaultCount}</span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="text-accent-green font-medium tabular-nums text-sm">
+            {yieldRangeText}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="text-text-secondary tabular-nums text-sm">
+            {curator.avgFee > 0 ? `${curator.avgFee.toFixed(1)}%` : "None"}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="font-bold text-accent-green tabular-nums text-lg">
+            {formatCurrency(getCuratorYieldForTimeFrame(curator))}
+          </span>
+        </td>
+        <td className="px-2">
+          <svg
+            className={`w-4 h-4 text-text-muted transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </td>
+      </tr>
+
+      {/* Expanded vault breakdown */}
+      {isExpanded && (
+        <tr>
+          <td colSpan={6} className="p-0">
+            <div className="bg-background-elevated/40 border-t border-border px-6 py-4">
+              <div className="space-y-4">
+                {assetKeys.map((asset) => {
+                  const vaults = curator.vaultsByAsset[asset];
+                  return (
+                    <div key={asset}>
+                      <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">
+                        {asset}
+                      </p>
+                      <div className="space-y-1">
+                        {vaults.map((vault) => (
+                          <div
+                            key={vault.vaultId}
+                            className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-background-hover/50 transition-colors"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <Link
+                                href={`/vault/${vault.vaultAddress}`}
+                                className="text-sm font-medium text-text-primary hover:text-accent-blue transition-colors"
+                              >
+                                {vault.vaultName}
+                              </Link>
+                              <p className="text-xs text-text-muted tabular-nums">
+                                TVL {formatCurrency(vault.tvl)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-4 flex-shrink-0">
+                              <div className="text-right">
+                                <p className="text-sm tabular-nums">
+                                  <span className="text-text-secondary">{vault.grossApy.toFixed(2)}%</span>
+                                  <span className="text-text-muted mx-1">&rarr;</span>
+                                  <span className="text-accent-green font-medium">{vault.netApy.toFixed(2)}%</span>
+                                  {vault.performanceFee > 0 && (
+                                    <span className="text-text-muted ml-1.5 text-xs">
+                                      ({vault.performanceFee.toFixed(1)}% fee)
+                                    </span>
+                                  )}
+                                </p>
+                              </div>
+                              <div className="text-right w-24">
+                                <span className="text-sm font-semibold text-accent-green tabular-nums">
+                                  {formatCurrency(getVaultYieldForTimeFrame(vault))}
+                                </span>
+                                <p className="text-[10px] text-text-muted">
+                                  {timeFrameLabels[timeFrame].toLowerCase()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
 

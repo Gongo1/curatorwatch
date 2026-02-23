@@ -23,6 +23,8 @@ interface VaultYieldData {
   // Since inception (estimated)
   vaultAgeYears: number;
   estimatedTotalYield: number;
+  performanceFee: number;
+  managementFee: number;
 }
 
 interface CuratorYieldData {
@@ -151,6 +153,8 @@ export async function GET() {
         annualizedYield,
         vaultAgeYears,
         estimatedTotalYield,
+        performanceFee: performanceFee * 100,
+        managementFee: managementFee * 100,
       });
 
       // Aggregate by curator
