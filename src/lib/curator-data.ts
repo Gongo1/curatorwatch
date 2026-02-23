@@ -95,6 +95,18 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     logoUrl: "https://re7.capital/img/share.jpg",
   },
 
+  // Clearstar Labs AG - Split from Re7 Labs (uses synthetic address from vault override)
+  "override-clearstar": {
+    name: "Clearstar",
+    twitter: "https://twitter.com/ClearstarFi",
+    legalName: "Clearstar Labs AG",
+    entityType: "Corporation",
+    jurisdiction: "Switzerland",
+    description:
+      "Clearstar Labs AG is a Swiss corporation managing Morpho vaults with distinct strategies, previously grouped under Re7 Labs on-chain.",
+    isRegulated: false,
+  },
+
   // Re Ecosystem - Separate entity from Re7 Labs
   // Actual address from Morpho vaults: 0xD1E9242e075Db4bdd3f3c721D7d5fd4180A94A7e
   "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": {

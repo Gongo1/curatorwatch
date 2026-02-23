@@ -133,6 +133,7 @@ const CURATOR_PROFILES: Record<
     twitter: "ClearstarFi",
     logoUrl: getTwitterLogo("ClearstarFi"),
     entityType: "Corporation",
+    jurisdiction: "Switzerland",
     isRegulated: false,
   },
   "mev capital": {
