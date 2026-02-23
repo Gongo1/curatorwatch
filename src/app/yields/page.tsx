@@ -302,10 +302,9 @@ export default function YieldsPage() {
               subtext="Earned per day"
             />
             <SummaryCard
-              label="Net APY"
-              value={`${summary.avgNetApy.toFixed(2)}%`}
-              subtext={`Across ${summary.totalVaults} vaults`}
-              valueColor="text-accent-green"
+              label="Total Vaults"
+              value={`${summary.totalVaults}`}
+              subtext={`${summary.totalCurators} curators`}
             />
           </div>
         )}
