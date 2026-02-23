@@ -170,7 +170,7 @@ export async function getPaginatedCuratorAggregates(
     switch (sortBy) {
       case "aum": cmp = a.totalAUM - b.totalAUM; break;
       case "vaults": cmp = a.vaultCount - b.vaultCount; break;
-      case "apy": cmp = a.avgNetApy - b.avgNetApy; break;
+      case "apy": cmp = a.totalAUM - b.totalAUM; break; // Fallback to AUM sort if APY requested
       case "name": cmp = (a.name ?? "").localeCompare(b.name ?? ""); break;
     }
     return sortOrder === "desc" ? -cmp : cmp;

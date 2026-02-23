@@ -5,13 +5,12 @@ import Link from "next/link";
 import type { CuratorDashboardItem } from "@/lib/types/api";
 import {
   formatCurrency,
-  formatPercentage,
   formatTimeAgo,
 } from "@/lib/utils/format";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
 import { CuratorRating } from "@/components/CuratorRating";
 
-type SortField = "name" | "aum" | "vaults" | "apy" | "change";
+type SortField = "name" | "aum" | "vaults" | "change";
 type SortDirection = "asc" | "desc";
 
 interface CuratorTableProps {
@@ -39,10 +38,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
         case "vaults":
           aValue = a.vaultCount;
           bValue = b.vaultCount;
-          break;
-        case "apy":
-          aValue = a.avgNetApy;
-          bValue = b.avgNetApy;
           break;
         case "change":
           aValue = a.tvlChangePct30d;
@@ -124,7 +119,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
               <HeaderCell field="name">Curator</HeaderCell>
               <HeaderCell field="aum" align="right">Total AUM</HeaderCell>
               <HeaderCell field="vaults" align="right"># Vaults</HeaderCell>
-              <HeaderCell field="apy" align="right">APY</HeaderCell>
               <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-left">
                 Assets
               </th>
@@ -173,13 +167,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                 <td className="px-4 py-4 whitespace-nowrap text-right">
                   <span className="text-sm text-text-secondary tabular-nums">
                     {curator.vaultCount}
-                  </span>
-                </td>
-
-                {/* APY */}
-                <td className="px-4 py-4 whitespace-nowrap text-right">
-                  <span className="text-sm font-medium text-accent-green tabular-nums">
-                    {formatPercentage(curator.avgNetApy)}
                   </span>
                 </td>
 
@@ -270,7 +257,7 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                     {curator.tvlChangePct30d.toFixed(1)}%
                   </span>
                 </div>
-                <div className="mt-2 grid grid-cols-3 gap-2">
+                <div className="mt-2 grid grid-cols-2 gap-2">
                   <div>
                     <p className="text-xs text-text-muted">AUM</p>
                     <p className="text-sm font-semibold text-text-primary tabular-nums">
@@ -281,12 +268,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                     <p className="text-xs text-text-muted">Vaults</p>
                     <p className="text-sm text-text-secondary tabular-nums">
                       {curator.vaultCount}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-text-muted">APY</p>
-                    <p className="text-sm font-medium text-accent-green tabular-nums">
-                      {formatPercentage(curator.avgNetApy)}
                     </p>
                   </div>
                 </div>
@@ -322,7 +303,7 @@ export function CuratorTableSkeleton() {
         <table className="min-w-full">
           <thead className="bg-background-elevated border-b border-border">
             <tr>
-              {["Curator", "Total AUM", "# Vaults", "APY", "Assets", "Grade", "30d Change"].map((header) => (
+              {["Curator", "Total AUM", "# Vaults", "Assets", "Grade", "30d Change"].map((header) => (
                 <th key={header} className="px-4 py-3 text-left">
                   <div className="h-3 w-16 bg-background-elevated rounded" />
                 </th>
@@ -346,9 +327,6 @@ export function CuratorTableSkeleton() {
                 </td>
                 <td className="px-4 py-4 text-right">
                   <div className="h-4 w-8 bg-background-elevated rounded ml-auto" />
-                </td>
-                <td className="px-4 py-4 text-right">
-                  <div className="h-4 w-12 bg-background-elevated rounded ml-auto" />
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex gap-1">

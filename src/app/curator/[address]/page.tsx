@@ -108,12 +108,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
 
   // Calculate aggregate stats
   const totalTVL = vaults.reduce((sum, v) => sum + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
-  const weightedApySum = vaults.reduce((sum, v) => {
-    const tvl = v.latestSnapshot?.totalAssetsUsd ?? 0;
-    const apy = v.latestSnapshot?.avgNetApy ?? 0;
-    return sum + (apy * tvl);
-  }, 0);
-  const avgApy = totalTVL > 0 ? weightedApySum / totalTVL : 0;
 
   // Asset distribution
   const assetMap: Record<string, number> = {};
@@ -221,7 +215,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
 
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
             label="Total AUM"
             value={formatCurrency(totalTVL)}
@@ -230,11 +224,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
           <StatCard
             label="Vaults"
             value={vaults.length.toString()}
-          />
-          <StatCard
-            label="APY"
-            value={formatPercentage(avgApy)}
-            valueClass="text-accent-green"
           />
           <StatCard
             label="Founded"
@@ -394,88 +383,115 @@ export default function CuratorDetailPage({ params }: PageProps) {
 
           {/* Vaults Tab */}
           <TabsContent value="vaults" className="pt-6">
-            <section className="bg-background-subtle rounded-lg border border-border">
-              <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-text-primary">
-                    Vaults Managed ({vaults.length})
-                  </h2>
-                  <p className="text-xs text-text-tertiary mt-1">
-                    {curator.name || "This curator"} manages {vaults.length} vault{vaults.length !== 1 ? "s" : ""} totaling {formatCurrency(totalTVL)}
-                  </p>
-                </div>
+            <div className="mb-4">
+              <h2 className="text-sm font-semibold text-text-primary">
+                Vaults Managed ({vaults.length})
+              </h2>
+              <p className="text-xs text-text-tertiary mt-1">
+                {curator.name || "This curator"} manages {vaults.length} vault{vaults.length !== 1 ? "s" : ""} totaling {formatCurrency(totalTVL)}
+              </p>
+            </div>
+            {vaults.length === 0 ? (
+              <div className="bg-background-subtle rounded-lg border border-border px-6 py-12 text-center">
+                <p className="text-sm text-text-tertiary">No vaults found.</p>
               </div>
-              {vaults.length === 0 ? (
-                <div className="px-6 py-12 text-center">
-                  <p className="text-sm text-text-tertiary">No vaults found.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-background-elevated border-b border-border">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                          Vault
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                          Asset
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                          Deposits
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                          APY
-                        </th>
-                        <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                          Net APY
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border-subtle">
-                      {vaults.map((vault) => (
-                        <tr key={vault.id} className="hover:bg-background-hover transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Link href={`/vault/${vault.address}`} className="flex items-center gap-3 group">
-                              <div className={`w-8 h-8 rounded-lg ${getVaultColor(vault.address)} flex items-center justify-center text-white font-bold text-xs`}>
-                                {vault.symbol.slice(0, 2).toUpperCase()}
-                              </div>
-                              <div>
-                                <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                                  {vault.name}
-                                </div>
-                                <div className="text-xs text-text-tertiary font-mono">
-                                  {formatAddress(vault.address)}
-                                </div>
-                              </div>
-                            </Link>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-background-elevated border border-border text-text-primary">
-                              {vault.asset.symbol}
+            ) : (
+              <div className="space-y-6">
+                {(() => {
+                  const vaultsByAsset: Record<string, typeof vaults> = {};
+                  vaults.forEach((v) => {
+                    const asset = v.asset.symbol;
+                    if (!vaultsByAsset[asset]) vaultsByAsset[asset] = [];
+                    vaultsByAsset[asset].push(v);
+                  });
+                  const sortedAssets = Object.entries(vaultsByAsset).sort(
+                    (a, b) => {
+                      const aTvl = a[1].reduce((s, v) => s + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
+                      const bTvl = b[1].reduce((s, v) => s + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
+                      return bTvl - aTvl;
+                    }
+                  );
+                  return sortedAssets.map(([asset, assetVaults]) => {
+                    const assetTvl = assetVaults.reduce((s, v) => s + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
+                    return (
+                      <section key={asset} className="bg-background-subtle rounded-lg border border-border">
+                        <div className="px-6 py-3 border-b border-border flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-background-elevated border border-border text-text-primary">
+                              {asset}
                             </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="text-sm font-semibold text-text-primary tabular-nums">
-                              {formatCurrency(vault.latestSnapshot?.totalAssetsUsd)}
+                            <span className="text-xs text-text-tertiary">
+                              {assetVaults.length} vault{assetVaults.length !== 1 ? "s" : ""}
                             </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="text-sm text-text-secondary tabular-nums">
-                              {formatPercentage(vault.latestSnapshot?.avgApy)}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right">
-                            <span className="text-sm font-medium text-accent-green tabular-nums">
-                              {formatPercentage(vault.latestSnapshot?.avgNetApy)}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
+                          </div>
+                          <span className="text-sm font-medium text-text-secondary tabular-nums">
+                            {formatCurrency(assetTvl)}
+                          </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full">
+                            <thead className="bg-background-elevated/50">
+                              <tr>
+                                <th className="px-6 py-2.5 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                                  Vault
+                                </th>
+                                <th className="px-6 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
+                                  Deposits
+                                </th>
+                                <th className="px-6 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
+                                  APY
+                                </th>
+                                <th className="px-6 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
+                                  Net APY
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-border-subtle">
+                              {assetVaults
+                                .sort((a, b) => (b.latestSnapshot?.totalAssetsUsd ?? 0) - (a.latestSnapshot?.totalAssetsUsd ?? 0))
+                                .map((vault) => (
+                                <tr key={vault.id} className="hover:bg-background-hover transition-colors">
+                                  <td className="px-6 py-3.5 whitespace-nowrap">
+                                    <Link href={`/vault/${vault.address}`} className="flex items-center gap-3 group">
+                                      <div className={`w-8 h-8 rounded-lg ${getVaultColor(vault.address)} flex items-center justify-center text-white font-bold text-xs`}>
+                                        {vault.symbol.slice(0, 2).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                                          {vault.name}
+                                        </div>
+                                        <div className="text-xs text-text-tertiary font-mono">
+                                          {formatAddress(vault.address)}
+                                        </div>
+                                      </div>
+                                    </Link>
+                                  </td>
+                                  <td className="px-6 py-3.5 whitespace-nowrap text-right">
+                                    <span className="text-sm font-semibold text-text-primary tabular-nums">
+                                      {formatCurrency(vault.latestSnapshot?.totalAssetsUsd)}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-3.5 whitespace-nowrap text-right">
+                                    <span className="text-sm text-text-secondary tabular-nums">
+                                      {formatPercentage(vault.latestSnapshot?.avgApy)}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-3.5 whitespace-nowrap text-right">
+                                    <span className="text-sm font-medium text-accent-green tabular-nums">
+                                      {formatPercentage(vault.latestSnapshot?.avgNetApy)}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+                    );
+                  });
+                })()}
+              </div>
+            )}
           </TabsContent>
 
           {/* Performance Tab */}
@@ -486,10 +502,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
                 <div className="bg-background-subtle rounded-lg border border-accent-blue/30 bg-accent-blue/5 p-4">
                   <p className="text-xs text-text-tertiary mb-1">Total AUM</p>
                   <p className="text-xl font-semibold text-accent-blue tabular-nums">{formatCurrency(totalTVL)}</p>
-                </div>
-                <div className="bg-background-subtle rounded-lg border border-border p-4">
-                  <p className="text-xs text-text-tertiary mb-1">Weighted APY</p>
-                  <p className="text-xl font-semibold text-accent-green tabular-nums">{formatPercentage(avgApy)}</p>
                 </div>
                 <div className="bg-background-subtle rounded-lg border border-border p-4">
                   <p className="text-xs text-text-tertiary mb-1">Active Vaults</p>
@@ -569,13 +581,9 @@ export default function CuratorDetailPage({ params }: PageProps) {
                             <span className="text-sm text-text-tertiary">Lowest APY</span>
                             <span className="text-sm font-semibold text-accent-yellow tabular-nums">{formatPercentage(minApy)}</span>
                           </div>
-                          <div className="flex justify-between items-center py-2 border-b border-border-subtle">
+                          <div className="flex justify-between items-center py-2">
                             <span className="text-sm text-text-tertiary">APY Spread</span>
                             <span className="text-sm font-semibold text-text-primary tabular-nums">{formatPercentage(maxApy - minApy)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2">
-                            <span className="text-sm text-text-tertiary">Weighted APY</span>
-                            <span className="text-sm font-semibold text-accent-blue tabular-nums">{formatPercentage(avgApy)}</span>
                           </div>
                         </>
                       );

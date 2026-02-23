@@ -16,7 +16,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
     const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10));
     const pageSize = Math.min(100, Math.max(1, parseInt(searchParams.get("pageSize") || "20", 10)));
     const search = searchParams.get("search") || undefined;
-    const sortBy = (searchParams.get("sortBy") as "aum" | "vaults" | "apy" | "name") || "aum";
+    const sortBy = (searchParams.get("sortBy") as "aum" | "vaults" | "name") || "aum";
     const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
 
     const [paginatedResult, stats] = await Promise.all([

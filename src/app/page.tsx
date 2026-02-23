@@ -51,7 +51,7 @@ export default function Home() {
   // Search and pagination state
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<"aum" | "vaults" | "apy" | "name">("aum");
+  const [sortBy, setSortBy] = useState<"aum" | "vaults" | "name">("aum");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const fetchData = useCallback(async (page = 1, search = "", sort = sortBy, order = sortOrder) => {
@@ -159,7 +159,7 @@ export default function Home() {
   };
 
   // Handle sort change
-  const handleSortChange = (newSortBy: "aum" | "vaults" | "apy" | "name") => {
+  const handleSortChange = (newSortBy: "aum" | "vaults" | "name") => {
     const newOrder = newSortBy === sortBy && sortOrder === "desc" ? "asc" : "desc";
     setSortBy(newSortBy);
     setSortOrder(newOrder);
@@ -507,12 +507,11 @@ export default function Home() {
               {[
                 { key: "aum", label: "AUM" },
                 { key: "vaults", label: "Vaults" },
-                { key: "apy", label: "APY" },
                 { key: "name", label: "Name" },
               ].map((option) => (
                 <button
                   key={option.key}
-                  onClick={() => handleSortChange(option.key as "aum" | "vaults" | "apy" | "name")}
+                  onClick={() => handleSortChange(option.key as "aum" | "vaults" | "name")}
                   className={`px-2 sm:px-2.5 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
                     sortBy === option.key
                       ? "bg-accent-blue text-white"
