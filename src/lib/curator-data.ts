@@ -95,6 +95,16 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     logoUrl: "https://re7.capital/img/share.jpg",
   },
 
+  // Re Ecosystem - Separate entity from Re7 Labs
+  // Actual address from Morpho vaults: 0xD1E9242e075Db4bdd3f3c721D7d5fd4180A94A7e
+  "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": {
+    name: "Re Ecosystem",
+    entityType: "Corporation",
+    description:
+      "Re Ecosystem is a separate entity from Re7 Labs, managing Morpho vaults with distinct strategies.",
+    isRegulated: false,
+  },
+
   // August Digital - Institutional DeFi asset management
   // Actual address from Morpho vaults: 0xA81AE7d57D68Fd6eF76a3082134BD2F3019aec24
   "0xa81ae7d57d68fd6ef76a3082134bd2f3019aec24": {

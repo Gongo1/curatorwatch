@@ -41,6 +41,7 @@ export default function Home() {
   const [stats, setStats] = useState<CuratorDashboardStats | null>(null);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [timeAgo, setTimeAgo] = useState<string>("");
@@ -56,7 +57,9 @@ export default function Home() {
 
   const fetchData = useCallback(async (page = 1, search = "", sort = sortBy, order = sortOrder) => {
     try {
-      setLoading(true);
+      if (isInitialLoad) {
+        setLoading(true);
+      }
 
       const params = new URLSearchParams({
         page: page.toString(),
@@ -90,6 +93,7 @@ export default function Home() {
       setPagination(curatorsData.data.pagination || null);
       setLastUpdated(new Date());
       setError(null);
+      setIsInitialLoad(false);
 
       if (changesData.success) {
         setChangeSummary(changesData.data.summary);
@@ -113,7 +117,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [sortBy, sortOrder]);
+  }, [sortBy, sortOrder, isInitialLoad]);
 
   // Initial fetch
   useEffect(() => {
@@ -149,7 +153,7 @@ export default function Home() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, fetchData]);
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -559,10 +563,10 @@ export default function Home() {
         )}
 
         {/* Loading State */}
-        {loading && <CuratorTableSkeleton />}
+        {loading && isInitialLoad && <CuratorTableSkeleton />}
 
         {/* Curator Table */}
-        {!loading && !error && curators.length > 0 && (
+        {!(loading && isInitialLoad) && !error && curators.length > 0 && (
           <CuratorTable curators={curators} />
         )}
 

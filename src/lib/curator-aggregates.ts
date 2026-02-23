@@ -75,10 +75,17 @@ export async function getPaginatedCuratorAggregates(
   };
 
   if (search && search.trim()) {
-    whereClause.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { address: { contains: search.toLowerCase() } },
+    const trimmed = search.trim();
+    whereClause.AND = [
+      { vaults: { some: {} } },
+      {
+        OR: [
+          { name: { contains: trimmed, mode: "insensitive" } },
+          { address: { contains: trimmed, mode: "insensitive" } },
+        ],
+      },
     ];
+    delete whereClause.vaults;
   }
 
   // Single query - minimal includes

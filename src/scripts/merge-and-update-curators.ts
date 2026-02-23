@@ -123,6 +123,11 @@ const CURATOR_PROFILES: Record<
     isRegulated: false,
     description: "Decentralized APIs for Web3",
   },
+  "re ecosystem": {
+    canonicalName: "Re Ecosystem",
+    entityType: "Corporation",
+    isRegulated: false,
+  },
   clearstar: {
     canonicalName: "Clearstar",
     twitter: "ClearstarFi",
