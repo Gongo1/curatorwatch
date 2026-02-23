@@ -27,6 +27,18 @@ const entries: ChangelogEntry[] = [
         category: "Feature",
         text: "Split Clearstar out as its own curator \u2014 Clearstar\u2019s 4 vaults ($15.7M) were previously grouped under Re7 Labs because they share an on-chain curator address",
       },
+      {
+        category: "Feature",
+        text: "Split Re Ecosystem out as its own curator from Re7 Labs \u2014 Re Ecosystem Vault USDC was incorrectly grouped under Re7 Labs",
+      },
+      {
+        category: "Feature",
+        text: "Split Kabu out as its own curator from API3 \u2014 Kabu USDC was incorrectly grouped under API3",
+      },
+      {
+        category: "Fix",
+        text: "Fixed curator search bar \u2014 eliminated full skeleton flash on every keystroke, made address search case-insensitive, and trimmed whitespace from search input",
+      },
     ],
   },
   {
