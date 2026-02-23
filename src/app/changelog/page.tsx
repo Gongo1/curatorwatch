@@ -41,7 +41,7 @@ const entries: ChangelogEntry[] = [
       },
       {
         category: "Improvement",
-        text: "Alerts and data collection now run hourly instead of daily \u2014 vault changes, large flows, and APY shifts are detected within the hour",
+        text: "Alerts and data collection run on a daily schedule via Vercel Cron",
       },
       {
         category: "Improvement",
@@ -54,6 +54,10 @@ const entries: ChangelogEntry[] = [
       {
         category: "Fix",
         text: "Fixed crash caused by non-hex curator addresses in avatar and color generation functions \u2014 hardened all 7 affected components to handle any string safely",
+      },
+      {
+        category: "Improvement",
+        text: "Redesigned yields page \u2014 curator tab now has expandable rows showing vault breakdowns grouped by asset with gross APY \u2192 net APY and fee transparency. Vault tab adds gross APY and fee columns",
       },
     ],
   },
