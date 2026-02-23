@@ -45,8 +45,8 @@ function getAvatarColor(address: string): string {
     "bg-teal-500",
     "bg-orange-500",
   ];
-  const hash = parseInt(address.slice(2, 6), 16);
-  return colors[hash % colors.length];
+  const hash = address.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
+  return colors[Math.abs(hash) % colors.length];
 }
 
 export function CuratorDepositors({ curatorAddress }: CuratorDepositorsProps) {

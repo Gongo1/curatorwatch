@@ -33,8 +33,8 @@ function getVaultColor(address: string): string {
     "bg-indigo-500",
     "bg-rose-500",
   ];
-  const index = parseInt(address.slice(2, 4), 16) % colors.length;
-  return colors[index];
+  const hash = address.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
+  return colors[Math.abs(hash) % colors.length];
 }
 
 export default function CuratorDetailPage({ params }: PageProps) {
