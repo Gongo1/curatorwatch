@@ -25,8 +25,11 @@ function getAddressGradient(address: string): { from: string; to: string } {
     { from: "from-pink-500", to: "to-rose-400" },
   ];
 
-  // Use first 4 hex chars after 0x to generate index
-  const index = parseInt(address.slice(2, 6), 16) % gradients.length;
+  // Use first 4 hex chars after 0x to generate index, fallback to char codes for non-hex addresses
+  const hexValue = parseInt(address.slice(2, 6), 16);
+  const index = (isNaN(hexValue)
+    ? address.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0)
+    : hexValue) % gradients.length;
   return gradients[index];
 }
 
