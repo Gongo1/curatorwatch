@@ -21,6 +21,15 @@ const categoryStyles: Record<Category, string> = {
 
 const entries: ChangelogEntry[] = [
   {
+    date: "February 23, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "Split Clearstar out as its own curator \u2014 Clearstar\u2019s 4 vaults ($15.7M) were previously grouped under Re7 Labs because they share an on-chain curator address",
+      },
+    ],
+  },
+  {
     date: "February 22, 2026",
     items: [
       {

@@ -346,6 +346,17 @@ const CURATOR_MERGES: Record<string, string> = {
     "0x38989bba00bdf8181f4082995b3deae96163ac5d",
 };
 
+// Vaults that should be split from their on-chain curator into a separate entity.
+// Maps vault address (lowercase) to the curator name key in CURATOR_PROFILES.
+const VAULT_CURATOR_OVERRIDES: Record<string, string> = {
+  // Clearstar vaults share Re7's curator address on-chain but are a separate entity
+  "0xfa17f7aadbfac2c5d3c8125555404c1ae17df853": "clearstar", // Clearstar Yield USDC
+  "0x69a238ae7ebeb3c53ff3b544e48b96a2142fc284": "clearstar", // Clearstar USDC Core
+  "0xf3cc5c9a25508d8d959618fd48f6abc18ca4db49": "clearstar", // Clearstar Boring USDC
+  "0x2b58132964f038461e3d8b56df582f49fecc8745": "clearstar", // Clearstar Boring USDT
+  "0xae9a5aa54ae43bb8811435f02a29e9d2b43cdc7c": "clearstar", // Clearstar Reactor ETH
+};
+
 async function findMatchingProfile(
   curatorName: string | null
 ): Promise<(typeof CURATOR_PROFILES)[string] | null> {
@@ -404,6 +415,72 @@ async function mergeCurators() {
   }
 
   log("Curator merge complete");
+}
+
+async function splitVaultOverrides() {
+  log("Splitting vault curator overrides...");
+
+  // Group overrides by target curator profile key
+  const overridesByProfile: Record<string, string[]> = {};
+  for (const [vaultAddress, profileKey] of Object.entries(VAULT_CURATOR_OVERRIDES)) {
+    if (!overridesByProfile[profileKey]) overridesByProfile[profileKey] = [];
+    overridesByProfile[profileKey].push(vaultAddress);
+  }
+
+  for (const [profileKey, vaultAddresses] of Object.entries(overridesByProfile)) {
+    const profile = CURATOR_PROFILES[profileKey];
+    if (!profile) {
+      log(`  WARNING: No profile found for key "${profileKey}", skipping`);
+      continue;
+    }
+
+    // Find or create the target curator
+    let targetCurator = await prisma.curator.findFirst({
+      where: { name: profile.canonicalName },
+    });
+
+    if (!targetCurator) {
+      // Create a new curator for this entity using the first vault's curator address as a placeholder
+      // We'll use a deterministic address derived from the profile key
+      const placeholderAddress = `override-${profileKey}`;
+      targetCurator = await prisma.curator.create({
+        data: {
+          address: placeholderAddress,
+          name: profile.canonicalName,
+          website: profile.website,
+          twitter: profile.twitter,
+          logoUrl: profile.logoUrl,
+          entityType: profile.entityType,
+          jurisdiction: profile.jurisdiction,
+          isRegulated: profile.isRegulated ?? false,
+          description: profile.description,
+        },
+      });
+      log(`  Created new curator: ${profile.canonicalName}`);
+    }
+
+    // Move matching vaults to the target curator (case-insensitive address match)
+    let moved = 0;
+    for (const vaultAddress of vaultAddresses) {
+      const vault = await prisma.vault.findFirst({
+        where: { address: { equals: vaultAddress, mode: "insensitive" } },
+      });
+
+      if (vault && vault.curatorId !== targetCurator.id) {
+        await prisma.vault.update({
+          where: { id: vault.id },
+          data: { curatorId: targetCurator.id },
+        });
+        moved++;
+      }
+    }
+
+    if (moved > 0) {
+      log(`  Moved ${moved} vaults to ${profile.canonicalName}`);
+    }
+  }
+
+  log("Vault curator overrides complete");
 }
 
 async function updateCuratorProfiles() {
@@ -493,10 +570,13 @@ async function main() {
     // Step 1: Merge duplicate curators
     await mergeCurators();
 
-    // Step 2: Update curator profiles
+    // Step 2: Split vaults that share an address but are separate entities
+    await splitVaultOverrides();
+
+    // Step 3: Update curator profiles
     await updateCuratorProfiles();
 
-    // Step 3: Recalculate curator stats
+    // Step 4: Recalculate curator stats
     await updateCuratorStats();
 
     log("=" .repeat(60));
