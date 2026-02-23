@@ -129,7 +129,7 @@ const CURATOR_PROFILES: Record<
     isRegulated: false,
   },
   clearstar: {
-    canonicalName: "Clearstar",
+    canonicalName: "Clearstar Labs AG",
     twitter: "ClearstarFi",
     logoUrl: getTwitterLogo("ClearstarFi"),
     entityType: "Corporation",
@@ -445,14 +445,19 @@ async function splitVaultOverrides() {
     }
 
     // Find or create the target curator
+    const placeholderAddress = `override-${profileKey}`;
     let targetCurator = await prisma.curator.findFirst({
-      where: { name: profile.canonicalName },
+      where: {
+        OR: [
+          { name: profile.canonicalName },
+          { address: placeholderAddress },
+        ],
+      },
     });
 
     if (!targetCurator) {
       // Create a new curator for this entity using the first vault's curator address as a placeholder
       // We'll use a deterministic address derived from the profile key
-      const placeholderAddress = `override-${profileKey}`;
       targetCurator = await prisma.curator.create({
         data: {
           address: placeholderAddress,

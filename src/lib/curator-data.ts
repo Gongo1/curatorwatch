@@ -97,7 +97,7 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
 
   // Clearstar Labs AG - Split from Re7 Labs (uses synthetic address from vault override)
   "override-clearstar": {
-    name: "Clearstar",
+    name: "Clearstar Labs AG",
     twitter: "https://twitter.com/ClearstarFi",
     legalName: "Clearstar Labs AG",
     entityType: "Corporation",
