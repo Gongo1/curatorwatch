@@ -360,6 +360,8 @@ const VAULT_CURATOR_OVERRIDES: Record<string, string> = {
   "0xf3cc5c9a25508d8d959618fd48f6abc18ca4db49": "clearstar", // Clearstar Boring USDC
   "0x2b58132964f038461e3d8b56df582f49fecc8745": "clearstar", // Clearstar Boring USDT
   "0xae9a5aa54ae43bb8811435f02a29e9d2b43cdc7c": "clearstar", // Clearstar Reactor ETH
+  // Re Ecosystem is a separate entity from Re7 Labs
+  "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": "re ecosystem", // Re Ecosystem Vault USDC
 };
 
 async function findMatchingProfile(
