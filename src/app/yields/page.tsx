@@ -60,6 +60,9 @@ interface CuratorWithVaults extends CuratorYieldData {
 
 type ViewMode = "curators" | "vaults";
 type TimeFrame = "daily" | "weekly" | "monthly" | "annualized";
+type SortDir = "asc" | "desc";
+type CuratorSortKey = "name" | "vaults" | "yieldRange" | "avgFee" | "yield";
+type VaultSortKey = "name" | "curator" | "tvl" | "grossApy" | "netApy" | "fee" | "yield";
 
 export default function YieldsPage() {
   const [summary, setSummary] = useState<YieldSummary | null>(null);
@@ -69,6 +72,8 @@ export default function YieldsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("curators");
   const [timeFrame, setTimeFrame] = useState<TimeFrame>("annualized");
   const [expandedCurator, setExpandedCurator] = useState<string | null>(null);
+  const [curatorSort, setCuratorSort] = useState<{ key: CuratorSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
+  const [vaultSort, setVaultSort] = useState<{ key: VaultSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
 
   useEffect(() => {
     async function fetchData() {
@@ -141,10 +146,71 @@ export default function YieldsPage() {
       }
     }
 
-    return Array.from(curatorMap.values()).sort(
-      (a, b) => b.annualizedYield - a.annualizedYield
+    const rows = Array.from(curatorMap.values());
+
+    // Sort based on current sort state
+    const dir = curatorSort.dir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (curatorSort.key) {
+        case "name":
+          return dir * a.curatorName.localeCompare(b.curatorName);
+        case "vaults":
+          return dir * (a.vaultCount - b.vaultCount);
+        case "yieldRange":
+          return dir * (a.maxNetApy - b.maxNetApy);
+        case "avgFee":
+          return dir * (a.avgFee - b.avgFee);
+        case "yield":
+          return dir * (a.annualizedYield - b.annualizedYield);
+        default:
+          return 0;
+      }
+    });
+
+    return rows;
+  }, [curatorYields, vaultYields, curatorSort]);
+
+  const sortedVaults = useMemo(() => {
+    const sorted = [...vaultYields];
+    const dir = vaultSort.dir === "asc" ? 1 : -1;
+    sorted.sort((a, b) => {
+      switch (vaultSort.key) {
+        case "name":
+          return dir * a.vaultName.localeCompare(b.vaultName);
+        case "curator":
+          return dir * (a.curatorName || "").localeCompare(b.curatorName || "");
+        case "tvl":
+          return dir * (a.tvl - b.tvl);
+        case "grossApy":
+          return dir * (a.grossApy - b.grossApy);
+        case "netApy":
+          return dir * (a.netApy - b.netApy);
+        case "fee":
+          return dir * (a.performanceFee - b.performanceFee);
+        case "yield":
+          return dir * (a.annualizedYield - b.annualizedYield);
+        default:
+          return 0;
+      }
+    });
+    return sorted;
+  }, [vaultYields, vaultSort]);
+
+  function toggleCuratorSort(key: CuratorSortKey) {
+    setCuratorSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "desc" ? "asc" : "desc" }
+        : { key, dir: "desc" }
     );
-  }, [curatorYields, vaultYields]);
+  }
+
+  function toggleVaultSort(key: VaultSortKey) {
+    setVaultSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "desc" ? "asc" : "desc" }
+        : { key, dir: "desc" }
+    );
+  }
 
   const getVaultYieldForTimeFrame = (vault: VaultYieldData) => {
     switch (timeFrame) {
@@ -317,21 +383,11 @@ export default function YieldsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-background-elevated/50">
-                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Curator
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Vaults
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Yield Range
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Avg Fee
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      {timeFrameLabels[timeFrame]} Yield
-                    </th>
+                    <SortableHeader label="Curator" sortKey="name" currentSort={curatorSort} onSort={toggleCuratorSort} align="left" />
+                    <SortableHeader label="Vaults" sortKey="vaults" currentSort={curatorSort} onSort={toggleCuratorSort} />
+                    <SortableHeader label="Yield Range" sortKey="yieldRange" currentSort={curatorSort} onSort={toggleCuratorSort} />
+                    <SortableHeader label="Avg Fee" sortKey="avgFee" currentSort={curatorSort} onSort={toggleCuratorSort} />
+                    <SortableHeader label={`${timeFrameLabels[timeFrame]} Yield`} sortKey="yield" currentSort={curatorSort} onSort={toggleCuratorSort} />
                     <th className="w-10 px-2" />
                   </tr>
                 </thead>
@@ -368,51 +424,27 @@ export default function YieldsPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border bg-background-elevated/50">
-                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Vault
-                    </th>
-                    <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Curator
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      TVL
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Gross APY
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Net APY
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      Fee
-                    </th>
-                    <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">
-                      {timeFrameLabels[timeFrame]} Yield
-                    </th>
+                    <SortableHeader label="Vault" sortKey="name" currentSort={vaultSort} onSort={toggleVaultSort} align="left" />
+                    <SortableHeader label="Curator" sortKey="curator" currentSort={vaultSort} onSort={toggleVaultSort} align="left" />
+                    <SortableHeader label="TVL" sortKey="tvl" currentSort={vaultSort} onSort={toggleVaultSort} />
+                    <SortableHeader label="Gross APY" sortKey="grossApy" currentSort={vaultSort} onSort={toggleVaultSort} />
+                    <SortableHeader label="Net APY" sortKey="netApy" currentSort={vaultSort} onSort={toggleVaultSort} />
+                    <SortableHeader label="Fee" sortKey="fee" currentSort={vaultSort} onSort={toggleVaultSort} />
+                    <SortableHeader label={`${timeFrameLabels[timeFrame]} Yield`} sortKey="yield" currentSort={vaultSort} onSort={toggleVaultSort} />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {vaultYields.slice(0, 50).map((vault, index) => (
+                  {sortedVaults.slice(0, 50).map((vault) => (
                     <tr key={vault.vaultId} className="hover:bg-background-elevated/30 transition-colors">
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
-                            index === 0 ? "bg-yellow-500 text-black" :
-                            index === 1 ? "bg-neutral-300 text-black" :
-                            index === 2 ? "bg-amber-700 text-white" :
-                            "bg-neutral-700 text-white"
-                          }`}>
-                            {index + 1}
-                          </div>
-                          <div>
-                            <Link
-                              href={`/vault/${vault.vaultAddress}`}
-                              className="font-medium text-text-primary hover:text-accent-blue transition-colors"
-                            >
-                              {vault.vaultName}
-                            </Link>
-                            <p className="text-xs text-text-tertiary">{vault.assetSymbol}</p>
-                          </div>
+                        <div>
+                          <Link
+                            href={`/vault/${vault.vaultAddress}`}
+                            className="font-medium text-text-primary hover:text-accent-blue transition-colors"
+                          >
+                            {vault.vaultName}
+                          </Link>
+                          <p className="text-xs text-text-tertiary">{vault.assetSymbol}</p>
                         </div>
                       </td>
                       <td className="px-4 py-3">
@@ -476,6 +508,43 @@ export default function YieldsPage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+function SortableHeader<T extends string>({
+  label,
+  sortKey,
+  currentSort,
+  onSort,
+  align = "right",
+}: {
+  label: string;
+  sortKey: T;
+  currentSort: { key: T; dir: SortDir };
+  onSort: (key: T) => void;
+  align?: "left" | "right";
+}) {
+  const isActive = currentSort.key === sortKey;
+  return (
+    <th
+      className={`${align === "left" ? "text-left" : "text-right"} text-xs font-medium uppercase tracking-wider px-4 py-3 cursor-pointer select-none hover:text-text-primary transition-colors ${
+        isActive ? "text-accent-blue" : "text-text-secondary"
+      }`}
+      onClick={() => onSort(sortKey)}
+    >
+      <span className={`inline-flex items-center gap-1 ${align === "right" ? "justify-end" : ""}`}>
+        {label}
+        {isActive && (
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            {currentSort.dir === "desc" ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 15l7-7 7 7" />
+            )}
+          </svg>
+        )}
+      </span>
+    </th>
   );
 }
 
