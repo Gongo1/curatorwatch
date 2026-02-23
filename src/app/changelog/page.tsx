@@ -43,6 +43,18 @@ const entries: ChangelogEntry[] = [
         category: "Improvement",
         text: "Alerts and data collection now run hourly instead of daily \u2014 vault changes, large flows, and APY shifts are detected within the hour",
       },
+      {
+        category: "Improvement",
+        text: "Updated Clearstar profile to Clearstar Labs AG with correct jurisdiction (Switzerland) based on direct feedback from the team",
+      },
+      {
+        category: "Improvement",
+        text: "Curator detail pages now use clean URL slugs instead of raw addresses for split curators (e.g. /curator/clearstar instead of /curator/override-clearstar)",
+      },
+      {
+        category: "Fix",
+        text: "Fixed crash caused by non-hex curator addresses in avatar and color generation functions \u2014 hardened all 7 affected components to handle any string safely",
+      },
     ],
   },
   {
