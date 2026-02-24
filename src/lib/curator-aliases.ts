@@ -44,6 +44,22 @@ export const CURATOR_ALIAS_GROUPS: CuratorAliasGroup[] = [
   },
 ];
 
+/**
+ * Vault-level curator overrides.
+ * Some vaults share an on-chain curator address but belong to different
+ * entities (e.g. Clearstar and Re Ecosystem vaults use Re7's on-chain address).
+ * Keys are lowercased vault addresses, values are the curator address to use.
+ */
+export const VAULT_CURATOR_OVERRIDES: Record<string, string> = {
+  // Clearstar vaults — on-chain curator is Re7 but actual curator is Clearstar Labs AG
+  "0x2b58132964f038461e3d8b56df582f49fecc8745": "clearstar",   // Clearstar Boring USDT
+  "0xfa17f7aadbfac2c5d3c8125555404c1ae17df853": "clearstar",   // Clearstar Yield USDC
+  "0x69a238ae7ebeb3c53ff3b544e48b96a2142fc284": "clearstar",   // Clearstar USDC Core
+  "0xf3cc5c9a25508d8d959618fd48f6abc18ca4db49": "clearstar",   // Clearstar Boring USDC
+  // Re Ecosystem vault — on-chain curator is Re7 but actual curator is Re Ecosystem
+  "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": "reecosystem", // Re Ecosystem Vault
+};
+
 /** Pre-built lookup: alias address -> primary address */
 const aliasToPrimary = new Map<string, string>();
 for (const group of CURATOR_ALIAS_GROUPS) {
@@ -58,6 +74,16 @@ for (const group of CURATOR_ALIAS_GROUPS) {
  */
 export function resolveCuratorAddress(address: string): string {
   return aliasToPrimary.get(address.toLowerCase()) ?? address.toLowerCase();
+}
+
+/**
+ * Resolve the curator address for a vault, checking vault-level overrides first,
+ * then falling back to the standard address alias resolution.
+ */
+export function resolveVaultCuratorAddress(vaultAddress: string, onChainCuratorAddress: string): string {
+  const override = VAULT_CURATOR_OVERRIDES[vaultAddress.toLowerCase()];
+  if (override) return override;
+  return resolveCuratorAddress(onChainCuratorAddress);
 }
 
 /**
