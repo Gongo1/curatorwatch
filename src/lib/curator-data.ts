@@ -209,6 +209,22 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     isRegulated: false,
   },
 
+  // AlphaPing - Institutional-grade credit infrastructure
+  // Actual address from Morpho vaults: 0x6788c8ad65e85cca7224a0b46d061ef7d81f9da5
+  "0x6788c8ad65e85cca7224a0b46d061ef7d81f9da5": {
+    name: "AlphaPing",
+    website: "https://alphaping.ch",
+    twitter: "https://twitter.com/AlphaPingCH",
+    legalName: "AlphaPing AG",
+    entityType: "Corporation",
+    jurisdiction: "Switzerland",
+    headquarters: "Switzerland",
+    description:
+      "AlphaPing provides institutional-grade credit infrastructure through mandate-driven, non-custodial on-chain credit vaults. They specialize in transparent credit strategies on Morpho Blue, offering curated lending vaults for USDC, FRAX, and other assets.",
+    teamSize: "1-10",
+    isRegulated: false,
+  },
+
   // Spark (MakerDAO ecosystem)
   "0x44c4a5026a9af1e10c3b6a5a4f8d7c5e0e3d7f2a": {
     name: "Spark Protocol",
