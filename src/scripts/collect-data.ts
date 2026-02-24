@@ -8,6 +8,7 @@ import {
   type VaultReallocatesResponse,
 } from "../lib/graphql/queries";
 import { collectLiquidations } from "./collect-liquidations";
+import { collectMarketAllocations } from "./collect-market-allocations";
 import type { VaultV2sResponse, MorphoVaultV2 } from "../lib/types/vault";
 import { calculateAllRiskMetrics } from "../lib/risk-calculator";
 import { detectChanges, storeChanges } from "../lib/change-detector";
@@ -791,6 +792,15 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
 
     // Update curator statistics
     await updateCuratorStats();
+
+    // Collect market allocations (needed for liquidation join)
+    log("Collecting market allocations...");
+    try {
+      const maResult = await collectMarketAllocations();
+      log(`  Market allocations: ${maResult.allocationsStored} stored from ${maResult.vaultsProcessed} vaults`);
+    } catch (error) {
+      logError("Failed to collect market allocations (non-critical)", error);
+    }
 
     // Collect liquidation data
     log("Collecting liquidation data...");
