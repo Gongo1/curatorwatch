@@ -21,6 +21,31 @@ const categoryStyles: Record<Category, string> = {
 
 const entries: ChangelogEntry[] = [
   {
+    date: "February 24, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "Added Fees tab to yields page \u2014 shows total annual fees, average fee rate, and per-curator revenue breakdown with expandable asset-level detail",
+      },
+      {
+        category: "Feature",
+        text: "Added Economics tab to curator detail pages \u2014 replaces Performance and Activity tabs with annual yield, annual fees, net to LPs, vault economics table, and asset breakdown",
+      },
+      {
+        category: "Fix",
+        text: "Fixed Clearstar and Re Ecosystem vaults showing under Re7 Labs \u2014 added vault-level curator overrides so the daily cron no longer reassigns split curators back to the shared on-chain address",
+      },
+      {
+        category: "Improvement",
+        text: "Renamed Alpha Finance to AlphaPing with correct profile data (Swiss corporation, alphaping.ch)",
+      },
+      {
+        category: "Improvement",
+        text: "Removed 30D Change column from homepage curator table",
+      },
+    ],
+  },
+  {
     date: "February 23, 2026",
     items: [
       {
