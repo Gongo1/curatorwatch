@@ -263,6 +263,12 @@ function Header() {
             >
               Vaults
             </Link>
+            <Link
+              href="/yields"
+              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
+            >
+              Economics
+            </Link>
             <Link href="/changelog" className="text-sm font-medium text-accent-blue">
               Changelog
             </Link>

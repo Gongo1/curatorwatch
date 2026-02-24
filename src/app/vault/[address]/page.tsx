@@ -188,6 +188,9 @@ export default function VaultDetailPage({ params }: PageProps) {
               <Link href="/vaults" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
                 All Vaults
               </Link>
+              <Link href="/yields" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                Economics
+              </Link>
               <Link href="/alerts" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
                 Alerts
               </Link>

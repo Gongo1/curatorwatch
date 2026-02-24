@@ -231,12 +231,31 @@ export default function AlertsPage() {
       {/* Header */}
       <header className="bg-background-subtle border-b border-border sticky top-0 z-50">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between mb-4">
+            <Link href="/" className="flex items-center gap-3">
+              <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
+              <span className="text-lg font-semibold text-text-primary">CuratorWatch</span>
+            </Link>
+            <nav className="flex items-center gap-5">
+              <Link href="/" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                Dashboard
+              </Link>
+              <Link href="/vaults" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                Vaults
+              </Link>
+              <Link href="/yields" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                Economics
+              </Link>
+              <Link href="/alerts" className="text-sm font-medium text-accent-blue">
+                Alerts
+              </Link>
+              <Link href="/changelog" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
+                Changelog
+              </Link>
+            </nav>
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <Link href="/" className="flex items-center gap-3 mb-3">
-                <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
-                <span className="text-lg font-semibold text-text-primary">CuratorWatch</span>
-              </Link>
               <h1 className="text-xl font-semibold text-text-primary tracking-tight">
                 Alerts
               </h1>
