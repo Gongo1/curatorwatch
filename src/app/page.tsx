@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { CuratorTable, CuratorTableSkeleton } from "@/components/CuratorTable";
 import { TabbedMetricChart } from "@/components/TabbedMetricChart";
 import { StablecoinBreakdown } from "@/components/StablecoinBreakdown";
@@ -37,6 +38,7 @@ const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const PAGE_SIZE = 20;
 
 export default function Home() {
+  const router = useRouter();
   const [curators, setCurators] = useState<CuratorDashboardItem[]>([]);
   const [stats, setStats] = useState<CuratorDashboardStats | null>(null);
   const [pagination, setPagination] = useState<PaginationInfo | null>(null);
@@ -54,6 +56,10 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortBy, setSortBy] = useState<"aum" | "vaults" | "name">("aum");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Autocomplete dropdown state
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const fetchData = useCallback(async (page = 1, search = "", sort = sortBy, order = sortOrder) => {
     try {
@@ -149,11 +155,24 @@ export default function Home() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setCurrentPage(1);
-      fetchData(1, searchQuery);
+      fetchData(1, searchQuery).then(() => {
+        setShowDropdown(searchQuery.trim().length > 0);
+      });
     }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery, fetchData]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleMouseDown = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, []);
 
   // Handle page change
   const handlePageChange = (newPage: number) => {
@@ -475,13 +494,15 @@ export default function Home() {
 
         {/* Search and Filter Bar */}
         <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          {/* Search Input */}
-          <div className="relative w-full sm:w-72">
+          {/* Search Input with Autocomplete */}
+          <div className="relative w-full sm:w-72" ref={dropdownRef}>
             <input
               type="text"
               placeholder="Search curators..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => { if (searchQuery.trim() && curators.length > 0) setShowDropdown(true); }}
+              onKeyDown={(e) => { if (e.key === "Escape") setShowDropdown(false); }}
               className="w-full pl-9 pr-4 py-2 text-sm bg-background-subtle border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue"
             />
             <svg
@@ -494,13 +515,57 @@ export default function Home() {
             </svg>
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={() => { setSearchQuery(""); setShowDropdown(false); }}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </button>
+            )}
+
+            {/* Autocomplete Dropdown */}
+            {showDropdown && searchQuery.trim() && (
+              <div className="absolute z-50 top-full mt-1 w-full sm:w-96 bg-background-elevated border border-border rounded-lg shadow-xl overflow-hidden">
+                {curators.length === 0 ? (
+                  <div className="px-4 py-3 text-sm text-text-secondary">
+                    No curators found
+                  </div>
+                ) : (
+                  <ul className="max-h-80 overflow-y-auto">
+                    {curators.slice(0, 8).map((curator) => (
+                      <li key={curator.curatorId}>
+                        <button
+                          className="w-full text-left px-4 py-2.5 hover:bg-background-subtle transition-colors flex items-center justify-between gap-3"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setShowDropdown(false);
+                            setSearchQuery("");
+                            router.push(`/curator/${curator.curatorAddress}`);
+                          }}
+                        >
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-text-primary truncate">
+                              {curator.name || "Unknown Curator"}
+                            </div>
+                            <div className="text-xs text-text-muted font-mono truncate">
+                              {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
+                            </div>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            <div className="text-xs font-medium text-text-secondary">
+                              {formatCurrency(curator.totalAUM)}
+                            </div>
+                            <div className="text-[11px] text-text-muted">
+                              {curator.vaultCount} vault{curator.vaultCount !== 1 ? "s" : ""}
+                            </div>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
             )}
           </div>
 
