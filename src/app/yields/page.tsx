@@ -58,12 +58,44 @@ interface CuratorWithVaults extends CuratorYieldData {
   vaultsByAsset: Record<string, VaultYieldData[]>;
 }
 
-type ViewMode = "curators" | "vaults" | "fees";
+interface LiquidationEvent {
+  txHash: string;
+  timestamp: string;
+  marketUniqueKey: string;
+  borrower: string;
+  seizedAssetsUsd: number;
+  repaidAssetsUsd: number;
+  badDebtAssetsUsd: number;
+}
+
+interface CuratorLiquidationData {
+  curatorId: string;
+  curatorName: string;
+  curatorAddress: string;
+  totalEvents: number;
+  totalSeizedUsd: number;
+  totalRepaidUsd: number;
+  totalBadDebtUsd: number;
+  recent30d: number;
+  events: LiquidationEvent[];
+}
+
+interface LiquidationSummary {
+  totalEvents: number;
+  totalSeizedUsd: number;
+  totalRepaidUsd: number;
+  totalBadDebtUsd: number;
+  recent30d: number;
+  marketsAffected: number;
+}
+
+type ViewMode = "curators" | "vaults" | "fees" | "liquidations";
 type TimeFrame = "daily" | "weekly" | "monthly" | "annualized";
 type SortDir = "asc" | "desc";
 type CuratorSortKey = "name" | "vaults" | "tvl" | "yieldRange" | "avgFee" | "yield";
 type VaultSortKey = "name" | "curator" | "tvl" | "grossApy" | "netApy" | "fee" | "yield";
 type FeeSortKey = "name" | "aum" | "avgFee" | "annualRevenue" | "vaults";
+type LiqSortKey = "name" | "events" | "seized" | "repaid" | "badDebt" | "recent30d";
 
 export default function YieldsPage() {
   const [summary, setSummary] = useState<YieldSummary | null>(null);
@@ -77,19 +109,31 @@ export default function YieldsPage() {
   const [vaultSort, setVaultSort] = useState<{ key: VaultSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
   const [feeSort, setFeeSort] = useState<{ key: FeeSortKey; dir: SortDir }>({ key: "annualRevenue", dir: "desc" });
   const [expandedFeeCurator, setExpandedFeeCurator] = useState<string | null>(null);
+  const [liqSummary, setLiqSummary] = useState<LiquidationSummary | null>(null);
+  const [liqByCurator, setLiqByCurator] = useState<CuratorLiquidationData[]>([]);
+  const [liqSort, setLiqSort] = useState<{ key: LiqSortKey; dir: SortDir }>({ key: "seized", dir: "desc" });
+  const [expandedLiqCurator, setExpandedLiqCurator] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch("/api/stats/yield-breakdown");
-        const data = await response.json();
-        if (data.success) {
-          setSummary(data.data.summary);
-          setCuratorYields(data.data.byCurator);
-          setVaultYields(data.data.byVault);
+        const [yieldRes, liqRes] = await Promise.all([
+          fetch("/api/stats/yield-breakdown"),
+          fetch("/api/stats/liquidation-breakdown"),
+        ]);
+        const yieldData = await yieldRes.json();
+        if (yieldData.success) {
+          setSummary(yieldData.data.summary);
+          setCuratorYields(yieldData.data.byCurator);
+          setVaultYields(yieldData.data.byVault);
+        }
+        const liqData = await liqRes.json();
+        if (liqData.success) {
+          setLiqSummary(liqData.data.summary);
+          setLiqByCurator(liqData.data.byCurator);
         }
       } catch (err) {
-        console.error("Failed to fetch yields:", err);
+        console.error("Failed to fetch data:", err);
       } finally {
         setLoading(false);
       }
@@ -247,6 +291,38 @@ export default function YieldsPage() {
     return { totalAnnualFees, avgFeeRate, totalAUM, vaultCount: vaultYields.length };
   }, [vaultYields]);
 
+  const sortedLiqCurators = useMemo(() => {
+    const rows = [...liqByCurator];
+    const dir = liqSort.dir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (liqSort.key) {
+        case "name":
+          return dir * a.curatorName.localeCompare(b.curatorName);
+        case "events":
+          return dir * (a.totalEvents - b.totalEvents);
+        case "seized":
+          return dir * (a.totalSeizedUsd - b.totalSeizedUsd);
+        case "repaid":
+          return dir * (a.totalRepaidUsd - b.totalRepaidUsd);
+        case "badDebt":
+          return dir * (a.totalBadDebtUsd - b.totalBadDebtUsd);
+        case "recent30d":
+          return dir * (a.recent30d - b.recent30d);
+        default:
+          return 0;
+      }
+    });
+    return rows;
+  }, [liqByCurator, liqSort]);
+
+  function toggleLiqSort(key: LiqSortKey) {
+    setLiqSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "desc" ? "asc" : "desc" }
+        : { key, dir: "desc" }
+    );
+  }
+
   function toggleFeeSort(key: FeeSortKey) {
     setFeeSort((prev) =>
       prev.key === key
@@ -335,12 +411,12 @@ export default function YieldsPage() {
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-text-primary mb-1">Economics</h1>
           <p className="text-sm text-text-secondary">
-            Yield, fees, and revenue across Morpho V2 vaults
+            Yield, fees, liquidations, and revenue across Morpho V2 vaults
           </p>
         </div>
 
-        {/* Summary Cards */}
-        {summary && (
+        {/* Summary Cards — yield overview (hide on liquidations tab) */}
+        {summary && viewMode !== "liquidations" && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <SummaryCard
               label="Total Yield (Annualized)"
@@ -366,13 +442,15 @@ export default function YieldsPage() {
           </div>
         )}
 
-        {/* Explainer */}
-        <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/20 rounded-xl">
-          <p className="text-sm text-text-secondary">
-            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and Net APY.
-            Net APY is the return depositors receive after all fees (curator + protocol). These are projected yields based on current rates.
-          </p>
-        </div>
+        {/* Explainer — hide on liquidations tab */}
+        {viewMode !== "liquidations" && (
+          <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/20 rounded-xl">
+            <p className="text-sm text-text-secondary">
+              <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and Net APY.
+              Net APY is the return depositors receive after all fees (curator + protocol). These are projected yields based on current rates.
+            </p>
+          </div>
+        )}
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
@@ -409,6 +487,16 @@ export default function YieldsPage() {
                 }`}
               >
                 Fees
+              </button>
+              <button
+                onClick={() => setViewMode("liquidations")}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  viewMode === "liquidations"
+                    ? "bg-accent-blue text-white"
+                    : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
+                }`}
+              >
+                Liquidations
               </button>
             </div>
           </div>
@@ -540,6 +628,69 @@ export default function YieldsPage() {
                           assetKeys={assetKeys}
                           onToggle={() =>
                             setExpandedFeeCurator(isExpanded ? null : curator.curatorId)
+                          }
+                        />
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Liquidations Tab */}
+        {viewMode === "liquidations" && (
+          <>
+            {/* Liquidation Summary Cards */}
+            {liqSummary && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <SummaryCard
+                  label="Total Liquidation Events"
+                  value={liqSummary.totalEvents.toLocaleString()}
+                  subtext={`${liqSummary.recent30d} in last 30 days`}
+                  highlight
+                  valueColor="text-accent-red"
+                />
+                <SummaryCard
+                  label="Total Collateral Seized"
+                  value={formatCurrency(liqSummary.totalSeizedUsd)}
+                  subtext={`Across ${liqSummary.marketsAffected} markets`}
+                />
+                <SummaryCard
+                  label="Total Bad Debt"
+                  value={formatCurrency(liqSummary.totalBadDebtUsd)}
+                  subtext="Unrecovered losses"
+                  valueColor="text-accent-red"
+                />
+              </div>
+            )}
+
+            {/* Liquidation by Curator Table */}
+            <div className="bg-background-subtle border border-border rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-background-elevated/50">
+                      <SortableHeader label="Curator" sortKey="name" currentSort={liqSort} onSort={toggleLiqSort} align="left" />
+                      <SortableHeader label="Events" sortKey="events" currentSort={liqSort} onSort={toggleLiqSort} />
+                      <SortableHeader label="Collateral Seized" sortKey="seized" currentSort={liqSort} onSort={toggleLiqSort} />
+                      <SortableHeader label="Debt Repaid" sortKey="repaid" currentSort={liqSort} onSort={toggleLiqSort} />
+                      <SortableHeader label="Bad Debt" sortKey="badDebt" currentSort={liqSort} onSort={toggleLiqSort} />
+                      <SortableHeader label="Last 30d" sortKey="recent30d" currentSort={liqSort} onSort={toggleLiqSort} />
+                      <th className="w-10 px-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {sortedLiqCurators.map((curator) => {
+                      const isExpanded = expandedLiqCurator === curator.curatorId;
+                      return (
+                        <LiquidationCuratorRow
+                          key={curator.curatorId}
+                          curator={curator}
+                          isExpanded={isExpanded}
+                          onToggle={() =>
+                            setExpandedLiqCurator(isExpanded ? null : curator.curatorId)
                           }
                         />
                       );
@@ -937,6 +1088,132 @@ function FeeCuratorRow({
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function LiquidationCuratorRow({
+  curator,
+  isExpanded,
+  onToggle,
+}: {
+  curator: CuratorLiquidationData;
+  isExpanded: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      <tr
+        className="hover:bg-background-elevated/30 transition-colors cursor-pointer"
+        onClick={onToggle}
+      >
+        <td className="px-4 py-3">
+          <div>
+            <p className="font-medium text-text-primary">{curator.curatorName}</p>
+            <p className="text-xs text-text-tertiary font-mono">
+              {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
+            </p>
+          </div>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="font-medium text-text-primary tabular-nums">
+            {curator.totalEvents.toLocaleString()}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="font-bold text-accent-red tabular-nums text-lg">
+            {formatCurrency(curator.totalSeizedUsd)}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="text-text-secondary tabular-nums">
+            {formatCurrency(curator.totalRepaidUsd)}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className={`font-medium tabular-nums ${curator.totalBadDebtUsd > 0 ? "text-accent-red" : "text-text-secondary"}`}>
+            {formatCurrency(curator.totalBadDebtUsd)}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className={`font-medium tabular-nums ${curator.recent30d > 0 ? "text-accent-red" : "text-text-secondary"}`}>
+            {curator.recent30d}
+          </span>
+        </td>
+        <td className="px-2">
+          <svg
+            className={`w-4 h-4 text-text-muted transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </td>
+      </tr>
+
+      {isExpanded && curator.events.length > 0 && (
+        <tr>
+          <td colSpan={7} className="p-0">
+            <div className="bg-background-elevated/40 border-t border-border px-6 py-4">
+              <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">
+                Recent Liquidation Events
+              </p>
+              <div className="space-y-1">
+                {curator.events.map((evt) => (
+                  <div
+                    key={`${evt.txHash}-${evt.borrower}`}
+                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-background-hover/50 transition-colors"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-text-primary">
+                        {new Date(evt.timestamp).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                        <span className="text-text-muted ml-2 text-xs">
+                          {new Date(evt.timestamp).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </p>
+                      <p className="text-xs text-text-tertiary font-mono">
+                        Market: {evt.marketUniqueKey.slice(0, 8)}...{evt.marketUniqueKey.slice(-6)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-6 flex-shrink-0">
+                      <div className="text-right">
+                        <p className="text-sm font-medium text-accent-red tabular-nums">
+                          {formatCurrency(evt.seizedAssetsUsd)}
+                        </p>
+                        <p className="text-[10px] text-text-muted">seized</p>
+                      </div>
+                      <div className="text-right w-24">
+                        <p className="text-sm text-text-secondary tabular-nums">
+                          {formatCurrency(evt.repaidAssetsUsd)}
+                        </p>
+                        <p className="text-[10px] text-text-muted">repaid</p>
+                      </div>
+                      {evt.badDebtAssetsUsd > 0 && (
+                        <div className="text-right w-24">
+                          <p className="text-sm font-medium text-accent-red tabular-nums">
+                            {formatCurrency(evt.badDebtAssetsUsd)}
+                          </p>
+                          <p className="text-[10px] text-text-muted">bad debt</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </td>
