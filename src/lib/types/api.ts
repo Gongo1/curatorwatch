@@ -215,6 +215,7 @@ export interface CuratorVaultSummary {
   name: string;
   symbol: string;
   asset: VaultAsset;
+  performanceFee: number;
   latestSnapshot: VaultSnapshot | null;
 }
 

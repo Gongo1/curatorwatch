@@ -206,6 +206,7 @@ export async function GET(
           symbol: vault.assetSymbol,
           decimals: vault.assetDecimals,
         },
+        performanceFee: vault.performanceFee ?? 0,
         latestSnapshot: snapshot
           ? {
               totalAssets: snapshot.totalAssets,

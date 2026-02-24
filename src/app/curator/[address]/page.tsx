@@ -240,8 +240,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
           <TabsList className="rounded-t-lg">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vaults">Vaults</TabsTrigger>
-            <TabsTrigger value="performance">Performance</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="economics">Economics</TabsTrigger>
             <TabsTrigger value="risk">Risk Profile</TabsTrigger>
           </TabsList>
 
@@ -494,299 +493,180 @@ export default function CuratorDetailPage({ params }: PageProps) {
             )}
           </TabsContent>
 
-          {/* Performance Tab */}
-          <TabsContent value="performance" className="pt-6">
-            <div className="space-y-6">
-              {/* Summary Stats Row */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-background-subtle rounded-lg border border-accent-blue/30 bg-accent-blue/5 p-4">
-                  <p className="text-xs text-text-tertiary mb-1">Total AUM</p>
-                  <p className="text-xl font-semibold text-accent-blue tabular-nums">{formatCurrency(totalTVL)}</p>
-                </div>
-                <div className="bg-background-subtle rounded-lg border border-border p-4">
-                  <p className="text-xs text-text-tertiary mb-1">Active Vaults</p>
-                  <p className="text-xl font-semibold text-text-primary tabular-nums">{vaults.length}</p>
-                </div>
-                <div className="bg-background-subtle rounded-lg border border-border p-4">
-                  <p className="text-xs text-text-tertiary mb-1">Positive APY Rate</p>
-                  <p className="text-xl font-semibold text-accent-green tabular-nums">
-                    {vaults.length > 0 ? Math.round((vaults.filter(v => (v.latestSnapshot?.avgNetApy ?? 0) > 0).length / vaults.length) * 100) : 0}%
-                  </p>
-                </div>
-              </div>
+          {/* Economics Tab */}
+          <TabsContent value="economics" className="pt-6">
+            {(() => {
+              const vaultEcon = vaults.map((v) => {
+                const tvl = v.latestSnapshot?.totalAssetsUsd ?? 0;
+                const netApy = v.latestSnapshot?.avgNetApy ?? 0;
+                const fee = v.performanceFee ?? 0;
+                const annualYield = tvl * netApy;
+                const annualFees = tvl * fee;
+                return { ...v, tvl, netApy, fee, annualYield, annualFees };
+              });
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* AUM Breakdown */}
-                <section className="bg-background-subtle rounded-lg border border-border">
-                  <div className="px-6 py-4 border-b border-border">
-                    <h2 className="text-sm font-semibold text-text-primary">AUM Breakdown</h2>
-                    <p className="text-xs text-text-tertiary mt-1">Distribution of assets under management</p>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    {assetDistribution.slice(0, 5).map((asset, index) => (
-                      <div key={asset.symbol} className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center justify-center w-6 h-6 rounded bg-accent-blue/15 text-accent-blue text-xs font-bold">
-                              {index + 1}
-                            </span>
-                            <span className="font-medium text-text-primary">{asset.symbol}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="font-medium text-text-primary tabular-nums">{formatCurrency(asset.amount)}</span>
-                            <span className="text-text-muted ml-2 tabular-nums">{asset.percentage.toFixed(1)}%</span>
-                          </div>
-                        </div>
-                        <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-accent-blue rounded-full transition-all"
-                            style={{ width: `${Math.min(asset.percentage, 100)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                    {assetDistribution.length > 5 && (
-                      <p className="text-xs text-text-muted text-center pt-2">
-                        +{assetDistribution.length - 5} more asset{assetDistribution.length - 5 !== 1 ? "s" : ""}
-                      </p>
-                    )}
-                  </div>
-                </section>
+              const totalAnnualYield = vaultEcon.reduce((s, v) => s + v.annualYield, 0);
+              const totalAnnualFees = vaultEcon.reduce((s, v) => s + v.annualFees, 0);
+              const netToLPs = totalAnnualYield - totalAnnualFees;
+              const weightedApy = totalTVL > 0
+                ? vaultEcon.reduce((s, v) => s + v.netApy * v.tvl, 0) / totalTVL
+                : 0;
+              const avgFee = vaultEcon.length > 0
+                ? vaultEcon.reduce((s, v) => s + v.fee, 0) / vaultEcon.length
+                : 0;
 
-                {/* Yield Analysis */}
-                <section className="bg-background-subtle rounded-lg border border-border">
-                  <div className="px-6 py-4 border-b border-border">
-                    <h2 className="text-sm font-semibold text-text-primary">Yield Analysis</h2>
-                    <p className="text-xs text-text-tertiary mt-1">APY performance across vaults</p>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    {(() => {
-                      const apys = vaults.map(v => v.latestSnapshot?.avgNetApy ?? 0).filter(a => a > 0);
-                      const maxApy = apys.length > 0 ? Math.max(...apys) : 0;
-                      const minApy = apys.length > 0 ? Math.min(...apys) : 0;
-                      const medianApy = apys.length > 0
-                        ? [...apys].sort((a, b) => a - b)[Math.floor(apys.length / 2)]
-                        : 0;
-                      return (
-                        <>
-                          <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                            <span className="text-sm text-text-tertiary">Highest APY</span>
-                            <span className="text-sm font-semibold text-accent-green tabular-nums">{formatPercentage(maxApy)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                            <span className="text-sm text-text-tertiary">Median APY</span>
-                            <span className="text-sm font-semibold text-text-primary tabular-nums">{formatPercentage(medianApy)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                            <span className="text-sm text-text-tertiary">Lowest APY</span>
-                            <span className="text-sm font-semibold text-accent-yellow tabular-nums">{formatPercentage(minApy)}</span>
-                          </div>
-                          <div className="flex justify-between items-center py-2">
-                            <span className="text-sm text-text-tertiary">APY Spread</span>
-                            <span className="text-sm font-semibold text-text-primary tabular-nums">{formatPercentage(maxApy - minApy)}</span>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </section>
-              </div>
+              // Group by asset
+              const assetEcon: Record<string, { aum: number; yield: number; fees: number; feeRates: number[]; vaults: typeof vaultEcon }> = {};
+              for (const v of vaultEcon) {
+                const sym = v.asset.symbol;
+                if (!assetEcon[sym]) assetEcon[sym] = { aum: 0, yield: 0, fees: 0, feeRates: [], vaults: [] };
+                assetEcon[sym].aum += v.tvl;
+                assetEcon[sym].yield += v.annualYield;
+                assetEcon[sym].fees += v.annualFees;
+                assetEcon[sym].feeRates.push(v.fee);
+                assetEcon[sym].vaults.push(v);
+              }
+              const sortedAssetEcon = Object.entries(assetEcon).sort((a, b) => b[1].aum - a[1].aum);
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Risk-Adjusted Metrics */}
-                <section className="bg-background-subtle rounded-lg border border-border">
-                  <div className="px-6 py-4 border-b border-border">
-                    <h2 className="text-sm font-semibold text-text-primary">Risk-Adjusted Metrics</h2>
-                    <p className="text-xs text-text-tertiary mt-1">Performance relative to risk taken</p>
+              return (
+                <div className="space-y-6">
+                  {/* Top Stats */}
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard label="Total AUM" value={formatCurrency(totalTVL)} highlight />
+                    <StatCard
+                      label="Annual Yield"
+                      value={formatCurrency(totalAnnualYield)}
+                      valueClass="text-accent-green"
+                    />
+                    <StatCard
+                      label="Annual Fees"
+                      value={formatCurrency(totalAnnualFees)}
+                      valueClass="text-accent-blue"
+                    />
+                    <StatCard
+                      label="Net to LPs"
+                      value={formatCurrency(netToLPs)}
+                      valueClass="text-accent-green"
+                    />
                   </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-background-elevated rounded-lg p-4 text-center">
-                        <p className="text-xs text-text-tertiary mb-1">Consistency Score</p>
-                        <p className="text-2xl font-bold text-accent-blue">
-                          {(() => {
-                            const apys = vaults.map(v => v.latestSnapshot?.avgNetApy ?? 0).filter(a => a > 0);
-                            if (apys.length < 2) return "N/A";
-                            const avg = apys.reduce((s, a) => s + a, 0) / apys.length;
-                            const variance = apys.reduce((s, a) => s + Math.pow(a - avg, 2), 0) / apys.length;
-                            const cv = Math.sqrt(variance) / Math.abs(avg);
-                            return Math.max(0, Math.round((1 - cv) * 100));
-                          })()}
-                        </p>
-                        <p className="text-xs text-text-muted">of 100</p>
-                      </div>
-                      <div className="bg-background-elevated rounded-lg p-4 text-center">
-                        <p className="text-xs text-text-tertiary mb-1">Win Rate</p>
-                        <p className="text-2xl font-bold text-accent-green">
-                          {vaults.length > 0 ? Math.round((vaults.filter(v => (v.latestSnapshot?.avgNetApy ?? 0) > 0).length / vaults.length) * 100) : 0}%
-                        </p>
-                        <p className="text-xs text-text-muted">vaults earning yield</p>
-                      </div>
-                      <div className="bg-background-elevated rounded-lg p-4 text-center">
-                        <p className="text-xs text-text-tertiary mb-1">Diversification</p>
-                        <p className="text-2xl font-bold text-text-muted">
-                          --
-                        </p>
-                        <p className="text-xs text-text-muted">In Progress</p>
-                      </div>
-                      <div className="bg-background-elevated rounded-lg p-4 text-center">
-                        <p className="text-xs text-text-tertiary mb-1">Risk Grade</p>
-                        <p className="text-2xl font-bold text-text-muted">
-                          --
-                        </p>
-                        <p className="text-xs text-text-muted">In Progress</p>
-                      </div>
+
+                  {/* Supplementary stats */}
+                  <div className="flex items-center gap-6 px-1">
+                    <span className="text-sm text-text-secondary">
+                      Weighted APY: <span className="font-semibold text-accent-green tabular-nums">{formatPercentage(weightedApy)}</span>
+                    </span>
+                    <span className="text-sm text-text-secondary">
+                      Avg Fee: <span className="font-semibold text-text-primary tabular-nums">{formatPercentage(avgFee)}</span>
+                    </span>
+                  </div>
+
+                  {/* Vault Economics Table */}
+                  <section className="bg-background-subtle rounded-lg border border-border overflow-hidden">
+                    <div className="px-6 py-4 border-b border-border">
+                      <h2 className="text-sm font-semibold text-text-primary">Vault Economics</h2>
                     </div>
-                  </div>
-                </section>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-border bg-background-elevated/50">
+                            <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Vault</th>
+                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">TVL</th>
+                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">APY</th>
+                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Fee</th>
+                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Annual Yield</th>
+                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Annual Fees</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {vaultEcon
+                            .sort((a, b) => b.annualFees - a.annualFees)
+                            .map((v) => (
+                            <tr key={v.id} className="hover:bg-background-elevated/30 transition-colors">
+                              <td className="px-4 py-3">
+                                <Link href={`/vault/${v.address}`} className="group">
+                                  <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                                    {v.name}
+                                  </span>
+                                  <span className="block text-xs text-text-tertiary">{v.asset.symbol}</span>
+                                </Link>
+                              </td>
+                              <td className="text-right px-4 py-3">
+                                <span className="text-sm font-medium text-text-primary tabular-nums">
+                                  {formatCurrency(v.tvl)}
+                                </span>
+                              </td>
+                              <td className="text-right px-4 py-3">
+                                <span className="text-sm text-accent-green font-medium tabular-nums">
+                                  {formatPercentage(v.netApy)}
+                                </span>
+                              </td>
+                              <td className="text-right px-4 py-3">
+                                <span className="text-sm text-text-secondary tabular-nums">
+                                  {formatPercentage(v.fee)}
+                                </span>
+                              </td>
+                              <td className="text-right px-4 py-3">
+                                <span className="text-sm font-semibold text-accent-green tabular-nums">
+                                  {formatCurrency(v.annualYield)}
+                                </span>
+                              </td>
+                              <td className="text-right px-4 py-3">
+                                <span className="text-sm font-semibold text-accent-blue tabular-nums">
+                                  {formatCurrency(v.annualFees)}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
 
-                {/* Efficiency Metrics */}
-                <section className="bg-background-subtle rounded-lg border border-border">
-                  <div className="px-6 py-4 border-b border-border">
-                    <h2 className="text-sm font-semibold text-text-primary">Efficiency Metrics</h2>
-                    <p className="text-xs text-text-tertiary mt-1">Operational efficiency indicators</p>
-                  </div>
-                  <div className="p-6 space-y-4">
-                    <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                      <span className="text-sm text-text-tertiary">Avg AUM per Vault</span>
-                      <span className="text-sm font-semibold text-text-primary tabular-nums">
-                        {formatCurrency(vaults.length > 0 ? totalTVL / vaults.length : 0)}
-                      </span>
+                  {/* Asset Breakdown */}
+                  <section className="bg-background-subtle rounded-lg border border-border">
+                    <div className="px-6 py-4 border-b border-border">
+                      <h2 className="text-sm font-semibold text-text-primary">By Asset</h2>
                     </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                      <span className="text-sm text-text-tertiary">Largest Vault Share</span>
-                      <span className="text-sm font-semibold text-text-primary tabular-nums">
-                        {(() => {
-                          const largest = vaults.reduce((max, v) => {
-                            const tvl = v.latestSnapshot?.totalAssetsUsd ?? 0;
-                            return tvl > (max?.latestSnapshot?.totalAssetsUsd ?? 0) ? v : max;
-                          }, vaults[0]);
-                          return totalTVL > 0 && largest
-                            ? `${((largest.latestSnapshot?.totalAssetsUsd ?? 0) / totalTVL * 100).toFixed(1)}%`
-                            : "0%";
-                        })()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-border-subtle">
-                      <span className="text-sm text-text-tertiary">Asset Diversity</span>
-                      <span className="text-sm font-semibold text-text-primary tabular-nums">
-                        {assetDistribution.length} asset{assetDistribution.length !== 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-text-tertiary">Concentration Index</span>
-                      <span className={`text-sm font-semibold tabular-nums ${
-                        assetDistribution[0]?.percentage > 70 ? "text-accent-red" :
-                        assetDistribution[0]?.percentage > 50 ? "text-accent-yellow" : "text-accent-green"
-                      }`}>
-                        {assetDistribution[0]?.percentage.toFixed(0) ?? 0}%
-                      </span>
-                    </div>
-                  </div>
-                </section>
-              </div>
-
-              {/* Vault Performance Comparison */}
-              <section className="bg-background-subtle rounded-lg border border-border">
-                <div className="px-6 py-4 border-b border-border">
-                  <h2 className="text-sm font-semibold text-text-primary">Vault Performance Comparison</h2>
-                  <p className="text-xs text-text-tertiary mt-1">APY performance ranked by yield</p>
-                </div>
-                <div className="p-6 space-y-3">
-                  {vaults
-                    .sort((a, b) => (b.latestSnapshot?.avgNetApy ?? 0) - (a.latestSnapshot?.avgNetApy ?? 0))
-                    .map((vault, index) => (
-                      <div key={vault.id} className="flex items-center gap-3">
-                        <span className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold ${
-                          index === 0 ? "bg-accent-green/15 text-accent-green" :
-                          index === 1 ? "bg-accent-blue/15 text-accent-blue" :
-                          index === 2 ? "bg-purple-500/15 text-purple-400" : "bg-background-elevated text-text-muted"
-                        }`}>
-                          {index + 1}
-                        </span>
-                        <div className="w-32 text-sm font-medium text-text-primary truncate">{vault.name}</div>
-                        <div className="flex-1">
-                          <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                index === 0 ? "bg-accent-green" :
-                                index === 1 ? "bg-accent-blue" :
-                                index === 2 ? "bg-purple-500" : "bg-text-muted"
-                              }`}
-                              style={{
-                                width: `${Math.min(((vault.latestSnapshot?.avgNetApy ?? 0) / 20) * 100, 100)}%`,
-                              }}
-                            />
+                    <div className="divide-y divide-border">
+                      {sortedAssetEcon.map(([symbol, data]) => {
+                        const assetAvgFee = data.feeRates.length > 0
+                          ? data.feeRates.reduce((s, f) => s + f, 0) / data.feeRates.length
+                          : 0;
+                        return (
+                          <div key={symbol} className="px-6 py-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-background-elevated border border-border text-text-primary">
+                                  {symbol}
+                                </span>
+                                <span className="text-sm font-medium text-text-primary tabular-nums">
+                                  {formatCurrency(data.aum)} AUM
+                                </span>
+                              </div>
+                              <span className="text-xs text-text-tertiary">
+                                {data.vaults.length} vault{data.vaults.length !== 1 ? "s" : ""}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-text-secondary">
+                              <span className="tabular-nums">
+                                <span className="text-accent-green font-medium">{formatCurrency(data.yield)}</span> yield
+                              </span>
+                              <span className="text-text-muted">&rarr;</span>
+                              <span className="tabular-nums">
+                                <span className="text-accent-blue font-medium">{formatCurrency(data.fees)}</span> fees
+                              </span>
+                              <span className="text-text-muted">
+                                ({formatPercentage(assetAvgFee)} avg fee)
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <div className="w-20 text-right">
-                          <span className="text-sm font-medium text-accent-green tabular-nums">
-                            {formatPercentage(vault.latestSnapshot?.avgNetApy)}
-                          </span>
-                        </div>
-                        <div className="w-24 text-right">
-                          <span className="text-xs text-text-muted tabular-nums">
-                            {formatCurrency(vault.latestSnapshot?.totalAssetsUsd)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
+                        );
+                      })}
+                    </div>
+                  </section>
                 </div>
-              </section>
-            </div>
-          </TabsContent>
-
-          {/* Activity Tab */}
-          <TabsContent value="activity" className="pt-6">
-            <section className="bg-background-subtle rounded-lg border border-border">
-              <div className="px-6 py-4 border-b border-border">
-                <h2 className="text-sm font-semibold text-text-primary">News & Activity</h2>
-              </div>
-              {news.length === 0 ? (
-                <div className="px-6 py-12 text-center">
-                  <svg className="mx-auto h-12 w-12 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
-                  </svg>
-                  <p className="mt-4 text-sm text-text-tertiary">No recent activity.</p>
-                </div>
-              ) : (
-                <div className="divide-y divide-border">
-                  {news.map((item) => (
-                    <a
-                      key={item.id}
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-start gap-4 px-6 py-4 hover:bg-background-hover transition-colors group"
-                    >
-                      <CategoryIcon category={item.category} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className={`text-xs font-medium uppercase ${getSentimentColor(item.sentiment)}`}>
-                            {item.category || "Update"}
-                          </span>
-                          <span className="text-xs text-text-muted">•</span>
-                          <span className="text-xs text-text-muted">{item.source}</span>
-                          <span className="text-xs text-text-muted">•</span>
-                          <span className="text-xs text-text-muted">{formatTimeAgo(item.publishedAt)}</span>
-                        </div>
-                        <p className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                          {item.title}
-                        </p>
-                        {item.summary && (
-                          <p className="text-xs text-text-tertiary mt-1 line-clamp-2">
-                            {item.summary}
-                          </p>
-                        )}
-                      </div>
-                      <svg className="w-4 h-4 text-text-muted group-hover:text-accent-blue transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </a>
-                  ))}
-                </div>
-              )}
-            </section>
+              );
+            })()}
           </TabsContent>
 
           {/* Risk Profile Tab */}
