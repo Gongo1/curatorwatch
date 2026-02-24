@@ -58,11 +58,12 @@ interface CuratorWithVaults extends CuratorYieldData {
   vaultsByAsset: Record<string, VaultYieldData[]>;
 }
 
-type ViewMode = "curators" | "vaults";
+type ViewMode = "curators" | "vaults" | "fees";
 type TimeFrame = "daily" | "weekly" | "monthly" | "annualized";
 type SortDir = "asc" | "desc";
 type CuratorSortKey = "name" | "vaults" | "tvl" | "yieldRange" | "avgFee" | "yield";
 type VaultSortKey = "name" | "curator" | "tvl" | "grossApy" | "netApy" | "fee" | "yield";
+type FeeSortKey = "name" | "aum" | "avgFee" | "annualRevenue" | "vaults";
 
 export default function YieldsPage() {
   const [summary, setSummary] = useState<YieldSummary | null>(null);
@@ -74,6 +75,8 @@ export default function YieldsPage() {
   const [expandedCurator, setExpandedCurator] = useState<string | null>(null);
   const [curatorSort, setCuratorSort] = useState<{ key: CuratorSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
   const [vaultSort, setVaultSort] = useState<{ key: VaultSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
+  const [feeSort, setFeeSort] = useState<{ key: FeeSortKey; dir: SortDir }>({ key: "annualRevenue", dir: "desc" });
+  const [expandedFeeCurator, setExpandedFeeCurator] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -197,6 +200,60 @@ export default function YieldsPage() {
     });
     return sorted;
   }, [vaultYields, vaultSort]);
+
+  // Fee tab data: curator rows sorted by fee-related fields
+  const feeCuratorRows = useMemo(() => {
+    const rows = curatorRows.map((curator) => {
+      const annualRevenue = curator.vaults.reduce(
+        (sum, v) => sum + (v.tvl * v.performanceFee) / 100,
+        0
+      );
+      return { ...curator, annualRevenue };
+    });
+
+    const dir = feeSort.dir === "asc" ? 1 : -1;
+    rows.sort((a, b) => {
+      switch (feeSort.key) {
+        case "name":
+          return dir * a.curatorName.localeCompare(b.curatorName);
+        case "aum":
+          return dir * (a.totalAUM - b.totalAUM);
+        case "avgFee":
+          return dir * (a.avgFee - b.avgFee);
+        case "annualRevenue":
+          return dir * (a.annualRevenue - b.annualRevenue);
+        case "vaults":
+          return dir * (a.vaultCount - b.vaultCount);
+        default:
+          return 0;
+      }
+    });
+
+    return rows;
+  }, [curatorRows, feeSort]);
+
+  // Fee tab summary stats
+  const feeSummary = useMemo(() => {
+    const totalAnnualFees = vaultYields.reduce(
+      (sum, v) => sum + (v.tvl * v.performanceFee) / 100,
+      0
+    );
+    const avgFeeRate =
+      vaultYields.length > 0
+        ? vaultYields.reduce((sum, v) => sum + v.performanceFee, 0) /
+          vaultYields.length
+        : 0;
+    const totalAUM = vaultYields.reduce((sum, v) => sum + v.tvl, 0);
+    return { totalAnnualFees, avgFeeRate, totalAUM, vaultCount: vaultYields.length };
+  }, [vaultYields]);
+
+  function toggleFeeSort(key: FeeSortKey) {
+    setFeeSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === "desc" ? "asc" : "desc" }
+        : { key, dir: "desc" }
+    );
+  }
 
   function toggleCuratorSort(key: CuratorSortKey) {
     setCuratorSort((prev) =>
@@ -343,6 +400,16 @@ export default function YieldsPage() {
               >
                 Vaults
               </button>
+              <button
+                onClick={() => setViewMode("fees")}
+                className={`px-4 py-2 text-sm font-medium transition-colors ${
+                  viewMode === "fees"
+                    ? "bg-accent-blue text-white"
+                    : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
+                }`}
+              >
+                Fees
+              </button>
             </div>
           </div>
 
@@ -417,6 +484,67 @@ export default function YieldsPage() {
               </table>
             </div>
           </div>
+        )}
+
+        {/* Fee Analysis Tab */}
+        {viewMode === "fees" && (
+          <>
+            {/* Fee Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+              <SummaryCard
+                label="Total Annual Fees"
+                value={formatCurrency(feeSummary.totalAnnualFees)}
+                subtext={`Across ${feeSummary.vaultCount} vaults`}
+                highlight
+              />
+              <SummaryCard
+                label="Average Fee Rate"
+                value={`${feeSummary.avgFeeRate.toFixed(1)}%`}
+                subtext="Performance fee"
+              />
+              <SummaryCard
+                label="Total AUM"
+                value={formatCurrency(feeSummary.totalAUM)}
+                subtext="Fee-generating TVL"
+              />
+            </div>
+
+            {/* Fee Table */}
+            <div className="bg-background-subtle border border-border rounded-xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-background-elevated/50">
+                      <SortableHeader label="Curator" sortKey="name" currentSort={feeSort} onSort={toggleFeeSort} align="left" />
+                      <SortableHeader label="AUM" sortKey="aum" currentSort={feeSort} onSort={toggleFeeSort} />
+                      <SortableHeader label="Avg Fee" sortKey="avgFee" currentSort={feeSort} onSort={toggleFeeSort} />
+                      <SortableHeader label="Annual Revenue" sortKey="annualRevenue" currentSort={feeSort} onSort={toggleFeeSort} />
+                      <SortableHeader label="Vaults" sortKey="vaults" currentSort={feeSort} onSort={toggleFeeSort} />
+                      <th className="w-10 px-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {feeCuratorRows.map((curator) => {
+                      const isExpanded = expandedFeeCurator === curator.curatorId;
+                      const assetKeys = Object.keys(curator.vaultsByAsset).sort();
+                      return (
+                        <FeeCuratorRow
+                          key={curator.curatorId}
+                          curator={curator}
+                          annualRevenue={curator.annualRevenue}
+                          isExpanded={isExpanded}
+                          assetKeys={assetKeys}
+                          onToggle={() =>
+                            setExpandedFeeCurator(isExpanded ? null : curator.curatorId)
+                          }
+                        />
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
         {/* Vault Yields Table */}
@@ -682,6 +810,125 @@ function CuratorRow({
                             </div>
                           </div>
                         ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function FeeCuratorRow({
+  curator,
+  annualRevenue,
+  isExpanded,
+  assetKeys,
+  onToggle,
+}: {
+  curator: CuratorWithVaults;
+  annualRevenue: number;
+  isExpanded: boolean;
+  assetKeys: string[];
+  onToggle: () => void;
+}) {
+  return (
+    <>
+      <tr
+        className="hover:bg-background-elevated/30 transition-colors cursor-pointer"
+        onClick={onToggle}
+      >
+        <td className="px-4 py-3">
+          <div>
+            <p className="font-medium text-text-primary">{curator.curatorName}</p>
+            <p className="text-xs text-text-tertiary font-mono">
+              {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
+            </p>
+          </div>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="font-medium text-text-primary tabular-nums">
+            {formatCurrency(curator.totalAUM)}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="text-text-secondary tabular-nums">
+            {curator.avgFee > 0 ? `${curator.avgFee.toFixed(1)}%` : "None"}
+          </span>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="font-bold text-accent-blue tabular-nums text-lg">
+            {formatCurrency(annualRevenue)}
+          </span>
+          <p className="text-[10px] text-text-muted">/year</p>
+        </td>
+        <td className="text-right px-4 py-3">
+          <span className="text-text-secondary">{curator.vaultCount}</span>
+        </td>
+        <td className="px-2">
+          <svg
+            className={`w-4 h-4 text-text-muted transition-transform ${
+              isExpanded ? "rotate-180" : ""
+            }`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </td>
+      </tr>
+
+      {isExpanded && (
+        <tr>
+          <td colSpan={6} className="p-0">
+            <div className="bg-background-elevated/40 border-t border-border px-6 py-4">
+              <div className="space-y-4">
+                {assetKeys.map((asset) => {
+                  const vaults = curator.vaultsByAsset[asset];
+                  const assetRevenue = vaults.reduce(
+                    (sum, v) => sum + (v.tvl * v.performanceFee) / 100,
+                    0
+                  );
+                  return (
+                    <div key={asset}>
+                      <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">
+                        {asset} Vaults:{" "}
+                        <span className="text-accent-blue">
+                          {formatCurrency(assetRevenue)}/year
+                        </span>
+                      </p>
+                      <div className="space-y-1">
+                        {vaults.map((vault) => {
+                          const vaultRevenue = (vault.tvl * vault.performanceFee) / 100;
+                          return (
+                            <div
+                              key={vault.vaultId}
+                              className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-background-hover/50 transition-colors"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <Link
+                                  href={`/vault/${vault.vaultAddress}`}
+                                  className="text-sm font-medium text-text-primary hover:text-accent-blue transition-colors"
+                                >
+                                  {vault.vaultName}
+                                </Link>
+                              </div>
+                              <div className="flex items-center gap-6 flex-shrink-0">
+                                <span className="text-sm text-accent-blue font-semibold tabular-nums">
+                                  {formatCurrency(vaultRevenue)}
+                                </span>
+                                <span className="text-xs text-text-muted tabular-nums w-28 text-right">
+                                  {vault.performanceFee.toFixed(1)}% on {formatCurrency(vault.tvl)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );
