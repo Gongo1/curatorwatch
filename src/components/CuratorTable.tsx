@@ -10,7 +10,7 @@ import {
 import { CuratorAvatar } from "@/components/CuratorAvatar";
 import { CuratorRating } from "@/components/CuratorRating";
 
-type SortField = "name" | "aum" | "vaults" | "change";
+type SortField = "name" | "aum" | "vaults";
 type SortDirection = "asc" | "desc";
 
 interface CuratorTableProps {
@@ -38,10 +38,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
         case "vaults":
           aValue = a.vaultCount;
           bValue = b.vaultCount;
-          break;
-        case "change":
-          aValue = a.tvlChangePct30d;
-          bValue = b.tvlChangePct30d;
           break;
         default:
           return 0;
@@ -125,7 +121,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
               <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-center">
                 Grade
               </th>
-              <HeaderCell field="change" align="right">30d Change</HeaderCell>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
@@ -196,25 +191,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                   <CuratorRating curatorAddress={curator.curatorAddress} compact />
                 </td>
 
-                {/* 30d Change */}
-                <td className="px-4 py-4 whitespace-nowrap text-right">
-                  <div className="flex flex-col items-end">
-                    <span
-                      className={`text-sm font-medium tabular-nums ${
-                        curator.tvlChangePct30d >= 0
-                          ? "text-accent-green"
-                          : "text-accent-red"
-                      }`}
-                    >
-                      {curator.tvlChangePct30d >= 0 ? "+" : ""}
-                      {curator.tvlChangePct30d.toFixed(1)}%
-                    </span>
-                    <span className="text-xs text-text-muted tabular-nums">
-                      {curator.tvlChange30d >= 0 ? "+" : ""}
-                      {formatCurrency(curator.tvlChange30d)}
-                    </span>
-                  </div>
-                </td>
               </tr>
             ))}
           </tbody>
@@ -246,16 +222,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                       {curator.jurisdiction || curator.entityType || `${curator.vaultCount} vaults`}
                     </p>
                   </div>
-                  <span
-                    className={`text-xs font-medium tabular-nums flex-shrink-0 ${
-                      curator.tvlChangePct30d >= 0
-                        ? "text-accent-green"
-                        : "text-accent-red"
-                    }`}
-                  >
-                    {curator.tvlChangePct30d >= 0 ? "+" : ""}
-                    {curator.tvlChangePct30d.toFixed(1)}%
-                  </span>
                 </div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <div>
@@ -303,7 +269,7 @@ export function CuratorTableSkeleton() {
         <table className="min-w-full">
           <thead className="bg-background-elevated border-b border-border">
             <tr>
-              {["Curator", "Total AUM", "# Vaults", "Assets", "Grade", "30d Change"].map((header) => (
+              {["Curator", "Total AUM", "# Vaults", "Assets", "Grade"].map((header) => (
                 <th key={header} className="px-4 py-3 text-left">
                   <div className="h-3 w-16 bg-background-elevated rounded" />
                 </th>
