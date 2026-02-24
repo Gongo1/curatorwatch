@@ -642,6 +642,13 @@ export default function YieldsPage() {
         {/* Liquidations Tab */}
         {viewMode === "liquidations" && (
           <>
+            {/* Data scope callout */}
+            <div className="mb-6 p-4 bg-accent-red/10 border border-accent-red/20 rounded-xl">
+              <p className="text-sm text-text-secondary">
+                <span className="font-medium text-accent-red">Data scope:</span> Showing the most recent ~5,000 liquidation events from the Morpho API, filtered to markets allocated by tracked vaults. Older events may not be included.
+              </p>
+            </div>
+
             {/* Liquidation Summary Cards */}
             {liqSummary && (
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
