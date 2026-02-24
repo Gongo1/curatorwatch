@@ -88,7 +88,20 @@ export async function GET() {
       }
     }
 
-    // Now aggregate using only the latest snapshot per vault per day
+    // Carry forward: for each day, if a vault wasn't snapshotted, use its
+    // most recent snapshot from a previous day. This prevents partial
+    // collections from causing AUM drops in the chart.
+    const sortedDays = Object.keys(latestSnapshotByDayVault).sort();
+    let carryForward: Record<string, typeof snapshots[0]> = {};
+
+    for (const day of sortedDays) {
+      const todaySnapshots = latestSnapshotByDayVault[day];
+      // Merge: carry forward fills gaps, today's data overwrites
+      carryForward = { ...carryForward, ...todaySnapshots };
+      latestSnapshotByDayVault[day] = { ...carryForward };
+    }
+
+    // Now aggregate using the filled-in snapshots per day
     const dailyData: Record<string, DailyAggregated> = {};
     const allCurators = new Set<string>();
 
