@@ -213,7 +213,7 @@ export default function Home() {
                   href="/yields"
                   className="text-sm text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  Yields
+                  Economics
                 </Link>
                 <Link
                   href="/alerts"
@@ -243,7 +243,7 @@ export default function Home() {
                   href="/yields"
                   className="px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  Yields
+                  Economics
                 </Link>
                 <Link
                   href="/alerts"

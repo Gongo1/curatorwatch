@@ -333,9 +333,9 @@ export default function YieldsPage() {
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
         {/* Page Title */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-text-primary mb-1">Yield Payouts</h1>
+          <h1 className="text-2xl font-bold text-text-primary mb-1">Economics</h1>
           <p className="text-sm text-text-secondary">
-            Estimated yield generated for depositors across Morpho V2 vaults
+            Yield, fees, and revenue across Morpho V2 vaults
           </p>
         </div>
 
@@ -413,36 +413,40 @@ export default function YieldsPage() {
             </div>
           </div>
 
-          {/* Time Frame Toggle */}
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-text-secondary">Period:</span>
-            <div className="flex rounded-lg border border-border overflow-hidden">
-              {(["daily", "weekly", "monthly", "annualized"] as TimeFrame[]).map((tf) => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeFrame(tf)}
-                  className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    timeFrame === tf
-                      ? "bg-accent-green text-white"
-                      : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
-                  }`}
-                >
-                  {timeFrameLabels[tf]}
-                </button>
-              ))}
+          {/* Time Frame Toggle — only for Curators & Vaults tabs */}
+          {(viewMode === "curators" || viewMode === "vaults") && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-text-secondary">Period:</span>
+              <div className="flex rounded-lg border border-border overflow-hidden">
+                {(["daily", "weekly", "monthly", "annualized"] as TimeFrame[]).map((tf) => (
+                  <button
+                    key={tf}
+                    onClick={() => setTimeFrame(tf)}
+                    className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      timeFrame === tf
+                        ? "bg-accent-green text-white"
+                        : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
+                    }`}
+                  >
+                    {timeFrameLabels[tf]}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
-        {/* Total for selected timeframe */}
-        <div className="mb-4 p-3 bg-background-subtle rounded-lg border border-border inline-block">
-          <span className="text-sm text-text-secondary">
-            Total {timeFrameLabels[timeFrame]} Yield:{" "}
-          </span>
-          <span className="text-lg font-bold text-accent-green">
-            {formatCurrency(getSummaryYieldForTimeFrame())}
-          </span>
-        </div>
+        {/* Total for selected timeframe — hide on Fees tab */}
+        {(viewMode === "curators" || viewMode === "vaults") && (
+          <div className="mb-4 p-3 bg-background-subtle rounded-lg border border-border inline-block">
+            <span className="text-sm text-text-secondary">
+              Total {timeFrameLabels[timeFrame]} Yield:{" "}
+            </span>
+            <span className="text-lg font-bold text-accent-green">
+              {formatCurrency(getSummaryYieldForTimeFrame())}
+            </span>
+          </div>
+        )}
 
         {/* Curator Yields Table — Expandable */}
         {viewMode === "curators" && (
@@ -972,7 +976,7 @@ function Header() {
               Vaults
             </Link>
             <Link href="/yields" className="text-sm font-medium text-accent-blue">
-              Yields
+              Economics
             </Link>
             <Link
               href="/alerts"
