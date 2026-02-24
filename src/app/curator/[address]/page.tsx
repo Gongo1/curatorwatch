@@ -9,6 +9,7 @@ import {
   formatPercentage,
   formatAddress,
   formatTimeAgo,
+  formatDate,
 } from "@/lib/utils/format";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
@@ -667,6 +668,73 @@ export default function CuratorDetailPage({ params }: PageProps) {
                       })}
                     </div>
                   </section>
+
+                  {/* Liquidations */}
+                  {data.liquidationSummary && (
+                    <>
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                        <StatCard
+                          label="Total Liquidations"
+                          value={data.liquidationSummary.total.toString()}
+                          valueClass={data.liquidationSummary.total > 0 ? "text-accent-red" : undefined}
+                        />
+                        <StatCard
+                          label="Bad Debt (All-Time)"
+                          value={formatCurrency(data.liquidationSummary.totalBadDebtUsd)}
+                          valueClass={data.liquidationSummary.totalBadDebtUsd > 0 ? "text-accent-red" : undefined}
+                        />
+                        <StatCard
+                          label="Last 30 Days"
+                          value={data.liquidationSummary.recent30d.toString()}
+                          valueClass={data.liquidationSummary.recent30d > 0 ? "text-accent-red" : undefined}
+                        />
+                      </div>
+
+                      {data.liquidationSummary.events.length > 0 && (
+                        <section className="bg-background-subtle rounded-lg border border-border overflow-hidden">
+                          <div className="px-6 py-4 border-b border-border">
+                            <h2 className="text-sm font-semibold text-text-primary">Recent Liquidations</h2>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full">
+                              <thead>
+                                <tr className="border-b border-border bg-background-elevated/50">
+                                  <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Date</th>
+                                  <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Market</th>
+                                  <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Collateral Seized</th>
+                                  <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Debt Repaid</th>
+                                  <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Bad Debt</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {data.liquidationSummary.events.map((event, i) => (
+                                  <tr key={`${event.txHash}-${i}`} className="hover:bg-background-elevated/30 transition-colors">
+                                    <td className="px-4 py-3">
+                                      <span className="text-sm text-text-secondary">{formatDate(event.timestamp)}</span>
+                                    </td>
+                                    <td className="px-4 py-3">
+                                      <span className="text-sm text-text-tertiary font-mono">{formatAddress(event.marketUniqueKey)}</span>
+                                    </td>
+                                    <td className="text-right px-4 py-3">
+                                      <span className="text-sm font-medium text-accent-red tabular-nums">{formatCurrency(event.seizedAssetsUsd)}</span>
+                                    </td>
+                                    <td className="text-right px-4 py-3">
+                                      <span className="text-sm font-medium text-text-primary tabular-nums">{formatCurrency(event.repaidAssetsUsd)}</span>
+                                    </td>
+                                    <td className="text-right px-4 py-3">
+                                      <span className={`text-sm font-medium tabular-nums ${event.badDebtAssetsUsd > 0 ? "text-accent-red" : "text-text-muted"}`}>
+                                        {event.badDebtAssetsUsd > 0 ? formatCurrency(event.badDebtAssetsUsd) : "-"}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </section>
+                      )}
+                    </>
+                  )}
                 </div>
               );
             })()}

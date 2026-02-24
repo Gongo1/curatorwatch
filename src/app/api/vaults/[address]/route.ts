@@ -127,6 +127,72 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Get latest market allocations for risk assessment
     const latestMarketAllocations = getLatestMarketAllocations(vault.marketAllocations);
 
+    // Get liquidation data for this vault's markets
+    const vaultMarketKeys = latestMarketAllocations.map((m) => m.marketUniqueKey);
+    let liquidations: Array<{
+      txHash: string;
+      timestamp: string;
+      marketUniqueKey: string;
+      borrower: string;
+      liquidator: string;
+      repaidAssetsUsd: number;
+      seizedAssetsUsd: number;
+      badDebtAssetsUsd: number;
+    }> = [];
+    let liquidationSummary = {
+      total: 0,
+      totalBadDebtUsd: 0,
+      totalSeizedUsd: 0,
+      totalRepaidUsd: 0,
+      recent30d: 0,
+    };
+
+    if (vaultMarketKeys.length > 0) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      const [liqEvents, recent30dCount, aggregates] = await Promise.all([
+        prisma.liquidation.findMany({
+          where: { marketUniqueKey: { in: vaultMarketKeys } },
+          orderBy: { timestamp: "desc" },
+          take: 20,
+        }),
+        prisma.liquidation.count({
+          where: {
+            marketUniqueKey: { in: vaultMarketKeys },
+            timestamp: { gte: thirtyDaysAgo },
+          },
+        }),
+        prisma.liquidation.aggregate({
+          where: { marketUniqueKey: { in: vaultMarketKeys } },
+          _count: true,
+          _sum: {
+            badDebtAssetsUsd: true,
+            seizedAssetsUsd: true,
+            repaidAssetsUsd: true,
+          },
+        }),
+      ]);
+
+      liquidations = liqEvents.map((l) => ({
+        txHash: l.txHash,
+        timestamp: l.timestamp.toISOString(),
+        marketUniqueKey: l.marketUniqueKey,
+        borrower: l.borrower,
+        liquidator: l.liquidator,
+        repaidAssetsUsd: l.repaidAssetsUsd,
+        seizedAssetsUsd: l.seizedAssetsUsd,
+        badDebtAssetsUsd: l.badDebtAssetsUsd,
+      }));
+
+      liquidationSummary = {
+        total: aggregates._count,
+        totalBadDebtUsd: aggregates._sum.badDebtAssetsUsd ?? 0,
+        totalSeizedUsd: aggregates._sum.seizedAssetsUsd ?? 0,
+        totalRepaidUsd: aggregates._sum.repaidAssetsUsd ?? 0,
+        recent30d: recent30dCount,
+      };
+    }
+
     // Get latest risk snapshot
     const latestRiskSnapshot = vault.riskSnapshots[0];
 
@@ -281,6 +347,8 @@ export async function GET(request: Request, { params }: RouteParams) {
         },
         lastUpdated: riskAssessment.lastUpdated.toISOString(),
       },
+      liquidations,
+      liquidationSummary,
       createdAt: vault.createdAt.toISOString(),
       updatedAt: vault.updatedAt.toISOString(),
     };
@@ -320,6 +388,7 @@ function getLatestAllocations(
 // Get only market allocations from the most recent snapshot
 function getLatestMarketAllocations(
   allocations: Array<{
+    marketUniqueKey: string;
     collateralAssetSymbol: string;
     lltv: number;
     allocationPct: number;

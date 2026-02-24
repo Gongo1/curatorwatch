@@ -537,6 +537,80 @@ export default function VaultDetailPage({ params }: PageProps) {
 
             {/* Fee Analysis */}
             <FeesCard vaultAddress={vault.address} />
+
+            {/* Liquidations */}
+            {vault.liquidationSummary && vault.liquidationSummary.total > 0 && (
+              <section className="bg-background-subtle rounded-lg border border-border">
+                <div className="px-6 py-4 border-b border-border">
+                  <h2 className="text-base font-semibold text-text-primary">Liquidations</h2>
+                  <p className="text-sm text-text-tertiary">
+                    Liquidation events in markets this vault supplies to
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-6 py-4">
+                  <div>
+                    <p className="text-xs text-text-secondary">Total Events</p>
+                    <p className="text-lg font-semibold text-text-primary tabular-nums">
+                      {vault.liquidationSummary.total}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-secondary">Last 30 Days</p>
+                    <p className={`text-lg font-semibold tabular-nums ${vault.liquidationSummary.recent30d > 0 ? "text-accent-red" : "text-text-primary"}`}>
+                      {vault.liquidationSummary.recent30d}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-secondary">Total Collateral Seized</p>
+                    <p className="text-lg font-semibold text-accent-red tabular-nums">
+                      {formatCurrency(vault.liquidationSummary.totalSeizedUsd)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-text-secondary">Bad Debt</p>
+                    <p className={`text-lg font-semibold tabular-nums ${vault.liquidationSummary.totalBadDebtUsd > 0 ? "text-accent-red" : "text-text-muted"}`}>
+                      {vault.liquidationSummary.totalBadDebtUsd > 0 ? formatCurrency(vault.liquidationSummary.totalBadDebtUsd) : "-"}
+                    </p>
+                  </div>
+                </div>
+
+                {vault.liquidations && vault.liquidations.length > 0 && (
+                  <div className="overflow-x-auto border-t border-border">
+                    <table className="min-w-full">
+                      <thead className="bg-background-elevated border-b border-border">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Date</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Collateral Seized</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Debt Repaid</th>
+                          <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Bad Debt</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-subtle">
+                        {vault.liquidations.map((liq: { txHash: string; timestamp: string; seizedAssetsUsd: number; repaidAssetsUsd: number; badDebtAssetsUsd: number }, i: number) => (
+                          <tr key={`${liq.txHash}-${i}`} className="hover:bg-background-hover transition-colors">
+                            <td className="px-6 py-3 whitespace-nowrap">
+                              <span className="text-sm text-text-secondary">{formatDate(liq.timestamp)}</span>
+                            </td>
+                            <td className="px-6 py-3 whitespace-nowrap text-right">
+                              <span className="text-sm font-medium text-accent-red tabular-nums">{formatCurrency(liq.seizedAssetsUsd)}</span>
+                            </td>
+                            <td className="px-6 py-3 whitespace-nowrap text-right">
+                              <span className="text-sm font-medium text-text-primary tabular-nums">{formatCurrency(liq.repaidAssetsUsd)}</span>
+                            </td>
+                            <td className="px-6 py-3 whitespace-nowrap text-right">
+                              <span className={`text-sm font-medium tabular-nums ${liq.badDebtAssetsUsd > 0 ? "text-accent-red" : "text-text-muted"}`}>
+                                {liq.badDebtAssetsUsd > 0 ? formatCurrency(liq.badDebtAssetsUsd) : "-"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </section>
+            )}
           </TabsContent>
 
           <TabsContent value="activity" className="pt-6">

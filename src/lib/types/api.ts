@@ -160,6 +160,14 @@ export interface VaultDetail extends VaultData {
   curator: VaultCurator | null;
   createdAt: string;
   riskAssessment: InstitutionalRiskAssessment;
+  liquidations?: LiquidationEvent[];
+  liquidationSummary?: {
+    total: number;
+    totalBadDebtUsd: number;
+    totalSeizedUsd: number;
+    totalRepaidUsd: number;
+    recent30d: number;
+  };
 }
 
 export interface VaultDetailApiResponse {
@@ -225,6 +233,7 @@ export interface CuratorDetailResponse {
     curator: CuratorProfile;
     vaults: CuratorVaultSummary[];
     news: CuratorNewsItem[];
+    liquidationSummary?: LiquidationSummary;
   };
   error?: string;
 }
@@ -341,4 +350,25 @@ export interface CuratorActivityResponse {
   data: CuratorActivityItem[];
   count: number;
   error?: string;
+}
+
+// Liquidation types
+export interface LiquidationEvent {
+  txHash: string;
+  timestamp: string;
+  marketUniqueKey: string;
+  borrower: string;
+  liquidator: string;
+  repaidAssetsUsd: number;
+  seizedAssetsUsd: number;
+  badDebtAssetsUsd: number;
+}
+
+export interface LiquidationSummary {
+  total: number;
+  totalBadDebtUsd: number;
+  totalSeizedUsd: number;
+  totalRepaidUsd: number;
+  recent30d: number;
+  events: LiquidationEvent[];
 }

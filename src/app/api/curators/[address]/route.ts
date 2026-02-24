@@ -6,6 +6,8 @@ import type {
   CuratorProfile,
   CuratorNewsItem,
   CuratorVaultSummary,
+  LiquidationSummary,
+  LiquidationEvent,
 } from "@/lib/types/api";
 
 /**
@@ -232,6 +234,73 @@ export async function GET(
         (a.latestSnapshot?.totalAssetsUsd ?? 0)
     );
 
+    // Collect market keys from all vault allocations and query liquidations
+    const allMarketKeys = await prisma.marketAllocation.findMany({
+      where: {
+        vault: { curatorId: curator.id },
+      },
+      select: { marketUniqueKey: true },
+      distinct: ["marketUniqueKey"],
+    });
+    const marketKeys = allMarketKeys.map((m) => m.marketUniqueKey);
+
+    let liquidationSummary: LiquidationSummary = {
+      total: 0,
+      totalBadDebtUsd: 0,
+      totalSeizedUsd: 0,
+      totalRepaidUsd: 0,
+      recent30d: 0,
+      events: [],
+    };
+
+    if (marketKeys.length > 0) {
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+
+      const [allLiquidations, recent30dCount] = await Promise.all([
+        prisma.liquidation.findMany({
+          where: { marketUniqueKey: { in: marketKeys } },
+          orderBy: { timestamp: "desc" },
+          take: 20,
+        }),
+        prisma.liquidation.count({
+          where: {
+            marketUniqueKey: { in: marketKeys },
+            timestamp: { gte: thirtyDaysAgo },
+          },
+        }),
+      ]);
+
+      const aggregates = await prisma.liquidation.aggregate({
+        where: { marketUniqueKey: { in: marketKeys } },
+        _count: true,
+        _sum: {
+          badDebtAssetsUsd: true,
+          seizedAssetsUsd: true,
+          repaidAssetsUsd: true,
+        },
+      });
+
+      const events: LiquidationEvent[] = allLiquidations.map((l) => ({
+        txHash: l.txHash,
+        timestamp: l.timestamp.toISOString(),
+        marketUniqueKey: l.marketUniqueKey,
+        borrower: l.borrower,
+        liquidator: l.liquidator,
+        repaidAssetsUsd: l.repaidAssetsUsd,
+        seizedAssetsUsd: l.seizedAssetsUsd,
+        badDebtAssetsUsd: l.badDebtAssetsUsd,
+      }));
+
+      liquidationSummary = {
+        total: aggregates._count,
+        totalBadDebtUsd: aggregates._sum.badDebtAssetsUsd ?? 0,
+        totalSeizedUsd: aggregates._sum.seizedAssetsUsd ?? 0,
+        totalRepaidUsd: aggregates._sum.repaidAssetsUsd ?? 0,
+        recent30d: recent30dCount,
+        events,
+      };
+    }
+
     // Transform news data
     const news: CuratorNewsItem[] = curator.news.map((item) => ({
       id: item.id,
@@ -251,6 +320,7 @@ export async function GET(
         curator: curatorData,
         vaults,
         news,
+        liquidationSummary,
       },
     });
   } catch (error) {

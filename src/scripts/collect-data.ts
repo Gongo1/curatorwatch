@@ -7,6 +7,7 @@ import {
   type VaultV2TransactionsResponse,
   type VaultReallocatesResponse,
 } from "../lib/graphql/queries";
+import { collectLiquidations } from "./collect-liquidations";
 import type { VaultV2sResponse, MorphoVaultV2 } from "../lib/types/vault";
 import { calculateAllRiskMetrics } from "../lib/risk-calculator";
 import { detectChanges, storeChanges } from "../lib/change-detector";
@@ -790,6 +791,15 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
 
     // Update curator statistics
     await updateCuratorStats();
+
+    // Collect liquidation data
+    log("Collecting liquidation data...");
+    try {
+      const liqResult = await collectLiquidations();
+      log(`  Liquidations: ${liqResult.stored} new, ${liqResult.fetched} fetched`);
+    } catch (error) {
+      logError("Failed to collect liquidations (non-critical)", error);
+    }
 
     // Print summary
     const vaultCount = await prisma.vault.count();

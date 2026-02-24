@@ -300,3 +300,21 @@ model MarketAllocation {
   @@index([marketUniqueKey])
   @@index([collateralAssetSymbol])
 }
+
+model Liquidation {
+  id                String   @id @default(cuid())
+  txHash            String
+  timestamp         DateTime
+  marketUniqueKey   String
+  borrower          String
+  liquidator        String
+  repaidAssetsUsd   Float
+  seizedAssetsUsd   Float
+  badDebtAssetsUsd  Float
+
+  createdAt         DateTime @default(now())
+
+  @@unique([txHash, marketUniqueKey, borrower])
+  @@index([marketUniqueKey])
+  @@index([timestamp])
+}

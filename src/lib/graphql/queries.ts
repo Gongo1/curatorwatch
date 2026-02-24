@@ -403,3 +403,62 @@ export interface UserPositionsAcrossVaultsResponse {
     items: UserVaultPosition[];
   };
 }
+
+// Fetch market liquidation transactions
+export const GET_LIQUIDATION_TRANSACTIONS = gql`
+  query GetLiquidationTransactions($first: Int!, $skip: Int!) {
+    transactions(
+      first: $first
+      skip: $skip
+      orderBy: Timestamp
+      orderDirection: Desc
+      where: { type_in: [MarketLiquidation] }
+    ) {
+      items {
+        hash
+        timestamp
+        type
+        data {
+          ... on MarketLiquidationTransactionData {
+            repaidAssetsUsd
+            seizedAssetsUsd
+            badDebtAssetsUsd
+            liquidator
+            market {
+              uniqueKey
+            }
+          }
+        }
+        user {
+          address
+        }
+      }
+    }
+  }
+`;
+
+export interface LiquidationTransactionData {
+  repaidAssetsUsd: number;
+  seizedAssetsUsd: number;
+  badDebtAssetsUsd: number;
+  liquidator: string;
+  market: {
+    uniqueKey: string;
+  };
+}
+
+export interface LiquidationTransaction {
+  hash: string;
+  timestamp: string;
+  type: string;
+  data: LiquidationTransactionData;
+  user: {
+    address: string;
+  };
+}
+
+export interface LiquidationTransactionsResponse {
+  transactions: {
+    items: LiquidationTransaction[];
+  };
+}
