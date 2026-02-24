@@ -25,6 +25,10 @@ const entries: ChangelogEntry[] = [
     items: [
       {
         category: "Feature",
+        text: "Added Liquidations tab to Economics page \u2014 shows total liquidation events, collateral seized, and bad debt with per-curator breakdown and expandable recent events",
+      },
+      {
+        category: "Feature",
         text: "Added Fees tab to yields page \u2014 shows total annual fees, average fee rate, and per-curator revenue breakdown with expandable asset-level detail",
       },
       {
