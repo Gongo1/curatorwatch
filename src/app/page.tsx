@@ -290,6 +290,29 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4 sm:py-5 xl:pr-52">
+        {/* Upgrade Announcement Banner */}
+        <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-accent-green/10 via-accent-green/5 to-transparent border border-accent-green/30">
+          <div className="flex items-start gap-3">
+            <span className="flex-shrink-0 mt-0.5 flex items-center justify-center w-6 h-6 rounded-full bg-accent-green/20">
+              <svg className="w-3.5 h-3.5 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </span>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-accent-green/20 text-accent-green rounded">
+                  Upgrade
+                </span>
+                <span className="text-sm font-semibold text-text-primary">Hourly Data Collection is Live</span>
+              </div>
+              <p className="text-xs text-text-secondary leading-relaxed max-w-2xl">
+                All vault data — TVL, APY, risk scores, and alerts — now updates every hour instead of once daily.
+                Faster detection of yield changes, large flows, and concentration spikes across all 80+ vaults.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Hero/Disclaimer Banner */}
         <div className="mb-5 p-4 sm:p-5 rounded-xl bg-gradient-to-r from-accent-blue/10 via-accent-purple/5 to-transparent border border-accent-blue/20">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -306,7 +329,7 @@ export default function Home() {
                 Morpho V2 Vault Analytics
               </h2>
               <p className="text-xs sm:text-sm text-text-secondary max-w-2xl leading-relaxed">
-                Real-time curator intelligence, vault performance tracking, and risk monitoring for the Morpho V2 ecosystem.
+                Hourly curator intelligence, vault performance tracking, and risk monitoring for the Morpho V2 ecosystem.
               </p>
               <p className="text-[11px] text-text-tertiary mt-1.5 flex items-center gap-1.5">
                 <span className="inline-block w-1 h-1 rounded-full bg-accent-purple"></span>

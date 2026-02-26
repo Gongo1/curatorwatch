@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData } from "@/scripts/collect-data";
 
-export const maxDuration = 300; // 5 minutes for full collection with transactions
+export const maxDuration = 800; // Pro plan allows up to 900s
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
@@ -33,9 +33,11 @@ export async function GET(request: NextRequest) {
     const result = await collectData({
       fetchAll: true,
       minTvlUsd: 1000,
-      // Light collection: skip transactions and reallocations for speed
+      // Light collection: skip heavy operations for speed
       skipTransactions: !fullCollection,
       skipReallocations: !fullCollection,
+      skipMarketAllocations: !fullCollection,
+      skipLiquidations: !fullCollection,
       verbose: false,
     });
 

@@ -21,6 +21,23 @@ const categoryStyles: Record<Category, string> = {
 
 const entries: ChangelogEntry[] = [
   {
+    date: "February 26, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "Upgraded to hourly data collection \u2014 all vault data (TVL, APY, risk scores, adapter allocations) and alert detection now runs every hour instead of once daily",
+      },
+      {
+        category: "Feature",
+        text: "Full data collection (transactions, reallocations, market allocations, liquidations) continues to run daily at midnight UTC",
+      },
+      {
+        category: "Improvement",
+        text: "Upgraded to Vercel Pro for faster serverless execution (up to 800s function duration) and reliable hourly cron scheduling",
+      },
+    ],
+  },
+  {
     date: "February 24, 2026",
     items: [
       {
@@ -70,7 +87,7 @@ const entries: ChangelogEntry[] = [
       },
       {
         category: "Improvement",
-        text: "Alerts and data collection run on a daily schedule via Vercel Cron",
+        text: "Alerts and data collection run on schedule via Vercel Cron (now hourly, originally daily)",
       },
       {
         category: "Improvement",

@@ -43,6 +43,8 @@ export interface CollectionOptions {
   fetchAll?: boolean; // Fetch all vaults (default: true)
   skipTransactions?: boolean; // Skip transaction fetching for speed
   skipReallocations?: boolean; // Skip reallocation fetching for speed
+  skipMarketAllocations?: boolean; // Skip market allocation collection
+  skipLiquidations?: boolean; // Skip liquidation collection
   minTvlUsd?: number; // Minimum TVL to include
   verbose?: boolean; // Verbose logging
 }
@@ -794,21 +796,25 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
     await updateCuratorStats();
 
     // Collect market allocations (needed for liquidation join)
-    log("Collecting market allocations...");
-    try {
-      const maResult = await collectMarketAllocations();
-      log(`  Market allocations: ${maResult.allocationsStored} stored from ${maResult.vaultsProcessed} vaults`);
-    } catch (error) {
-      logError("Failed to collect market allocations (non-critical)", error);
+    if (!options.skipMarketAllocations) {
+      log("Collecting market allocations...");
+      try {
+        const maResult = await collectMarketAllocations();
+        log(`  Market allocations: ${maResult.allocationsStored} stored from ${maResult.vaultsProcessed} vaults`);
+      } catch (error) {
+        logError("Failed to collect market allocations (non-critical)", error);
+      }
     }
 
     // Collect liquidation data
-    log("Collecting liquidation data...");
-    try {
-      const liqResult = await collectLiquidations();
-      log(`  Liquidations: ${liqResult.stored} new, ${liqResult.fetched} fetched`);
-    } catch (error) {
-      logError("Failed to collect liquidations (non-critical)", error);
+    if (!options.skipLiquidations) {
+      log("Collecting liquidation data...");
+      try {
+        const liqResult = await collectLiquidations();
+        log(`  Liquidations: ${liqResult.stored} new, ${liqResult.fetched} fetched`);
+      } catch (error) {
+        logError("Failed to collect liquidations (non-critical)", error);
+      }
     }
 
     // Print summary

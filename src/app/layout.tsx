@@ -16,9 +16,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://curatorwatch.com"),
   title: "CuratorWatch - Track DeFi Vault Curators",
   description:
-    "Real-time intelligence on vault curators. Track $721M across 33 curators managing Morpho V2 vaults. Monitor changes, assess risk, compare strategies.",
+    "Hourly intelligence on vault curators. Track $800M+ across 40+ curators managing Morpho V2 vaults. Monitor changes, assess risk, compare strategies.",
   keywords: ["DeFi", "Morpho", "vault curators", "risk intelligence", "yield"],
   icons: {
     icon: "/logo.png",
