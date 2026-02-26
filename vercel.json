@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/collect",
+      "schedule": "0 * * * *"
+    },
+    {
       "path": "/api/cron/collect?full=true",
       "schedule": "0 0 * * *"
     }
