@@ -1,10 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Optional protocol filter
+    const protocolFilter = request.nextUrl.searchParams.get("protocol");
+
+    const whereClause: Record<string, unknown> = {};
+    if (protocolFilter) {
+      whereClause.protocol = protocolFilter;
+    }
+
     // MINIMAL query - just vaults with latest snapshot
     const vaults = await prisma.vault.findMany({
+      where: whereClause,
       include: {
         snapshots: {
           orderBy: { timestamp: "desc" },
@@ -54,6 +63,9 @@ export async function GET() {
           overallRisk: "Moderate Risk" as const,
           overallScore: 50,
         },
+        protocol: vault.protocol,
+        dataSource: vault.dataSource,
+        chainName: vault.chainName,
         updatedAt: vault.updatedAt.toISOString(),
       };
     });

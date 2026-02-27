@@ -22,6 +22,7 @@ import { StrategyIntelligence } from "@/components/StrategyIntelligence";
 import { RecentChanges } from "@/components/RecentChanges";
 import { CuratorSection, CuratorPlaceholder } from "@/components/CuratorSection";
 import { FeesCard } from "@/components/FeesCard";
+import { ProtocolBadge } from "@/components/ProtocolBadge";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -134,6 +135,7 @@ export default function VaultDetailPage({ params }: PageProps) {
   const snapshot = vault.latestSnapshot;
   const curatorName = vault.curator?.name || null;
   const curatorAddress = vault.curatorAddress;
+  const isTurtleVault = vault.dataSource === "turtle";
 
   return (
     <div className="min-h-screen bg-background">
@@ -205,9 +207,7 @@ export default function VaultDetailPage({ params }: PageProps) {
               <div>
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-semibold text-text-primary tracking-tight">{vault.name}</h1>
-                  <span className="text-xs text-accent-blue bg-accent-blue/10 px-2 py-0.5 rounded font-medium">
-                    Morpho V2
-                  </span>
+                  <ProtocolBadge protocol={vault.protocol ?? "morpho"} size="md" />
                 </div>
                 <p className="text-sm text-text-secondary flex items-center gap-2 flex-wrap">
                   <span className="font-medium">{vault.symbol}</span>
@@ -231,17 +231,19 @@ export default function VaultDetailPage({ params }: PageProps) {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <a
-                href={getMorphoVaultUrl(vault.address, vault.name)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15 transition-colors"
-              >
-                View on Morpho
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </a>
+              {vault.dataSource !== "turtle" && (
+                <a
+                  href={getMorphoVaultUrl(vault.address, vault.name)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15 transition-colors"
+                >
+                  View on Morpho
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              )}
               {curatorAddress && (
                 <Link
                   href={`/curator/${curatorAddress}`}
@@ -340,12 +342,27 @@ export default function VaultDetailPage({ params }: PageProps) {
         <Tabs defaultValue="overview">
           <TabsList className="rounded-t-lg">
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-            <TabsTrigger value="strategy">Strategy Intelligence</TabsTrigger>
+            {!isTurtleVault && <TabsTrigger value="activity">Activity</TabsTrigger>}
+            {!isTurtleVault && <TabsTrigger value="strategy">Strategy Intelligence</TabsTrigger>}
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="pt-6 space-y-6">
+            {/* Turtle data notice */}
+            {isTurtleVault && (
+              <div className="p-4 rounded-lg bg-accent-yellow/5 border border-accent-yellow/20">
+                <div className="flex items-center gap-2 mb-1">
+                  <svg className="w-4 h-4 text-accent-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span className="text-sm font-medium text-text-primary">Cross-Protocol Vault</span>
+                </div>
+                <p className="text-xs text-text-secondary">
+                  This vault is tracked via the Turtle Club API. TVL and APY data are available, but detailed allocations, transactions, reallocations, and risk snapshots are only available for Morpho vaults.
+                </p>
+              </div>
+            )}
+
             {/* Allocations Section */}
             <section className="bg-background-subtle rounded-lg border border-border">
               <div className="px-6 py-4 border-b border-border">
@@ -649,7 +666,7 @@ export default function VaultDetailPage({ params }: PageProps) {
             <p>
               Data from{" "}
               <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
-              {" "}• Updated hourly
+              {" "}& Turtle Club • Updated hourly
             </p>
             <div className="flex items-center gap-3">
               <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">

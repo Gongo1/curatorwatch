@@ -9,6 +9,7 @@ import {
 } from "@/lib/utils/format";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
 import { CuratorRating } from "@/components/CuratorRating";
+import { ProtocolBadgeList } from "@/components/ProtocolBadge";
 
 type SortField = "name" | "aum" | "vaults";
 type SortDirection = "asc" | "desc";
@@ -116,6 +117,9 @@ export function CuratorTable({ curators }: CuratorTableProps) {
               <HeaderCell field="aum" align="right">Total AUM</HeaderCell>
               <HeaderCell field="vaults" align="right"># Vaults</HeaderCell>
               <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-left">
+                Protocols
+              </th>
+              <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-left">
                 Assets
               </th>
               <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-center">
@@ -163,6 +167,11 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                   <span className="text-sm text-text-secondary tabular-nums">
                     {curator.vaultCount}
                   </span>
+                </td>
+
+                {/* Protocols */}
+                <td className="px-4 py-4 whitespace-nowrap">
+                  <ProtocolBadgeList protocols={curator.protocols ?? ["morpho"]} />
                 </td>
 
                 {/* Asset Distribution */}
@@ -269,7 +278,7 @@ export function CuratorTableSkeleton() {
         <table className="min-w-full">
           <thead className="bg-background-elevated border-b border-border">
             <tr>
-              {["Curator", "Total AUM", "# Vaults", "Assets", "Grade"].map((header) => (
+              {["Curator", "Total AUM", "# Vaults", "Protocols", "Assets", "Grade"].map((header) => (
                 <th key={header} className="px-4 py-3 text-left">
                   <div className="h-3 w-16 bg-background-elevated rounded" />
                 </th>

@@ -17,6 +17,7 @@ import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar
 import { CopyAddress } from "@/components/CopyAddress";
 import { CuratorRating } from "@/components/CuratorRating";
 import type { CuratorDetailResponse } from "@/lib/types/api";
+import { ProtocolBadge } from "@/components/ProtocolBadge";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -460,8 +461,13 @@ export default function CuratorDetailPage({ params }: PageProps) {
                                         {vault.symbol.slice(0, 2).toUpperCase()}
                                       </div>
                                       <div>
-                                        <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                                          {vault.name}
+                                        <div className="flex items-center gap-1.5">
+                                          <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                                            {vault.name}
+                                          </span>
+                                          {vault.protocol && vault.protocol !== "morpho" && (
+                                            <ProtocolBadge protocol={vault.protocol} />
+                                          )}
                                         </div>
                                         <div className="text-xs text-text-tertiary font-mono">
                                           {formatAddress(vault.address)}
@@ -753,7 +759,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
             <p>
               Data from{" "}
               <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
-              {" "}• Updated hourly
+              {" "}& Turtle Club • Updated hourly
             </p>
             <div className="flex items-center gap-3">
               <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">

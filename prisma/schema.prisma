@@ -23,6 +23,14 @@ model Vault {
   performanceFee  Float    @default(0)
   managementFee   Float    @default(0)
   active          Boolean  @default(true)  // For marking inactive vaults
+
+  // Multi-protocol fields
+  protocol        String   @default("morpho")  // "morpho", "aave", "euler", "compound", "spark", etc.
+  turtleId        String?  @unique             // Turtle opportunity ID for dedup
+  dataSource      String   @default("morpho")  // Which pipeline owns this vault: "morpho" | "turtle"
+  opportunityType String?                      // "lending" | "vault" from Turtle
+  chainName       String?                      // Human-readable chain name ("Base", "Arbitrum", etc.)
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -42,6 +50,9 @@ model Vault {
   @@index([active])
   @@index([chainId, active])
   @@index([updatedAt])
+  @@index([protocol])
+  @@index([protocol, active])
+  @@index([dataSource])
 }
 
 model VaultSnapshot {

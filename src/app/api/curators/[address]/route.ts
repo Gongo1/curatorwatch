@@ -209,6 +209,8 @@ export async function GET(
           decimals: vault.assetDecimals,
         },
         performanceFee: vault.performanceFee ?? 0,
+        protocol: vault.protocol ?? "morpho",
+        dataSource: vault.dataSource ?? "morpho",
         latestSnapshot: snapshot
           ? {
               totalAssets: snapshot.totalAssets,

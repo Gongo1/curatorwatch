@@ -212,7 +212,7 @@ export default function Home() {
                   CuratorWatch
                 </h1>
                 <p className="text-[10px] text-text-tertiary leading-tight">
-                  Morpho V2 Vault Analytics
+                  Multi-Protocol Vault Analytics
                 </p>
               </div>
             </Link>
@@ -322,18 +322,18 @@ export default function Home() {
                   Beta
                 </span>
                 <span className="px-2 py-0.5 text-[10px] font-medium bg-background-elevated text-text-secondary rounded">
-                  Ethereum Mainnet
+                  Multi-Chain
                 </span>
               </div>
               <h2 className="text-base sm:text-lg font-semibold text-text-primary mb-1">
-                Morpho V2 Vault Analytics
+                Multi-Protocol Vault Analytics
               </h2>
               <p className="text-xs sm:text-sm text-text-secondary max-w-2xl leading-relaxed">
-                Hourly curator intelligence, vault performance tracking, and risk monitoring for the Morpho V2 ecosystem.
+                Hourly curator intelligence, vault performance tracking, and risk monitoring across Morpho, Aave, Euler, Compound, Spark, and more.
               </p>
               <p className="text-[11px] text-text-tertiary mt-1.5 flex items-center gap-1.5">
                 <span className="inline-block w-1 h-1 rounded-full bg-accent-purple"></span>
-                <span>Coming soon: Smart contract & redemption risk layers, protocol composability maps, and RWA yield impact analysis.</span>
+                <span>Morpho data updated hourly. Cross-protocol data via Turtle Club API updated every 4 hours.</span>
               </p>
             </div>
             <a
@@ -403,7 +403,7 @@ export default function Home() {
             <StatCard
               label="Curators"
               value={stats.totalCurators.toString()}
-              tooltip="Total number of vault curators actively managing Morpho V2 vaults"
+              tooltip="Total number of vault curators actively managing vaults across all protocols"
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -413,7 +413,7 @@ export default function Home() {
             <StatCard
               label="Total AUM"
               value={formatCurrency(stats.totalAUM)}
-              tooltip="Total Assets Under Management across all tracked Morpho V2 vaults"
+              tooltip="Total Assets Under Management across all tracked vaults"
               highlight
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -424,7 +424,7 @@ export default function Home() {
             <StatCard
               label="Vaults"
               value={stats.totalVaults.toString()}
-              tooltip="Total number of Morpho V2 vaults with at least $1,000 in deposits"
+              tooltip="Total number of tracked vaults across all protocols"
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -737,7 +737,7 @@ export default function Home() {
               >
                 Morpho API
               </a>
-              {" "}• Updated hourly
+              {" "}& Turtle Club • Updated hourly
             </p>
             <div className="flex items-center gap-3">
               <Link href="/changelog" className="text-text-tertiary hover:text-text-primary transition-colors">

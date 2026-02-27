@@ -25,6 +25,18 @@ const entries: ChangelogEntry[] = [
     items: [
       {
         category: "Feature",
+        text: "Multi-protocol expansion \u2014 CuratorWatch now tracks managed vaults across Aave, Euler, Compound, Spark, and other protocols via the Turtle Club API. Cross-protocol data updates every 4 hours.",
+      },
+      {
+        category: "Feature",
+        text: "Added protocol badges throughout the UI \u2014 curators and vaults now show which protocols they operate on",
+      },
+      {
+        category: "Improvement",
+        text: "Updated branding from \"Morpho V2 Vault Analytics\" to \"Multi-Protocol Vault Analytics\" to reflect broader coverage",
+      },
+      {
+        category: "Feature",
         text: "Upgraded to hourly data collection \u2014 all vault data (TVL, APY, risk scores, adapter allocations) and alert detection now runs every hour instead of once daily",
       },
       {
@@ -226,7 +238,7 @@ export default function ChangelogPage() {
               >
                 Morpho API
               </a>
-              {" "}&bull; Updated hourly
+              {" "}& Turtle Club &bull; Updated hourly
             </p>
             <div className="flex items-center gap-3">
               <Link href="/changelog" className="text-text-tertiary hover:text-text-primary transition-colors">
@@ -267,7 +279,7 @@ function Header() {
                 CuratorWatch
               </h1>
               <p className="text-[10px] text-text-tertiary leading-tight">
-                Morpho V2 Vault Analytics
+                Multi-Protocol Vault Analytics
               </p>
             </div>
           </Link>

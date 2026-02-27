@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://curatorwatch.com"),
   title: "CuratorWatch - Track DeFi Vault Curators",
   description:
-    "Hourly intelligence on vault curators. Track $800M+ across 40+ curators managing Morpho V2 vaults. Monitor changes, assess risk, compare strategies.",
-  keywords: ["DeFi", "Morpho", "vault curators", "risk intelligence", "yield"],
+    "Hourly intelligence on DeFi vault curators. Track managed vaults across Morpho, Aave, Euler, Compound, Spark, and more. Monitor changes, assess risk, compare strategies.",
+  keywords: ["DeFi", "Morpho", "Aave", "Euler", "vault curators", "risk intelligence", "yield", "multi-protocol"],
   icons: {
     icon: "/logo.png",
     apple: "/logo.png",

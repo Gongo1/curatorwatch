@@ -60,6 +60,9 @@ export interface VaultData {
   latestSnapshot: VaultSnapshot | null;
   adapters: VaultAdapter[];
   riskAssessment?: VaultRiskSummary;
+  protocol: string;
+  dataSource: string;
+  chainName?: string | null;
   updatedAt: string;
 }
 
@@ -224,6 +227,8 @@ export interface CuratorVaultSummary {
   symbol: string;
   asset: VaultAsset;
   performanceFee: number;
+  protocol: string;
+  dataSource: string;
   latestSnapshot: VaultSnapshot | null;
 }
 
@@ -267,6 +272,7 @@ export interface CuratorDashboardItem {
   avgApy: number;
   avgNetApy: number;
   assetDistribution: AssetDistribution[];
+  protocols: string[];
   lastActive: string | null;
   riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";

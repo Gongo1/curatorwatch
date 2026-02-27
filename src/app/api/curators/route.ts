@@ -45,6 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
       avgApy: c.avgApy,
       avgNetApy: c.avgNetApy,
       assetDistribution: c.assetDistribution,
+      protocols: c.protocols,
       lastActive: c.lastActive?.toISOString() ?? null,
       riskScore: c.riskScore,
       strategyType: c.strategyType,

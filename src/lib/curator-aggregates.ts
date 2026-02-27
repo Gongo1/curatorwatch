@@ -25,6 +25,7 @@ export interface CuratorAggregates {
   avgApy: number;
   avgNetApy: number;
   assetDistribution: AssetDistribution[];
+  protocols: string[];
   lastActive: Date | null;
   riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";
@@ -117,6 +118,7 @@ export async function getPaginatedCuratorAggregates(
     let weightedApySum = 0;
     let weightedNetApySum = 0;
     const assetMap: Record<string, number> = {};
+    const protocolSet = new Set<string>();
 
     for (const vault of vaults) {
       const snap = vault.snapshots[0];
@@ -127,6 +129,7 @@ export async function getPaginatedCuratorAggregates(
       weightedApySum += (snap.avgApy ?? 0) * tvl;
       weightedNetApySum += (snap.avgNetApy ?? 0) * tvl;
       assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
+      protocolSet.add(vault.protocol ?? "morpho");
     }
 
     if (totalAUM === 0) continue;
@@ -163,6 +166,7 @@ export async function getPaginatedCuratorAggregates(
       avgApy,
       avgNetApy,
       assetDistribution,
+      protocols: Array.from(protocolSet),
       lastActive: null,
       riskScore,
       strategyType,
@@ -265,6 +269,7 @@ export async function getCuratorAggregates(
   let weightedApySum = 0;
   let weightedNetApySum = 0;
   const assetMap: Record<string, number> = {};
+  const protocolSet = new Set<string>();
 
   for (const vault of vaults) {
     const snap = vault.snapshots[0];
@@ -275,6 +280,7 @@ export async function getCuratorAggregates(
     weightedApySum += (snap.avgApy ?? 0) * tvl;
     weightedNetApySum += (snap.avgNetApy ?? 0) * tvl;
     assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
+    protocolSet.add((vault as Record<string, unknown>).protocol as string ?? "morpho");
   }
 
   const avgApy = totalAUM > 0 ? weightedApySum / totalAUM : 0;
@@ -308,6 +314,7 @@ export async function getCuratorAggregates(
     avgApy,
     avgNetApy,
     assetDistribution,
+    protocols: Array.from(protocolSet),
     lastActive: null,
     riskScore,
     strategyType,

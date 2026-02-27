@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/collect?full=true",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/collect-turtle",
+      "schedule": "0 */4 * * *"
     }
   ]
 }

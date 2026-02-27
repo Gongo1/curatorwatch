@@ -271,6 +271,9 @@ export async function GET(request: Request, { params }: RouteParams) {
         performance: vault.performanceFee,
         management: vault.managementFee,
       },
+      protocol: vault.protocol,
+      dataSource: vault.dataSource,
+      chainName: vault.chainName,
       yield: {
         dailyYield,
         weeklyYield,
