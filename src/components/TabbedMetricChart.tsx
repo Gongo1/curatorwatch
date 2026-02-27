@@ -26,7 +26,7 @@ interface ChartDataPoint {
   [key: string]: unknown;
 }
 
-type MetricKey = "aum" | "apy" | "vaults" | "curators";
+type MetricKey = "aum" | "vaults" | "curators";
 
 interface MetricConfig {
   label: string;
@@ -43,14 +43,6 @@ const METRICS: Record<MetricKey, MetricConfig & { tooltip: string }> = {
     color: "#3B82F6",
     gradientId: "aumGradient",
     tooltip: "Total Assets Under Management, broken down by curator",
-  },
-  apy: {
-    label: "Weighted APY",
-    format: (v) => `${v.toFixed(2)}%`,
-    color: "#F59E0B",
-    gradientId: "apyGradient",
-    suffix: "%",
-    tooltip: "AUM-weighted average Net APY across all vaults",
   },
   vaults: {
     label: "Vault Count",
@@ -300,9 +292,6 @@ export function TabbedMetricChart() {
                 if (selectedMetric === "aum") {
                   if (value >= 1e9) return `$${(value / 1e9).toFixed(1)}B`;
                   return `$${(value / 1e6).toFixed(0)}M`;
-                }
-                if (selectedMetric === "apy") {
-                  return `${value.toFixed(1)}%`;
                 }
                 return value.toString();
               }}
