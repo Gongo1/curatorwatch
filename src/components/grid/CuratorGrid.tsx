@@ -7,7 +7,6 @@ import { DataGrid } from "./DataGrid";
 import {
   CuratorNameRenderer,
   CurrencyRenderer,
-  ProtocolBadgesRenderer,
   AssetDistributionRenderer,
   CuratorRatingRenderer,
 } from "./cellRenderers";
@@ -47,14 +46,6 @@ export function CuratorGrid({ curators }: CuratorGridProps) {
         minWidth: 90,
         type: "numericColumn",
         cellClass: "text-text-secondary tabular-nums",
-      },
-      {
-        headerName: "Protocols",
-        field: "protocols",
-        cellRenderer: ProtocolBadgesRenderer,
-        flex: 1,
-        minWidth: 120,
-        sortable: false,
       },
       {
         headerName: "Assets",

@@ -205,7 +205,7 @@ export default function Home() {
           </Link>
         )}
 
-      <PageHeader title="Dashboard" description="Multi-Protocol Vault Analytics" />
+      <PageHeader title="CuratorWatch" description="Institutional-grade analytics for Morpho vault curators" />
 
         {/* Stats Row */}
         {stats && (
