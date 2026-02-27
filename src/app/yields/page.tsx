@@ -59,44 +59,11 @@ interface CuratorWithVaults extends CuratorYieldData {
   vaultsByAsset: Record<string, VaultYieldData[]>;
 }
 
-interface LiquidationEvent {
-  txHash: string;
-  timestamp: string;
-  marketUniqueKey: string;
-  borrower: string;
-  seizedAssetsUsd: number;
-  repaidAssetsUsd: number;
-  badDebtAssetsUsd: number;
-}
-
-interface CuratorLiquidationData {
-  curatorId: string;
-  curatorName: string;
-  curatorAddress: string;
-  totalEvents: number;
-  totalSeizedUsd: number;
-  totalRepaidUsd: number;
-  totalBadDebtUsd: number;
-  recent30d: number;
-  events: LiquidationEvent[];
-}
-
-interface LiquidationSummary {
-  totalEvents: number;
-  totalSeizedUsd: number;
-  totalRepaidUsd: number;
-  totalBadDebtUsd: number;
-  recent30d: number;
-  marketsAffected: number;
-}
-
-type ViewMode = "curators" | "vaults" | "fees" | "liquidations";
+type ViewMode = "curators" | "vaults";
 type TimeFrame = "daily" | "weekly" | "monthly" | "annualized";
 type SortDir = "asc" | "desc";
 type CuratorSortKey = "name" | "vaults" | "tvl" | "yieldRange" | "avgFee" | "yield";
 type VaultSortKey = "name" | "curator" | "tvl" | "grossApy" | "netApy" | "fee" | "yield";
-type FeeSortKey = "name" | "aum" | "avgFee" | "annualRevenue" | "vaults";
-type LiqSortKey = "name" | "events" | "seized" | "repaid" | "badDebt" | "recent30d";
 
 export default function YieldsPage() {
   const [summary, setSummary] = useState<YieldSummary | null>(null);
@@ -108,30 +75,16 @@ export default function YieldsPage() {
   const [expandedCurator, setExpandedCurator] = useState<string | null>(null);
   const [curatorSort, setCuratorSort] = useState<{ key: CuratorSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
   const [vaultSort, setVaultSort] = useState<{ key: VaultSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
-  const [feeSort, setFeeSort] = useState<{ key: FeeSortKey; dir: SortDir }>({ key: "annualRevenue", dir: "desc" });
-  const [expandedFeeCurator, setExpandedFeeCurator] = useState<string | null>(null);
-  const [liqSummary, setLiqSummary] = useState<LiquidationSummary | null>(null);
-  const [liqByCurator, setLiqByCurator] = useState<CuratorLiquidationData[]>([]);
-  const [liqSort, setLiqSort] = useState<{ key: LiqSortKey; dir: SortDir }>({ key: "seized", dir: "desc" });
-  const [expandedLiqCurator, setExpandedLiqCurator] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [yieldRes, liqRes] = await Promise.all([
-          fetch("/api/stats/yield-breakdown"),
-          fetch("/api/stats/liquidation-breakdown"),
-        ]);
-        const yieldData = await yieldRes.json();
-        if (yieldData.success) {
-          setSummary(yieldData.data.summary);
-          setCuratorYields(yieldData.data.byCurator);
-          setVaultYields(yieldData.data.byVault);
-        }
-        const liqData = await liqRes.json();
-        if (liqData.success) {
-          setLiqSummary(liqData.data.summary);
-          setLiqByCurator(liqData.data.byCurator);
+        const res = await fetch("/api/stats/yield-breakdown");
+        const data = await res.json();
+        if (data.success) {
+          setSummary(data.data.summary);
+          setCuratorYields(data.data.byCurator);
+          setVaultYields(data.data.byVault);
         }
       } catch (err) {
         console.error("Failed to fetch data:", err);
@@ -146,7 +99,6 @@ export default function YieldsPage() {
   const curatorRows = useMemo(() => {
     const curatorMap = new Map<string, CuratorWithVaults>();
 
-    // Start with curator-level data
     for (const curator of curatorYields) {
       curatorMap.set(curator.curatorId, {
         ...curator,
@@ -158,62 +110,45 @@ export default function YieldsPage() {
       });
     }
 
-    // Attach vaults to their curators
     for (const vault of vaultYields) {
       const key = vault.curatorId || "unknown";
       const curator = curatorMap.get(key);
       if (!curator) continue;
 
       curator.vaults.push(vault);
-
       if (vault.netApy < curator.minNetApy) curator.minNetApy = vault.netApy;
       if (vault.netApy > curator.maxNetApy) curator.maxNetApy = vault.netApy;
 
-      // Group by asset
       if (!curator.vaultsByAsset[vault.assetSymbol]) {
         curator.vaultsByAsset[vault.assetSymbol] = [];
       }
       curator.vaultsByAsset[vault.assetSymbol].push(vault);
     }
 
-    // Calculate avg fee and sort vaults within each asset group
     for (const curator of curatorMap.values()) {
       if (curator.vaults.length > 0) {
-        const totalFee = curator.vaults.reduce(
-          (sum, v) => sum + v.performanceFee,
-          0
-        );
+        const totalFee = curator.vaults.reduce((sum, v) => sum + v.performanceFee, 0);
         curator.avgFee = totalFee / curator.vaults.length;
       }
       if (curator.minNetApy === Infinity) curator.minNetApy = 0;
       if (curator.maxNetApy === -Infinity) curator.maxNetApy = 0;
 
-      // Sort vaults within each asset group by TVL descending
       for (const asset of Object.keys(curator.vaultsByAsset)) {
         curator.vaultsByAsset[asset].sort((a, b) => b.tvl - a.tvl);
       }
     }
 
     const rows = Array.from(curatorMap.values());
-
-    // Sort based on current sort state
     const dir = curatorSort.dir === "asc" ? 1 : -1;
     rows.sort((a, b) => {
       switch (curatorSort.key) {
-        case "name":
-          return dir * a.curatorName.localeCompare(b.curatorName);
-        case "vaults":
-          return dir * (a.vaultCount - b.vaultCount);
-        case "tvl":
-          return dir * (a.totalAUM - b.totalAUM);
-        case "yieldRange":
-          return dir * (a.maxNetApy - b.maxNetApy);
-        case "avgFee":
-          return dir * (a.avgFee - b.avgFee);
-        case "yield":
-          return dir * (a.annualizedYield - b.annualizedYield);
-        default:
-          return 0;
+        case "name": return dir * a.curatorName.localeCompare(b.curatorName);
+        case "vaults": return dir * (a.vaultCount - b.vaultCount);
+        case "tvl": return dir * (a.totalAUM - b.totalAUM);
+        case "yieldRange": return dir * (a.maxNetApy - b.maxNetApy);
+        case "avgFee": return dir * (a.avgFee - b.avgFee);
+        case "yield": return dir * (a.annualizedYield - b.annualizedYield);
+        default: return 0;
       }
     });
 
@@ -225,112 +160,18 @@ export default function YieldsPage() {
     const dir = vaultSort.dir === "asc" ? 1 : -1;
     sorted.sort((a, b) => {
       switch (vaultSort.key) {
-        case "name":
-          return dir * a.vaultName.localeCompare(b.vaultName);
-        case "curator":
-          return dir * (a.curatorName || "").localeCompare(b.curatorName || "");
-        case "tvl":
-          return dir * (a.tvl - b.tvl);
-        case "grossApy":
-          return dir * (a.grossApy - b.grossApy);
-        case "netApy":
-          return dir * (a.netApy - b.netApy);
-        case "fee":
-          return dir * (a.performanceFee - b.performanceFee);
-        case "yield":
-          return dir * (a.annualizedYield - b.annualizedYield);
-        default:
-          return 0;
+        case "name": return dir * a.vaultName.localeCompare(b.vaultName);
+        case "curator": return dir * (a.curatorName || "").localeCompare(b.curatorName || "");
+        case "tvl": return dir * (a.tvl - b.tvl);
+        case "grossApy": return dir * (a.grossApy - b.grossApy);
+        case "netApy": return dir * (a.netApy - b.netApy);
+        case "fee": return dir * (a.performanceFee - b.performanceFee);
+        case "yield": return dir * (a.annualizedYield - b.annualizedYield);
+        default: return 0;
       }
     });
     return sorted;
   }, [vaultYields, vaultSort]);
-
-  // Fee tab data: curator rows sorted by fee-related fields
-  const feeCuratorRows = useMemo(() => {
-    const rows = curatorRows.map((curator) => {
-      const annualRevenue = curator.vaults.reduce(
-        (sum, v) => sum + (v.tvl * v.performanceFee) / 100,
-        0
-      );
-      return { ...curator, annualRevenue };
-    });
-
-    const dir = feeSort.dir === "asc" ? 1 : -1;
-    rows.sort((a, b) => {
-      switch (feeSort.key) {
-        case "name":
-          return dir * a.curatorName.localeCompare(b.curatorName);
-        case "aum":
-          return dir * (a.totalAUM - b.totalAUM);
-        case "avgFee":
-          return dir * (a.avgFee - b.avgFee);
-        case "annualRevenue":
-          return dir * (a.annualRevenue - b.annualRevenue);
-        case "vaults":
-          return dir * (a.vaultCount - b.vaultCount);
-        default:
-          return 0;
-      }
-    });
-
-    return rows;
-  }, [curatorRows, feeSort]);
-
-  // Fee tab summary stats
-  const feeSummary = useMemo(() => {
-    const totalAnnualFees = vaultYields.reduce(
-      (sum, v) => sum + (v.tvl * v.performanceFee) / 100,
-      0
-    );
-    const avgFeeRate =
-      vaultYields.length > 0
-        ? vaultYields.reduce((sum, v) => sum + v.performanceFee, 0) /
-          vaultYields.length
-        : 0;
-    const totalAUM = vaultYields.reduce((sum, v) => sum + v.tvl, 0);
-    return { totalAnnualFees, avgFeeRate, totalAUM, vaultCount: vaultYields.length };
-  }, [vaultYields]);
-
-  const sortedLiqCurators = useMemo(() => {
-    const rows = [...liqByCurator];
-    const dir = liqSort.dir === "asc" ? 1 : -1;
-    rows.sort((a, b) => {
-      switch (liqSort.key) {
-        case "name":
-          return dir * a.curatorName.localeCompare(b.curatorName);
-        case "events":
-          return dir * (a.totalEvents - b.totalEvents);
-        case "seized":
-          return dir * (a.totalSeizedUsd - b.totalSeizedUsd);
-        case "repaid":
-          return dir * (a.totalRepaidUsd - b.totalRepaidUsd);
-        case "badDebt":
-          return dir * (a.totalBadDebtUsd - b.totalBadDebtUsd);
-        case "recent30d":
-          return dir * (a.recent30d - b.recent30d);
-        default:
-          return 0;
-      }
-    });
-    return rows;
-  }, [liqByCurator, liqSort]);
-
-  function toggleLiqSort(key: LiqSortKey) {
-    setLiqSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === "desc" ? "asc" : "desc" }
-        : { key, dir: "desc" }
-    );
-  }
-
-  function toggleFeeSort(key: FeeSortKey) {
-    setFeeSort((prev) =>
-      prev.key === key
-        ? { key, dir: prev.dir === "desc" ? "asc" : "desc" }
-        : { key, dir: "desc" }
-    );
-  }
 
   function toggleCuratorSort(key: CuratorSortKey) {
     setCuratorSort((prev) =>
@@ -386,9 +227,8 @@ export default function YieldsPage() {
   if (loading) {
     return (
       <>
-        <PageHeader title="Economics" description="Yield, fees, liquidations, and revenue across vaults" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Economics" }]} />
+        <PageHeader title="Yields" description="Yield generation across vaults and curators" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Yields" }]} />
         <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-background-elevated rounded" />
           <div className="grid grid-cols-4 gap-4">
             <div className="h-24 bg-background-elevated rounded-xl" />
             <div className="h-24 bg-background-elevated rounded-xl" />
@@ -403,10 +243,10 @@ export default function YieldsPage() {
 
   return (
     <>
-      <PageHeader title="Economics" description="Yield, fees, liquidations, and revenue across vaults" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Economics" }]} />
+      <PageHeader title="Yields" description="Yield generation across vaults and curators" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Yields" }]} />
 
-        {/* Summary Cards — yield overview (hide on liquidations tab) */}
-        {summary && viewMode !== "liquidations" && (
+        {/* Summary Cards */}
+        {summary && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
             <SummaryCard
               label="Total Yield (Annualized)"
@@ -432,15 +272,13 @@ export default function YieldsPage() {
           </div>
         )}
 
-        {/* Explainer — hide on liquidations tab */}
-        {viewMode !== "liquidations" && (
-          <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/20 rounded-xl">
-            <p className="text-sm text-text-secondary">
-              <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and Net APY.
-              Net APY is the return depositors receive after all fees (curator + protocol). These are projected yields based on current rates.
-            </p>
-          </div>
-        )}
+        {/* Explainer */}
+        <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/20 rounded-xl">
+          <p className="text-sm text-text-secondary">
+            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and Net APY.
+            Net APY is the return depositors receive after all fees (curator + protocol). These are projected yields based on current rates.
+          </p>
+        </div>
 
         {/* Controls */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4">
@@ -468,63 +306,39 @@ export default function YieldsPage() {
               >
                 Vaults
               </button>
-              <button
-                onClick={() => setViewMode("fees")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  viewMode === "fees"
-                    ? "bg-accent-blue text-white"
-                    : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
-                }`}
-              >
-                Fees
-              </button>
-              <button
-                onClick={() => setViewMode("liquidations")}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${
-                  viewMode === "liquidations"
-                    ? "bg-accent-blue text-white"
-                    : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
-                }`}
-              >
-                Liquidations
-              </button>
             </div>
           </div>
 
-          {/* Time Frame Toggle — only for Curators & Vaults tabs */}
-          {(viewMode === "curators" || viewMode === "vaults") && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-text-secondary">Period:</span>
-              <div className="flex rounded-lg border border-border overflow-hidden">
-                {(["daily", "weekly", "monthly", "annualized"] as TimeFrame[]).map((tf) => (
-                  <button
-                    key={tf}
-                    onClick={() => setTimeFrame(tf)}
-                    className={`px-3 py-2 text-sm font-medium transition-colors ${
-                      timeFrame === tf
-                        ? "bg-accent-green text-white"
-                        : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
-                    }`}
-                  >
-                    {timeFrameLabels[tf]}
-                  </button>
-                ))}
-              </div>
+          {/* Time Frame Toggle */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-secondary">Period:</span>
+            <div className="flex rounded-lg border border-border overflow-hidden">
+              {(["daily", "weekly", "monthly", "annualized"] as TimeFrame[]).map((tf) => (
+                <button
+                  key={tf}
+                  onClick={() => setTimeFrame(tf)}
+                  className={`px-3 py-2 text-sm font-medium transition-colors ${
+                    timeFrame === tf
+                      ? "bg-accent-green text-white"
+                      : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
+                  }`}
+                >
+                  {timeFrameLabels[tf]}
+                </button>
+              ))}
             </div>
-          )}
+          </div>
         </div>
 
-        {/* Total for selected timeframe — hide on Fees tab */}
-        {(viewMode === "curators" || viewMode === "vaults") && (
-          <div className="mb-4 p-3 bg-background-subtle rounded-lg border border-border inline-block">
-            <span className="text-sm text-text-secondary">
-              Total {timeFrameLabels[timeFrame]} Yield:{" "}
-            </span>
-            <span className="text-lg font-bold text-accent-green">
-              {formatCurrency(getSummaryYieldForTimeFrame())}
-            </span>
-          </div>
-        )}
+        {/* Total for selected timeframe */}
+        <div className="mb-4 p-3 bg-background-subtle rounded-lg border border-border inline-block">
+          <span className="text-sm text-text-secondary">
+            Total {timeFrameLabels[timeFrame]} Yield:{" "}
+          </span>
+          <span className="text-lg font-bold text-accent-green">
+            {formatCurrency(getSummaryYieldForTimeFrame())}
+          </span>
+        </div>
 
         {/* Curator Yields Table — Expandable */}
         {viewMode === "curators" && (
@@ -566,130 +380,6 @@ export default function YieldsPage() {
               </table>
             </div>
           </div>
-        )}
-
-        {/* Fee Analysis Tab */}
-        {viewMode === "fees" && (
-          <>
-            {/* Fee Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <SummaryCard
-                label="Total Annual Fees"
-                value={formatCurrency(feeSummary.totalAnnualFees)}
-                subtext={`Across ${feeSummary.vaultCount} vaults`}
-                highlight
-              />
-              <SummaryCard
-                label="Average Fee Rate"
-                value={`${feeSummary.avgFeeRate.toFixed(1)}%`}
-                subtext="Performance fee"
-              />
-              <SummaryCard
-                label="Total AUM"
-                value={formatCurrency(feeSummary.totalAUM)}
-                subtext="Fee-generating TVL"
-              />
-            </div>
-
-            {/* Fee Table */}
-            <div className="bg-background-subtle border border-border rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-background-elevated/50">
-                      <SortableHeader label="Curator" sortKey="name" currentSort={feeSort} onSort={toggleFeeSort} align="left" />
-                      <SortableHeader label="AUM" sortKey="aum" currentSort={feeSort} onSort={toggleFeeSort} />
-                      <SortableHeader label="Avg Fee" sortKey="avgFee" currentSort={feeSort} onSort={toggleFeeSort} />
-                      <SortableHeader label="Annual Revenue" sortKey="annualRevenue" currentSort={feeSort} onSort={toggleFeeSort} />
-                      <SortableHeader label="Vaults" sortKey="vaults" currentSort={feeSort} onSort={toggleFeeSort} />
-                      <th className="w-10 px-2" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {feeCuratorRows.map((curator) => {
-                      const isExpanded = expandedFeeCurator === curator.curatorId;
-                      const assetKeys = Object.keys(curator.vaultsByAsset).sort();
-                      return (
-                        <FeeCuratorRow
-                          key={curator.curatorId}
-                          curator={curator}
-                          annualRevenue={curator.annualRevenue}
-                          isExpanded={isExpanded}
-                          assetKeys={assetKeys}
-                          onToggle={() =>
-                            setExpandedFeeCurator(isExpanded ? null : curator.curatorId)
-                          }
-                        />
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Liquidations Tab */}
-        {viewMode === "liquidations" && (
-          <>
-            {/* Liquidation Summary Cards */}
-            {liqSummary && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-                <SummaryCard
-                  label="Total Liquidation Events"
-                  value={liqSummary.totalEvents.toLocaleString()}
-                  subtext={`${liqSummary.recent30d} in last 30 days`}
-                  highlight
-                  valueColor="text-accent-red"
-                />
-                <SummaryCard
-                  label="Total Collateral Seized"
-                  value={formatCurrency(liqSummary.totalSeizedUsd)}
-                  subtext={`Across ${liqSummary.marketsAffected} markets`}
-                />
-                <SummaryCard
-                  label="Total Bad Debt"
-                  value={formatCurrency(liqSummary.totalBadDebtUsd)}
-                  subtext="Unrecovered losses"
-                  valueColor="text-accent-red"
-                />
-              </div>
-            )}
-
-            {/* Liquidation by Curator Table */}
-            <div className="bg-background-subtle border border-border rounded-xl overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-border bg-background-elevated/50">
-                      <SortableHeader label="Curator" sortKey="name" currentSort={liqSort} onSort={toggleLiqSort} align="left" />
-                      <SortableHeader label="Events" sortKey="events" currentSort={liqSort} onSort={toggleLiqSort} />
-                      <SortableHeader label="Collateral Seized" sortKey="seized" currentSort={liqSort} onSort={toggleLiqSort} />
-                      <SortableHeader label="Debt Repaid" sortKey="repaid" currentSort={liqSort} onSort={toggleLiqSort} />
-                      <SortableHeader label="Bad Debt" sortKey="badDebt" currentSort={liqSort} onSort={toggleLiqSort} />
-                      <SortableHeader label="Last 30d" sortKey="recent30d" currentSort={liqSort} onSort={toggleLiqSort} />
-                      <th className="w-10 px-2" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {sortedLiqCurators.map((curator) => {
-                      const isExpanded = expandedLiqCurator === curator.curatorId;
-                      return (
-                        <LiquidationCuratorRow
-                          key={curator.curatorId}
-                          curator={curator}
-                          isExpanded={isExpanded}
-                          onToggle={() =>
-                            setExpandedLiqCurator(isExpanded ? null : curator.curatorId)
-                          }
-                        />
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </>
         )}
 
         {/* Vault Yields Grid */}
@@ -763,7 +453,6 @@ function CuratorRow({
 
   return (
     <>
-      {/* Curator summary row */}
       <tr
         className="hover:bg-background-elevated/30 transition-colors cursor-pointer"
         onClick={onToggle}
@@ -815,7 +504,6 @@ function CuratorRow({
         </td>
       </tr>
 
-      {/* Expanded vault breakdown */}
       {isExpanded && (
         <tr>
           <td colSpan={7} className="p-0">
@@ -882,263 +570,16 @@ function CuratorRow({
   );
 }
 
-function FeeCuratorRow({
-  curator,
-  annualRevenue,
-  isExpanded,
-  assetKeys,
-  onToggle,
-}: {
-  curator: CuratorWithVaults;
-  annualRevenue: number;
-  isExpanded: boolean;
-  assetKeys: string[];
-  onToggle: () => void;
-}) {
-  return (
-    <>
-      <tr
-        className="hover:bg-background-elevated/30 transition-colors cursor-pointer"
-        onClick={onToggle}
-      >
-        <td className="px-4 py-3">
-          <div>
-            <p className="font-medium text-text-primary">{curator.curatorName}</p>
-            <p className="text-xs text-text-tertiary font-mono">
-              {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
-            </p>
-          </div>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className="font-medium text-text-primary tabular-nums">
-            {formatCurrency(curator.totalAUM)}
-          </span>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className="text-text-secondary tabular-nums">
-            {curator.avgFee > 0 ? `${curator.avgFee.toFixed(1)}%` : "None"}
-          </span>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className="font-bold text-accent-blue tabular-nums text-lg">
-            {formatCurrency(annualRevenue)}
-          </span>
-          <p className="text-[10px] text-text-muted">/year</p>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className="text-text-secondary">{curator.vaultCount}</span>
-        </td>
-        <td className="px-2">
-          <svg
-            className={`w-4 h-4 text-text-muted transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </td>
-      </tr>
-
-      {isExpanded && (
-        <tr>
-          <td colSpan={6} className="p-0">
-            <div className="bg-background-elevated/40 border-t border-border px-6 py-4">
-              <div className="space-y-4">
-                {assetKeys.map((asset) => {
-                  const vaults = curator.vaultsByAsset[asset];
-                  const assetRevenue = vaults.reduce(
-                    (sum, v) => sum + (v.tvl * v.performanceFee) / 100,
-                    0
-                  );
-                  return (
-                    <div key={asset}>
-                      <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-2">
-                        {asset} Vaults:{" "}
-                        <span className="text-accent-blue">
-                          {formatCurrency(assetRevenue)}/year
-                        </span>
-                      </p>
-                      <div className="space-y-1">
-                        {vaults.map((vault) => {
-                          const vaultRevenue = (vault.tvl * vault.performanceFee) / 100;
-                          return (
-                            <div
-                              key={vault.vaultId}
-                              className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-background-hover/50 transition-colors"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <Link
-                                  href={`/vault/${vault.vaultAddress}`}
-                                  className="text-sm font-medium text-text-primary hover:text-accent-blue transition-colors"
-                                >
-                                  {vault.vaultName}
-                                </Link>
-                              </div>
-                              <div className="flex items-center gap-6 flex-shrink-0">
-                                <span className="text-sm text-accent-blue font-semibold tabular-nums">
-                                  {formatCurrency(vaultRevenue)}
-                                </span>
-                                <span className="text-xs text-text-muted tabular-nums w-28 text-right">
-                                  {vault.performanceFee.toFixed(1)}% on {formatCurrency(vault.tvl)}
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-function LiquidationCuratorRow({
-  curator,
-  isExpanded,
-  onToggle,
-}: {
-  curator: CuratorLiquidationData;
-  isExpanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <>
-      <tr
-        className="hover:bg-background-elevated/30 transition-colors cursor-pointer"
-        onClick={onToggle}
-      >
-        <td className="px-4 py-3">
-          <div>
-            <p className="font-medium text-text-primary">{curator.curatorName}</p>
-            <p className="text-xs text-text-tertiary font-mono">
-              {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
-            </p>
-          </div>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className="font-medium text-text-primary tabular-nums">
-            {curator.totalEvents.toLocaleString()}
-          </span>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className="font-bold text-accent-red tabular-nums text-lg">
-            {formatCurrency(curator.totalSeizedUsd)}
-          </span>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className="text-text-secondary tabular-nums">
-            {formatCurrency(curator.totalRepaidUsd)}
-          </span>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className={`font-medium tabular-nums ${curator.totalBadDebtUsd > 0 ? "text-accent-red" : "text-text-secondary"}`}>
-            {formatCurrency(curator.totalBadDebtUsd)}
-          </span>
-        </td>
-        <td className="text-right px-4 py-3">
-          <span className={`font-medium tabular-nums ${curator.recent30d > 0 ? "text-accent-red" : "text-text-secondary"}`}>
-            {curator.recent30d}
-          </span>
-        </td>
-        <td className="px-2">
-          <svg
-            className={`w-4 h-4 text-text-muted transition-transform ${
-              isExpanded ? "rotate-180" : ""
-            }`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </td>
-      </tr>
-
-      {isExpanded && curator.events.length > 0 && (
-        <tr>
-          <td colSpan={7} className="p-0">
-            <div className="bg-background-elevated/40 border-t border-border px-6 py-4">
-              <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider mb-3">
-                Recent Liquidation Events
-              </p>
-              <div className="space-y-1">
-                {curator.events.map((evt) => (
-                  <div
-                    key={`${evt.txHash}-${evt.borrower}`}
-                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-background-hover/50 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-text-primary">
-                        {new Date(evt.timestamp).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                        <span className="text-text-muted ml-2 text-xs">
-                          {new Date(evt.timestamp).toLocaleTimeString("en-US", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </p>
-                      <p className="text-xs text-text-tertiary font-mono">
-                        Market: {evt.marketUniqueKey.slice(0, 8)}...{evt.marketUniqueKey.slice(-6)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-6 flex-shrink-0">
-                      <div className="text-right">
-                        <p className="text-sm font-medium text-accent-red tabular-nums">
-                          {formatCurrency(evt.seizedAssetsUsd)}
-                        </p>
-                        <p className="text-[10px] text-text-muted">seized</p>
-                      </div>
-                      <div className="text-right w-24">
-                        <p className="text-sm text-text-secondary tabular-nums">
-                          {formatCurrency(evt.repaidAssetsUsd)}
-                        </p>
-                        <p className="text-[10px] text-text-muted">repaid</p>
-                      </div>
-                      {evt.badDebtAssetsUsd > 0 && (
-                        <div className="text-right w-24">
-                          <p className="text-sm font-medium text-accent-red tabular-nums">
-                            {formatCurrency(evt.badDebtAssetsUsd)}
-                          </p>
-                          <p className="text-[10px] text-text-muted">bad debt</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
 function SummaryCard({
   label,
   value,
   subtext,
   highlight,
-  valueColor,
 }: {
   label: string;
   value: string;
   subtext: string;
   highlight?: boolean;
-  valueColor?: string;
 }) {
   return (
     <div
@@ -1151,7 +592,7 @@ function SummaryCard({
       <p className="text-xs text-text-secondary mb-1">{label}</p>
       <p
         className={`text-2xl font-bold tabular-nums ${
-          valueColor || (highlight ? "text-accent-green" : "text-text-primary")
+          highlight ? "text-accent-green" : "text-text-primary"
         }`}
       >
         {value}

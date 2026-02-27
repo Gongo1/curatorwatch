@@ -9,6 +9,7 @@ import {
   Box,
   TrendingUp,
   Coins,
+  Zap,
   Bell,
   BookOpen,
   X,
@@ -49,6 +50,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
     { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults", section: "Analytics" },
     { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields", section: "Economics" },
     { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Economics" },
+    { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Economics" },
     { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", section: "Monitoring" },
     { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog", section: "Info" },
   ];
