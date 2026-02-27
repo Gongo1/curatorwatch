@@ -181,114 +181,31 @@ export default function Home() {
 
   return (
     <>
-      <PageHeader title="Dashboard" description="Multi-Protocol Vault Analytics" />
-
-        {/* Upgrade Announcement Banner */}
-        <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-accent-green/10 via-accent-green/5 to-transparent border border-accent-green/30">
-          <div className="flex items-start gap-3">
-            <span className="flex-shrink-0 mt-0.5 flex items-center justify-center w-6 h-6 rounded-full bg-accent-green/20">
-              <svg className="w-3.5 h-3.5 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </span>
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-accent-green/20 text-accent-green rounded">
-                  Upgrade
-                </span>
-                <span className="text-sm font-semibold text-text-primary">Hourly Data Collection is Live</span>
-              </div>
-              <p className="text-xs text-text-secondary leading-relaxed max-w-2xl">
-                All vault data — TVL, APY, risk scores, and alerts — now updates every hour instead of once daily.
-                Faster detection of yield changes, large flows, and concentration spikes across all 80+ vaults.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Hero/Disclaimer Banner */}
-        <div className="mb-5 p-4 sm:p-5 rounded-xl bg-gradient-to-r from-accent-blue/10 via-accent-purple/5 to-transparent border border-accent-blue/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1.5">
-                <span className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-accent-blue/20 text-accent-blue rounded">
-                  Beta
-                </span>
-                <span className="px-2 py-0.5 text-[10px] font-medium bg-background-elevated text-text-secondary rounded">
-                  Multi-Chain
-                </span>
-              </div>
-              <h2 className="text-base sm:text-lg font-semibold text-text-primary mb-1">
-                Multi-Protocol Vault Analytics
-              </h2>
-              <p className="text-xs sm:text-sm text-text-secondary max-w-2xl leading-relaxed">
-                Hourly curator intelligence, vault performance tracking, and risk monitoring across Morpho, Aave, Euler, Compound, Spark, and more.
-              </p>
-              <p className="text-[11px] text-text-tertiary mt-1.5 flex items-center gap-1.5">
-                <span className="inline-block w-1 h-1 rounded-full bg-accent-purple"></span>
-                <span>Morpho data updated hourly. Cross-protocol data via Turtle Club API updated every 4 hours.</span>
-              </p>
-            </div>
-            <a
-              href="https://app.morpho.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex-shrink-0 inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-accent-blue hover:text-white bg-accent-blue/10 hover:bg-accent-blue border border-accent-blue/30 hover:border-accent-blue rounded-lg transition-all"
-            >
-              Open Morpho App
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
-          </div>
-        </div>
-
-        {/* Alerts Bar - Top */}
+        {/* Alerts Ribbon */}
         {changeSummary && changeSummary.total > 0 && (
           <Link
             href="/alerts"
-            className={`mb-5 flex items-center justify-between p-3 rounded-lg border transition-all hover:scale-[1.005] ${
+            className={`mb-4 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors hover:opacity-90 ${
               changeSummary.critical > 0
-                ? "bg-accent-red-muted/30 border-accent-red/30"
+                ? "bg-accent-red/15 text-accent-red"
                 : changeSummary.warning > 0
-                  ? "bg-accent-yellow-muted/30 border-accent-yellow/30"
-                  : "bg-accent-blue/10 border-accent-blue/30"
+                  ? "bg-accent-yellow/15 text-accent-yellow"
+                  : "bg-accent-blue/10 text-accent-blue"
             }`}
           >
-            <div className="flex items-center gap-2.5">
-              {changeSummary.critical > 0 ? (
-                <div className="w-7 h-7 rounded-full bg-accent-red/20 flex items-center justify-center">
-                  <svg className="w-3.5 h-3.5 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                </div>
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-accent-blue/20 flex items-center justify-center">
-                  <svg className="w-3.5 h-3.5 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              )}
-              <div className="text-sm">
-                <span className="font-medium text-text-primary">
-                  {changeSummary.total} change{changeSummary.total !== 1 ? "s" : ""}
-                </span>
-                <span className="text-text-secondary ml-1.5">in 24h</span>
-                {changeSummary.critical > 0 && (
-                  <span className="text-accent-red font-medium ml-2">
-                    {changeSummary.critical} critical
-                  </span>
-                )}
-              </div>
-            </div>
-            <span className="text-xs font-medium text-text-secondary hover:text-text-primary flex items-center gap-1">
-              View
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
+            <span className="font-medium">
+              {changeSummary.total} change{changeSummary.total !== 1 ? "s" : ""} in 24h
             </span>
+            {changeSummary.critical > 0 && (
+              <span className="font-semibold">{changeSummary.critical} critical</span>
+            )}
+            <svg className="w-3 h-3 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </Link>
         )}
+
+      <PageHeader title="Dashboard" description="Multi-Protocol Vault Analytics" />
 
         {/* Stats Row */}
         {stats && (
