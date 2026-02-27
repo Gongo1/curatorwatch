@@ -97,3 +97,54 @@ body {
   outline-offset: 2px;
 }
 
+/* AG Grid Dark Theme — CuratorWatch */
+.ag-theme-curatorwatch {
+  --ag-background-color: var(--background-subtle);
+  --ag-foreground-color: var(--text-primary);
+  --ag-header-background-color: var(--background-elevated);
+  --ag-header-foreground-color: var(--text-secondary);
+  --ag-border-color: var(--border);
+  --ag-secondary-border-color: var(--border-subtle);
+  --ag-row-hover-color: var(--background-hover);
+  --ag-selected-row-background-color: rgba(59, 130, 246, 0.08);
+  --ag-odd-row-background-color: transparent;
+  --ag-font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  --ag-font-size: 13px;
+  --ag-header-height: 40px;
+  --ag-row-height: 44px;
+  --ag-cell-horizontal-padding: 16px;
+  --ag-header-column-separator-display: none;
+  --ag-header-column-resize-handle-display: block;
+  --ag-header-column-resize-handle-color: var(--border-strong);
+  --ag-header-column-resize-handle-width: 1px;
+  --ag-header-column-resize-handle-height: 50%;
+  --ag-range-selection-border-color: var(--accent-blue);
+  --ag-input-focus-border-color: var(--accent-blue);
+  --ag-checkbox-checked-color: var(--accent-blue);
+  --ag-wrapper-border-radius: 12px;
+  --ag-card-radius: 8px;
+  --ag-borders: solid 1px;
+}
+
+.ag-theme-curatorwatch .ag-header-cell-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ag-theme-curatorwatch .ag-row {
+  border-bottom-color: var(--border-subtle);
+}
+
+.ag-theme-curatorwatch .ag-cell {
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+}
+
+.ag-theme-curatorwatch .ag-root-wrapper {
+  border-radius: 12px;
+  overflow: hidden;
+}
+

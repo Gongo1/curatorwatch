@@ -2,14 +2,13 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { CuratorTable, CuratorTableSkeleton } from "@/components/CuratorTable";
+import { CuratorGrid } from "@/components/grid/CuratorGrid";
 import { TabbedMetricChart } from "@/components/TabbedMetricChart";
 import { StablecoinBreakdown } from "@/components/StablecoinBreakdown";
 import { TopCurators } from "@/components/TopCurators";
 import { TopVaults } from "@/components/TopVaults";
-import { AlertSidebar } from "@/components/AlertSidebar";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { formatTimeAgo, formatCurrency, formatPercentage } from "@/lib/utils/format";
 import { InfoTooltip } from "@/components/Tooltip";
 import type { CuratorDashboardResponse, CuratorDashboardItem, CuratorDashboardStats, PaginationInfo } from "@/lib/types/api";
@@ -54,14 +53,12 @@ export default function Home() {
   // Search and pagination state
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortBy, setSortBy] = useState<"aum" | "vaults" | "name">("aum");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Autocomplete dropdown state
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const fetchData = useCallback(async (page = 1, search = "", sort = sortBy, order = sortOrder) => {
+  const fetchData = useCallback(async (page = 1, search = "") => {
     try {
       if (isInitialLoad) {
         setLoading(true);
@@ -70,8 +67,8 @@ export default function Home() {
       const params = new URLSearchParams({
         page: page.toString(),
         pageSize: PAGE_SIZE.toString(),
-        sortBy: sort,
-        sortOrder: order,
+        sortBy: "aum",
+        sortOrder: "desc",
       });
 
       if (search.trim()) {
@@ -123,7 +120,7 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, [sortBy, sortOrder, isInitialLoad]);
+  }, [isInitialLoad]);
 
   // Initial fetch
   useEffect(() => {
@@ -181,115 +178,11 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Handle sort change
-  const handleSortChange = (newSortBy: "aum" | "vaults" | "name") => {
-    const newOrder = newSortBy === sortBy && sortOrder === "desc" ? "asc" : "desc";
-    setSortBy(newSortBy);
-    setSortOrder(newOrder);
-    setCurrentPage(1);
-    fetchData(1, searchQuery, newSortBy, newOrder);
-  };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Alert Sidebar */}
-      <AlertSidebar />
+    <>
+      <PageHeader title="Dashboard" description="Multi-Protocol Vault Analytics" />
 
-      {/* Header */}
-      <header className="bg-background-subtle border-b border-border sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-3">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2.5">
-              <Image
-                src="/logo.png"
-                alt="CuratorWatch"
-                width={32}
-                height={32}
-                className="rounded-lg"
-              />
-              <div className="hidden xs:block">
-                <h1 className="text-lg font-bold text-text-primary tracking-tight leading-tight">
-                  CuratorWatch
-                </h1>
-                <p className="text-[10px] text-text-tertiary leading-tight">
-                  Multi-Protocol Vault Analytics
-                </p>
-              </div>
-            </Link>
-            <div className="flex items-center gap-3 sm:gap-4">
-              {/* Desktop Navigation */}
-              <nav className="hidden sm:flex items-center gap-5">
-                <Link href="/" className="text-sm font-medium text-accent-blue">
-                  Dashboard
-                </Link>
-                <Link
-                  href="/vaults"
-                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Vaults
-                </Link>
-                <Link
-                  href="/yields"
-                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Economics
-                </Link>
-                <Link
-                  href="/alerts"
-                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Alerts
-                </Link>
-                <Link
-                  href="/changelog"
-                  className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Changelog
-                </Link>
-              </nav>
-              {/* Mobile Navigation */}
-              <nav className="flex sm:hidden items-center gap-2">
-                <Link href="/" className="px-2 py-1.5 text-xs font-medium text-accent-blue bg-accent-blue/10 rounded">
-                  Home
-                </Link>
-                <Link
-                  href="/vaults"
-                  className="px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Vaults
-                </Link>
-                <Link
-                  href="/yields"
-                  className="px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Economics
-                </Link>
-                <Link
-                  href="/alerts"
-                  className="px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Alerts
-                </Link>
-                <Link
-                  href="/changelog"
-                  className="px-2 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  Log
-                </Link>
-              </nav>
-              {lastUpdated && (
-                <span className="hidden md:flex items-center gap-1.5 text-xs text-text-tertiary">
-                  <span className="w-1.5 h-1.5 bg-accent-green rounded-full" />
-                  {timeAgo}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4 sm:py-5 xl:pr-52">
         {/* Upgrade Announcement Banner */}
         <div className="mb-5 p-4 rounded-xl bg-gradient-to-r from-accent-green/10 via-accent-green/5 to-transparent border border-accent-green/30">
           <div className="flex items-start gap-3">
@@ -515,8 +408,8 @@ export default function Home() {
           )}
         </div>
 
-        {/* Search and Filter Bar */}
-        <div className="mb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        {/* Search Bar */}
+        <div className="mb-3">
           {/* Search Input with Autocomplete */}
           <div className="relative w-full sm:w-72" ref={dropdownRef}>
             <input
@@ -591,33 +484,6 @@ export default function Home() {
               </div>
             )}
           </div>
-
-          {/* Sort Buttons */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1">
-            <span className="text-xs text-text-tertiary flex-shrink-0">Sort:</span>
-            <div className="flex rounded-lg border border-border overflow-hidden flex-shrink-0">
-              {[
-                { key: "aum", label: "AUM" },
-                { key: "vaults", label: "Vaults" },
-                { key: "name", label: "Name" },
-              ].map((option) => (
-                <button
-                  key={option.key}
-                  onClick={() => handleSortChange(option.key as "aum" | "vaults" | "name")}
-                  className={`px-2 sm:px-2.5 py-1.5 text-xs font-medium transition-colors whitespace-nowrap ${
-                    sortBy === option.key
-                      ? "bg-accent-blue text-white"
-                      : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
-                  }`}
-                >
-                  {option.label}
-                  {sortBy === option.key && (
-                    <span className="ml-0.5">{sortOrder === "desc" ? "↓" : "↑"}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
 
         {/* Search Results Info */}
@@ -651,11 +517,17 @@ export default function Home() {
         )}
 
         {/* Loading State */}
-        {loading && isInitialLoad && <CuratorTableSkeleton />}
+        {loading && isInitialLoad && (
+          <div className="animate-pulse space-y-2">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-12 bg-background-elevated rounded" />
+            ))}
+          </div>
+        )}
 
-        {/* Curator Table */}
+        {/* Curator Grid */}
         {!(loading && isInitialLoad) && !error && curators.length > 0 && (
-          <CuratorTable curators={curators} />
+          <CuratorGrid curators={curators} />
         )}
 
         {/* Empty State */}
@@ -721,48 +593,7 @@ export default function Home() {
             </div>
           </div>
         )}
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border bg-background-subtle mt-auto">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between text-xs text-text-tertiary">
-            <p>
-              Data from{" "}
-              <a
-                href="https://api.morpho.org/graphql"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-accent-blue hover:text-accent-blue-hover"
-              >
-                Morpho API
-              </a>
-              {" "}& Turtle Club • Updated hourly
-            </p>
-            <div className="flex items-center gap-3">
-              <Link href="/changelog" className="text-text-tertiary hover:text-text-primary transition-colors">
-                Changelog
-              </Link>
-              <a
-                href="https://x.com/curator_watch"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-text-tertiary hover:text-text-primary transition-colors"
-                title="Follow us on X"
-              >
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-              </a>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-                Live
-              </span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
 

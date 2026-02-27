@@ -2,8 +2,8 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { ExternalLink } from "lucide-react";
+import { PageHeader } from "@/components/layout/PageHeader";
 import {
   formatCurrency,
   formatPercentage,
@@ -17,26 +17,10 @@ import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar
 import { CopyAddress } from "@/components/CopyAddress";
 import { CuratorRating } from "@/components/CuratorRating";
 import type { CuratorDetailResponse } from "@/lib/types/api";
-import { ProtocolBadge } from "@/components/ProtocolBadge";
+import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
 
 interface PageProps {
   params: Promise<{ address: string }>;
-}
-
-// Generate a deterministic color from an address for vault icons
-function getVaultColor(address: string): string {
-  const colors = [
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-pink-500",
-    "bg-emerald-500",
-    "bg-amber-500",
-    "bg-cyan-500",
-    "bg-indigo-500",
-    "bg-rose-500",
-  ];
-  const hash = address.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
-  return colors[Math.abs(hash) % colors.length];
 }
 
 export default function CuratorDetailPage({ params }: PageProps) {
@@ -73,34 +57,32 @@ export default function CuratorDetailPage({ params }: PageProps) {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="py-8">
+        <Link
+          href="/"
+          className="inline-flex items-center text-sm text-text-tertiary hover:text-text-primary transition-colors mb-6"
+        >
+          <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Back to Curators
+        </Link>
+
+        <div className="bg-background-subtle rounded-lg border border-accent-red/30 p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-accent-red/15 flex items-center justify-center mx-auto">
+            <svg className="h-8 w-8 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <h2 className="mt-4 text-lg font-medium text-text-primary">Curator Not Found</h2>
+          <p className="mt-2 text-sm text-text-secondary">{error || "The curator you're looking for doesn't exist."}</p>
+          <p className="mt-1 text-xs text-text-muted font-mono">{address}</p>
           <Link
             href="/"
-            className="inline-flex items-center text-sm text-text-tertiary hover:text-text-primary transition-colors mb-6"
+            className="mt-6 inline-flex items-center px-4 py-2 border border-border rounded-lg text-sm font-medium text-text-primary bg-background-elevated hover:bg-background-hover transition-colors"
           >
-            <svg className="w-4 h-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Curators
+            Return to Dashboard
           </Link>
-
-          <div className="bg-background-subtle rounded-lg border border-accent-red/30 p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-accent-red/15 flex items-center justify-center mx-auto">
-              <svg className="h-8 w-8 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <h2 className="mt-4 text-lg font-medium text-text-primary">Curator Not Found</h2>
-            <p className="mt-2 text-sm text-text-secondary">{error || "The curator you're looking for doesn't exist."}</p>
-            <p className="mt-1 text-xs text-text-muted font-mono">{address}</p>
-            <Link
-              href="/"
-              className="mt-6 inline-flex items-center px-4 py-2 border border-border rounded-lg text-sm font-medium text-text-primary bg-background-elevated hover:bg-background-hover transition-colors"
-            >
-              Return to Dashboard
-            </Link>
-          </div>
         </div>
       </div>
     );
@@ -126,99 +108,34 @@ export default function CuratorDetailPage({ params }: PageProps) {
     .sort((a, b) => b.amount - a.amount);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-background-subtle border-b border-border sticky top-0 z-50">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center gap-6 mb-4">
-            <Link href="/" className="flex items-center gap-2">
-              <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
-              <span className="text-sm font-bold text-text-primary hidden sm:inline">CuratorWatch</span>
-            </Link>
-            <nav className="flex items-center gap-4 ml-auto">
-              <Link href="/" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Curators
-              </Link>
-              <Link href="/vaults" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                All Vaults
-              </Link>
-              <Link href="/yields" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Economics
-              </Link>
-              <Link href="/alerts" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Alerts
-              </Link>
-            </nav>
+    <>
+      <PageHeader
+        title={curator.name && curator.name !== "Unknown" ? curator.name : `Curator ${formatAddress(curator.address)}`}
+        description={`Managing ${formatCurrency(totalTVL)} across ${vaults.length} vault${vaults.length !== 1 ? "s" : ""}`}
+        breadcrumbs={[
+          { label: "Dashboard", href: "/" },
+          { label: "Curators", href: "/" },
+          { label: curator.name || formatAddress(curator.address) },
+        ]}
+        actions={
+          <div className="flex items-center gap-2">
+            <CuratorAvatar address={curator.address} name={curator.name} logoUrl={curator.logoUrl} size="lg" />
+            <CopyAddress address={curator.address} />
+            {curator.website && (
+              <a href={curator.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors text-sm">
+                <svg className="w-4 h-4 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+                <span className="text-text-secondary">Website</span>
+              </a>
+            )}
+            {curator.twitter && (
+              <a href={`https://x.com/${curator.twitter}`} target="_blank" rel="noopener noreferrer" className="p-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors" title="Twitter/X">
+                <svg className="w-4 h-4 text-text-tertiary" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+              </a>
+            )}
           </div>
+        }
+      />
 
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex items-start gap-4">
-              <CuratorAvatar
-                address={curator.address}
-                name={curator.name}
-                logoUrl={curator.logoUrl}
-                size="lg"
-              />
-              <div>
-                <h1 className="text-xl font-semibold text-text-primary tracking-tight">
-                  {curator.name && curator.name !== "Unknown" ? curator.name : `Curator ${formatAddress(curator.address)}`}
-                </h1>
-                <p className="text-sm text-text-tertiary">
-                  Managing {formatCurrency(totalTVL)} across {vaults.length} vault{vaults.length !== 1 ? "s" : ""}
-                </p>
-                <div className="mt-0.5">
-                  <CopyAddress address={curator.address} />
-                </div>
-              </div>
-            </div>
-
-            {/* Social links */}
-            <div className="flex items-center gap-2">
-              {curator.website && (
-                <a
-                  href={curator.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors text-sm"
-                >
-                  <svg className="w-4 h-4 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                  </svg>
-                  <span className="text-text-secondary">Website</span>
-                </a>
-              )}
-              {curator.twitter && (
-                <a
-                  href={`https://x.com/${curator.twitter}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors"
-                  title="Twitter/X"
-                >
-                  <svg className="w-4 h-4 text-text-tertiary" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                </a>
-              )}
-              {curator.discord && (
-                <a
-                  href={curator.discord}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors"
-                  title="Discord"
-                >
-                  <svg className="w-4 h-4 text-text-tertiary" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189Z" />
-                  </svg>
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Key Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <StatCard
@@ -400,106 +317,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                 <p className="text-sm text-text-tertiary">No vaults found.</p>
               </div>
             ) : (
-              <div className="space-y-6">
-                {(() => {
-                  const vaultsByAsset: Record<string, typeof vaults> = {};
-                  vaults.forEach((v) => {
-                    const asset = v.asset.symbol;
-                    if (!vaultsByAsset[asset]) vaultsByAsset[asset] = [];
-                    vaultsByAsset[asset].push(v);
-                  });
-                  const sortedAssets = Object.entries(vaultsByAsset).sort(
-                    (a, b) => {
-                      const aTvl = a[1].reduce((s, v) => s + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
-                      const bTvl = b[1].reduce((s, v) => s + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
-                      return bTvl - aTvl;
-                    }
-                  );
-                  return sortedAssets.map(([asset, assetVaults]) => {
-                    const assetTvl = assetVaults.reduce((s, v) => s + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
-                    return (
-                      <section key={asset} className="bg-background-subtle rounded-lg border border-border">
-                        <div className="px-6 py-3 border-b border-border flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-background-elevated border border-border text-text-primary">
-                              {asset}
-                            </span>
-                            <span className="text-xs text-text-tertiary">
-                              {assetVaults.length} vault{assetVaults.length !== 1 ? "s" : ""}
-                            </span>
-                          </div>
-                          <span className="text-sm font-medium text-text-secondary tabular-nums">
-                            {formatCurrency(assetTvl)}
-                          </span>
-                        </div>
-                        <div className="overflow-x-auto">
-                          <table className="min-w-full">
-                            <thead className="bg-background-elevated/50">
-                              <tr>
-                                <th className="px-6 py-2.5 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                                  Vault
-                                </th>
-                                <th className="px-6 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                                  Deposits
-                                </th>
-                                <th className="px-6 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                                  APY
-                                </th>
-                                <th className="px-6 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                                  Net APY
-                                </th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border-subtle">
-                              {assetVaults
-                                .sort((a, b) => (b.latestSnapshot?.totalAssetsUsd ?? 0) - (a.latestSnapshot?.totalAssetsUsd ?? 0))
-                                .map((vault) => (
-                                <tr key={vault.id} className="hover:bg-background-hover transition-colors">
-                                  <td className="px-6 py-3.5 whitespace-nowrap">
-                                    <Link href={`/vault/${vault.address}`} className="flex items-center gap-3 group">
-                                      <div className={`w-8 h-8 rounded-lg ${getVaultColor(vault.address)} flex items-center justify-center text-white font-bold text-xs`}>
-                                        {vault.symbol.slice(0, 2).toUpperCase()}
-                                      </div>
-                                      <div>
-                                        <div className="flex items-center gap-1.5">
-                                          <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                                            {vault.name}
-                                          </span>
-                                          {vault.protocol && vault.protocol !== "morpho" && (
-                                            <ProtocolBadge protocol={vault.protocol} />
-                                          )}
-                                        </div>
-                                        <div className="text-xs text-text-tertiary font-mono">
-                                          {formatAddress(vault.address)}
-                                        </div>
-                                      </div>
-                                    </Link>
-                                  </td>
-                                  <td className="px-6 py-3.5 whitespace-nowrap text-right">
-                                    <span className="text-sm font-semibold text-text-primary tabular-nums">
-                                      {formatCurrency(vault.latestSnapshot?.totalAssetsUsd)}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-3.5 whitespace-nowrap text-right">
-                                    <span className="text-sm text-text-secondary tabular-nums">
-                                      {formatPercentage(vault.latestSnapshot?.avgApy)}
-                                    </span>
-                                  </td>
-                                  <td className="px-6 py-3.5 whitespace-nowrap text-right">
-                                    <span className="text-sm font-medium text-accent-green tabular-nums">
-                                      {formatPercentage(vault.latestSnapshot?.avgNetApy)}
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </section>
-                    );
-                  });
-                })()}
-              </div>
+              <CuratorVaultGrid vaults={vaults} />
             )}
           </TabsContent>
 
@@ -751,29 +569,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
             <CuratorRating curatorAddress={curator.address} />
           </TabsContent>
         </Tabs>
-      </main>
-
-      <footer className="border-t border-border bg-background-subtle mt-auto">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between text-xs text-text-tertiary">
-            <p>
-              Data from{" "}
-              <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
-              {" "}& Turtle Club • Updated hourly
-            </p>
-            <div className="flex items-center gap-3">
-              <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-              </a>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-                Live
-              </span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
 
@@ -852,43 +648,34 @@ function CategoryIcon({ category }: { category: string | null }) {
 
 function CuratorDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-background animate-pulse">
-      <header className="bg-background-subtle border-b border-border">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="h-4 w-24 bg-background-elevated rounded mb-4" />
-          <div className="flex items-start gap-4">
-            <div className="w-14 h-14 bg-background-elevated rounded-xl" />
-            <div>
-              <div className="h-6 w-48 bg-background-elevated rounded mb-2" />
-              <div className="h-4 w-32 bg-background-elevated rounded" />
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="animate-pulse">
+      <div className="mb-5">
+        <div className="h-4 w-48 bg-background-elevated rounded mb-3" />
+        <div className="h-7 w-64 bg-background-elevated rounded mb-1" />
+        <div className="h-4 w-40 bg-background-elevated rounded" />
+      </div>
 
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="bg-background-subtle rounded-lg border border-border p-4">
-              <div className="h-3 w-16 bg-background-elevated rounded mb-2" />
-              <div className="h-6 w-20 bg-background-elevated rounded" />
-            </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-background-subtle rounded-lg border border-border p-4">
+            <div className="h-3 w-16 bg-background-elevated rounded mb-2" />
+            <div className="h-6 w-20 bg-background-elevated rounded" />
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-background-subtle rounded-lg border border-border p-6">
+        <div className="flex gap-4 mb-6">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 w-24 bg-background-elevated rounded" />
           ))}
         </div>
-
-        <div className="bg-background-subtle rounded-lg border border-border p-6">
-          <div className="flex gap-4 mb-6">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-8 w-24 bg-background-elevated rounded" />
-            ))}
-          </div>
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-20 bg-background-elevated rounded" />
-            ))}
-          </div>
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-20 bg-background-elevated rounded" />
+          ))}
         </div>
-      </main>
+      </div>
     </div>
   );
 }

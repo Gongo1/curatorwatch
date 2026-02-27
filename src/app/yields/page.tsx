@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency } from "@/lib/utils/format";
+import { VaultYieldsGrid } from "@/components/grid/YieldsGrid";
 
 interface VaultYieldData {
   vaultId: string;
@@ -384,36 +385,25 @@ export default function YieldsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 w-48 bg-background-elevated rounded" />
-            <div className="grid grid-cols-4 gap-4">
-              <div className="h-24 bg-background-elevated rounded-xl" />
-              <div className="h-24 bg-background-elevated rounded-xl" />
-              <div className="h-24 bg-background-elevated rounded-xl" />
-              <div className="h-24 bg-background-elevated rounded-xl" />
-            </div>
-            <div className="h-64 bg-background-elevated rounded-xl" />
+      <>
+        <PageHeader title="Economics" description="Yield, fees, liquidations, and revenue across vaults" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Economics" }]} />
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-48 bg-background-elevated rounded" />
+          <div className="grid grid-cols-4 gap-4">
+            <div className="h-24 bg-background-elevated rounded-xl" />
+            <div className="h-24 bg-background-elevated rounded-xl" />
+            <div className="h-24 bg-background-elevated rounded-xl" />
+            <div className="h-24 bg-background-elevated rounded-xl" />
           </div>
-        </main>
-      </div>
+          <div className="h-64 bg-background-elevated rounded-xl" />
+        </div>
+      </>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
-        {/* Page Title */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-text-primary mb-1">Economics</h1>
-          <p className="text-sm text-text-secondary">
-            Yield, fees, liquidations, and revenue across Morpho V2 vaults
-          </p>
-        </div>
+    <>
+      <PageHeader title="Economics" description="Yield, fees, liquidations, and revenue across vaults" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Economics" }]} />
 
         {/* Summary Cards — yield overview (hide on liquidations tab) */}
         {summary && viewMode !== "liquidations" && (
@@ -702,97 +692,11 @@ export default function YieldsPage() {
           </>
         )}
 
-        {/* Vault Yields Table */}
+        {/* Vault Yields Grid */}
         {viewMode === "vaults" && (
-          <div className="bg-background-subtle border border-border rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-background-elevated/50">
-                    <SortableHeader label="Vault" sortKey="name" currentSort={vaultSort} onSort={toggleVaultSort} align="left" />
-                    <SortableHeader label="Curator" sortKey="curator" currentSort={vaultSort} onSort={toggleVaultSort} align="left" />
-                    <SortableHeader label="TVL" sortKey="tvl" currentSort={vaultSort} onSort={toggleVaultSort} />
-                    <SortableHeader label="Gross APY" sortKey="grossApy" currentSort={vaultSort} onSort={toggleVaultSort} />
-                    <SortableHeader label="Net APY" sortKey="netApy" currentSort={vaultSort} onSort={toggleVaultSort} />
-                    <SortableHeader label="Fee" sortKey="fee" currentSort={vaultSort} onSort={toggleVaultSort} />
-                    <SortableHeader label={`${timeFrameLabels[timeFrame]} Yield`} sortKey="yield" currentSort={vaultSort} onSort={toggleVaultSort} />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {sortedVaults.slice(0, 50).map((vault) => (
-                    <tr key={vault.vaultId} className="hover:bg-background-elevated/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div>
-                          <Link
-                            href={`/vault/${vault.vaultAddress}`}
-                            className="font-medium text-text-primary hover:text-accent-blue transition-colors"
-                          >
-                            {vault.vaultName}
-                          </Link>
-                          <p className="text-xs text-text-tertiary">{vault.assetSymbol}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-text-secondary">{vault.curatorName || "-"}</span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="font-medium text-text-primary tabular-nums">
-                          {formatCurrency(vault.tvl)}
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="text-text-secondary tabular-nums">
-                          {vault.grossApy.toFixed(2)}%
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="text-accent-green font-medium tabular-nums">
-                          {vault.netApy.toFixed(2)}%
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="text-text-muted tabular-nums text-sm">
-                          {vault.performanceFee.toFixed(1)}%
-                        </span>
-                      </td>
-                      <td className="text-right px-4 py-3">
-                        <span className="font-bold text-accent-green tabular-nums text-lg">
-                          {formatCurrency(getVaultYieldForTimeFrame(vault))}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <VaultYieldsGrid vaults={sortedVaults} timeFrame={timeFrame} />
         )}
-      </main>
-
-      <footer className="border-t border-border bg-background-subtle mt-auto">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between text-xs text-text-tertiary">
-            <p>
-              Data from{" "}
-              <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
-              {" "}&bull; Updated hourly
-            </p>
-            <div className="flex items-center gap-3">
-              <Link href="/changelog" className="text-text-tertiary hover:text-text-primary transition-colors">
-                Changelog
-              </Link>
-              <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-              </a>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-                Live
-              </span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
 
@@ -1220,57 +1124,6 @@ function LiquidationCuratorRow({
         </tr>
       )}
     </>
-  );
-}
-
-function Header() {
-  return (
-    <header className="bg-background-subtle border-b border-border sticky top-0 z-50">
-      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-3">
-        <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
-            <div>
-              <h1 className="text-lg font-bold text-text-primary tracking-tight leading-tight">
-                CuratorWatch
-              </h1>
-              <p className="text-[10px] text-text-tertiary leading-tight">
-                Morpho V2 Vault Analytics
-              </p>
-            </div>
-          </Link>
-          <nav className="flex items-center gap-5">
-            <Link
-              href="/"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/vaults"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
-              Vaults
-            </Link>
-            <Link href="/yields" className="text-sm font-medium text-accent-blue">
-              Economics
-            </Link>
-            <Link
-              href="/alerts"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
-              Alerts
-            </Link>
-            <Link
-              href="/changelog"
-              className="text-sm text-text-secondary hover:text-text-primary transition-colors"
-            >
-              Changelog
-            </Link>
-          </nav>
-        </div>
-      </div>
-    </header>
   );
 }
 

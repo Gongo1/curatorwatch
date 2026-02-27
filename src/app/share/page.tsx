@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { formatCurrency, formatPercentage } from "@/lib/utils/format";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface CuratorData {
   name: string;
@@ -41,11 +42,7 @@ export default function SharePage() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
-        <div className="text-white">Loading...</div>
-      </div>
-    );
+    return <div className="flex items-center justify-center py-20 text-white">Loading...</div>;
   }
 
   const today = new Date().toLocaleDateString("en-US", {
@@ -55,12 +52,13 @@ export default function SharePage() {
   });
 
   return (
-    <div className="min-h-screen bg-neutral-900 p-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-2xl font-bold text-white mb-2">Social Share Cards</h1>
-        <p className="text-neutral-400 mb-8">Screenshot these cards for X and LinkedIn posts</p>
-
-        <div className="grid gap-8">
+    <>
+      <PageHeader
+        title="Social Share Cards"
+        description="Screenshot these cards for X and LinkedIn posts"
+        breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Share" }]}
+      />
+      <div className="grid gap-8">
           {/* Card 1: Hero Stats Card (1200x675 - Twitter/X optimal) */}
           <div>
             <h2 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wider">
@@ -334,41 +332,18 @@ export default function SharePage() {
             </div>
           </div>
 
-        </div>
-
-        {/* Instructions */}
-        <div className="mt-12 p-6 bg-neutral-800 rounded-xl">
-          <h2 className="text-lg font-semibold text-white mb-3">How to Use These Cards</h2>
-          <ol className="text-neutral-300 space-y-2">
-            <li>1. Right-click on any card and select "Take Screenshot" (or use your OS screenshot tool)</li>
-            <li>2. Crop to the card boundaries</li>
-            <li>3. Post directly to X or LinkedIn</li>
-            <li>4. Cards are optimized: 1200x675 for X, 1080x1080 for Instagram/LinkedIn square</li>
-          </ol>
-        </div>
       </div>
-
-      <footer className="border-t border-neutral-700 mt-auto">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between text-xs text-neutral-400">
-            <p>
-              Data from{" "}
-              <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">Morpho API</a>
-              {" "}• Updated hourly
-            </p>
-            <div className="flex items-center gap-3">
-              <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-white transition-colors" title="Follow us on X">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-              </a>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                Live
-              </span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+      {/* Instructions */}
+      <div className="mt-12 p-6 bg-neutral-800 rounded-xl">
+        <h2 className="text-lg font-semibold text-white mb-3">How to Use These Cards</h2>
+        <ol className="text-neutral-300 space-y-2">
+          <li>1. Right-click on any card and select &quot;Take Screenshot&quot; (or use your OS screenshot tool)</li>
+          <li>2. Crop to the card boundaries</li>
+          <li>3. Post directly to X or LinkedIn</li>
+          <li>4. Cards are optimized: 1200x675 for X, 1080x1080 for Instagram/LinkedIn square</li>
+        </ol>
+      </div>
+    </>
   );
 }
 

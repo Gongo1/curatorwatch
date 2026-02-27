@@ -2,7 +2,6 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
   formatCurrency,
   formatPercentage,
@@ -23,6 +22,7 @@ import { RecentChanges } from "@/components/RecentChanges";
 import { CuratorSection, CuratorPlaceholder } from "@/components/CuratorSection";
 import { FeesCard } from "@/components/FeesCard";
 import { ProtocolBadge } from "@/components/ProtocolBadge";
+import { PageHeader } from "@/components/layout/PageHeader";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -78,55 +78,53 @@ export default function VaultDetailPage({ params }: PageProps) {
 
   if (error || !vault) {
     return (
-      <div className="min-h-screen bg-background">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm mb-6">
-            <Link href="/" className="text-text-tertiary hover:text-text-primary transition-colors">
-              Curators
-            </Link>
-            <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <Link href="/vaults" className="text-text-tertiary hover:text-text-primary transition-colors">
-              All Vaults
-            </Link>
-            <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-            <span className="text-text-primary font-medium">Vault</span>
-          </nav>
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm mb-6">
+          <Link href="/" className="text-text-tertiary hover:text-text-primary transition-colors">
+            Curators
+          </Link>
+          <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <Link href="/vaults" className="text-text-tertiary hover:text-text-primary transition-colors">
+            All Vaults
+          </Link>
+          <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+          <span className="text-text-primary font-medium">Vault</span>
+        </nav>
 
-          <div className="bg-background-subtle rounded-lg border border-accent-red/30 p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-accent-red/15 flex items-center justify-center mx-auto">
-              <svg
-                className="h-8 w-8 text-accent-red"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                />
-              </svg>
-            </div>
-            <h2 className="mt-4 text-lg font-medium text-text-primary">
-              Vault Not Found
-            </h2>
-            <p className="mt-2 text-sm text-text-secondary">
-              {error || "The vault you're looking for doesn't exist."}
-            </p>
-            <p className="mt-1 text-xs text-text-muted font-mono">{address}</p>
-            <Link
-              href="/"
-              className="mt-6 inline-flex items-center px-4 py-2 border border-border rounded-lg text-sm font-medium text-text-primary bg-background-elevated hover:bg-background-hover transition-colors"
+        <div className="bg-background-subtle rounded-lg border border-accent-red/30 p-8 text-center">
+          <div className="w-16 h-16 rounded-full bg-accent-red/15 flex items-center justify-center mx-auto">
+            <svg
+              className="h-8 w-8 text-accent-red"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              Return to Dashboard
-            </Link>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
           </div>
+          <h2 className="mt-4 text-lg font-medium text-text-primary">
+            Vault Not Found
+          </h2>
+          <p className="mt-2 text-sm text-text-secondary">
+            {error || "The vault you're looking for doesn't exist."}
+          </p>
+          <p className="mt-1 text-xs text-text-muted font-mono">{address}</p>
+          <Link
+            href="/"
+            className="mt-6 inline-flex items-center px-4 py-2 border border-border rounded-lg text-sm font-medium text-text-primary bg-background-elevated hover:bg-background-hover transition-colors"
+          >
+            Return to Dashboard
+          </Link>
         </div>
       </div>
     );
@@ -137,133 +135,38 @@ export default function VaultDetailPage({ params }: PageProps) {
   const curatorAddress = vault.curatorAddress;
   const isTurtleVault = vault.dataSource === "turtle";
 
+  const breadcrumbs = curatorAddress
+    ? [
+        { label: "Dashboard", href: "/" },
+        { label: curatorName || formatAddress(curatorAddress), href: `/curator/${curatorAddress}` },
+        { label: vault.name },
+      ]
+    : [
+        { label: "Dashboard", href: "/" },
+        { label: "Vaults", href: "/vaults" },
+        { label: vault.name },
+      ];
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="bg-background-subtle border-b border-border sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Top Navigation */}
-          <div className="flex items-center justify-between mb-3">
-            {/* Logo + Breadcrumb */}
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2">
-                <Image src="/logo.png" alt="CuratorWatch" width={32} height={32} className="rounded-lg" />
-              </Link>
-              <nav className="flex items-center gap-2 text-sm">
-                <Link href="/" className="text-text-tertiary hover:text-text-primary transition-colors">
-                  Curators
-                </Link>
-              <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-              {curatorAddress ? (
-                <>
-                  <Link
-                    href={`/curator/${curatorAddress}`}
-                    className="text-text-tertiary hover:text-text-primary transition-colors"
-                  >
-                    {curatorName || formatAddress(curatorAddress)}
-                  </Link>
-                  <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </>
-              ) : (
-                <>
-                  <Link href="/vaults" className="text-text-tertiary hover:text-text-primary transition-colors">
-                    All Vaults
-                  </Link>
-                  <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </>
-              )}
-              <span className="text-text-primary font-medium truncate max-w-[200px]">{vault.name}</span>
-              </nav>
-            </div>
-
-            {/* Global Navigation */}
-            <nav className="hidden sm:flex items-center gap-6">
-              <Link href="/" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Curators
-              </Link>
-              <Link href="/vaults" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                All Vaults
-              </Link>
-              <Link href="/yields" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Economics
-              </Link>
-              <Link href="/alerts" className="text-sm text-text-secondary hover:text-text-primary transition-colors">
-                Alerts
-              </Link>
-            </nav>
+    <>
+      <PageHeader
+        title={vault.name}
+        description={`${vault.symbol} \u2022 ${vault.asset.symbol} \u2022 ${formatAddress(vault.address)}`}
+        breadcrumbs={breadcrumbs}
+        actions={
+          <div className="flex items-center gap-3">
+            <ProtocolBadge protocol={vault.protocol ?? "morpho"} size="md" />
+            {vault.dataSource !== "turtle" && (
+              <a href={getMorphoVaultUrl(vault.address, vault.name)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15 transition-colors">
+                View on Morpho
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+              </a>
+            )}
+            <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-background-elevated border border-border text-text-primary">{vault.asset.symbol}</span>
           </div>
+        }
+      />
 
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-xl ${getAddressColor(vault.address)} flex items-center justify-center text-white font-bold text-lg`}>
-                {vault.symbol.slice(0, 2).toUpperCase()}
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-semibold text-text-primary tracking-tight">{vault.name}</h1>
-                  <ProtocolBadge protocol={vault.protocol ?? "morpho"} size="md" />
-                </div>
-                <p className="text-sm text-text-secondary flex items-center gap-2 flex-wrap">
-                  <span className="font-medium">{vault.symbol}</span>
-                  <span className="text-text-muted">•</span>
-                  <span className="font-mono text-text-tertiary">{formatAddress(vault.address)}</span>
-                  {curatorAddress && (
-                    <>
-                      <span className="text-text-muted">•</span>
-                      <span className="text-text-tertiary">
-                        Managed by{" "}
-                        <Link
-                          href={`/curator/${curatorAddress}`}
-                          className="text-accent-blue hover:text-accent-blue-hover transition-colors"
-                        >
-                          {curatorName || formatAddress(curatorAddress)}
-                        </Link>
-                      </span>
-                    </>
-                  )}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              {vault.dataSource !== "turtle" && (
-                <a
-                  href={getMorphoVaultUrl(vault.address, vault.name)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15 transition-colors"
-                >
-                  View on Morpho
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                  </svg>
-                </a>
-              )}
-              {curatorAddress && (
-                <Link
-                  href={`/curator/${curatorAddress}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-blue/10 border border-accent-blue/20 text-accent-blue hover:bg-accent-blue/15 transition-colors"
-                >
-                  View all {curatorName || "curator"} vaults
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              )}
-              <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-background-elevated border border-border text-text-primary">
-                {vault.asset.symbol}
-              </span>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Key Metrics */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
           <MetricCard
@@ -658,29 +561,7 @@ export default function VaultDetailPage({ params }: PageProps) {
             </section>
           </TabsContent>
         </Tabs>
-      </main>
-
-      <footer className="border-t border-border bg-background-subtle mt-auto">
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4">
-          <div className="flex items-center justify-between text-xs text-text-tertiary">
-            <p>
-              Data from{" "}
-              <a href="https://api.morpho.org/graphql" target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:text-accent-blue-hover">Morpho API</a>
-              {" "}& Turtle Club • Updated hourly
-            </p>
-            <div className="flex items-center gap-3">
-              <a href="https://x.com/curator_watch" target="_blank" rel="noopener noreferrer" className="text-text-tertiary hover:text-text-primary transition-colors" title="Follow us on X">
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-              </a>
-              <span className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-                Live
-              </span>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
 
@@ -769,51 +650,42 @@ function ConfigItem({
 
 function VaultDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-background animate-pulse">
-      <header className="bg-background-subtle border-b border-border">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="h-4 w-24 bg-background-elevated rounded mb-4" />
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-background-elevated rounded-xl" />
-            <div>
-              <div className="h-6 w-48 bg-background-elevated rounded mb-2" />
-              <div className="h-4 w-32 bg-background-elevated rounded" />
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="animate-pulse">
+      <div className="mb-5">
+        <div className="h-4 w-48 bg-background-elevated rounded mb-2" />
+        <div className="h-6 w-64 bg-background-elevated rounded mb-1" />
+        <div className="h-4 w-40 bg-background-elevated rounded" />
+      </div>
 
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-background-subtle rounded-lg border border-border p-4">
+            <div className="h-4 w-20 bg-background-elevated rounded mb-2" />
+            <div className="h-8 w-24 bg-background-elevated rounded" />
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-background-subtle rounded-lg border border-border p-6 mb-6">
+        <div className="h-5 w-40 bg-background-elevated rounded mb-4" />
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-12 bg-background-elevated rounded" />
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-background-subtle rounded-lg border border-border p-6">
+        <div className="h-5 w-40 bg-background-elevated rounded mb-4" />
+        <div className="grid grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="bg-background-subtle rounded-lg border border-border p-4">
-              <div className="h-4 w-20 bg-background-elevated rounded mb-2" />
-              <div className="h-8 w-24 bg-background-elevated rounded" />
+            <div key={i}>
+              <div className="h-4 w-24 bg-background-elevated rounded mb-2" />
+              <div className="h-4 w-32 bg-background-elevated/50 rounded" />
             </div>
           ))}
         </div>
-
-        <div className="bg-background-subtle rounded-lg border border-border p-6 mb-6">
-          <div className="h-5 w-40 bg-background-elevated rounded mb-4" />
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-12 bg-background-elevated rounded" />
-            ))}
-          </div>
-        </div>
-
-        <div className="bg-background-subtle rounded-lg border border-border p-6">
-          <div className="h-5 w-40 bg-background-elevated rounded mb-4" />
-          <div className="grid grid-cols-2 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i}>
-                <div className="h-4 w-24 bg-background-elevated rounded mb-2" />
-                <div className="h-4 w-32 bg-background-elevated/50 rounded" />
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
