@@ -143,6 +143,30 @@ body {
   align-items: center;
 }
 
+/* Ensure cell wrapper fills the cell so alignment works */
+.ag-theme-curatorwatch .ag-cell-wrapper {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Right-align numeric columns — header label and cell content */
+.ag-theme-curatorwatch .ag-right-aligned-header .ag-header-cell-label {
+  justify-content: flex-end;
+}
+
+.ag-theme-curatorwatch .ag-right-aligned-cell {
+  justify-content: flex-end;
+}
+
+.ag-theme-curatorwatch .ag-right-aligned-cell .ag-cell-wrapper {
+  justify-content: flex-end;
+}
+
+.ag-theme-curatorwatch .ag-right-aligned-cell .ag-cell-value {
+  text-align: right;
+}
+
 .ag-theme-curatorwatch .ag-root-wrapper {
   border-radius: 12px;
   overflow: hidden;
