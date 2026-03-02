@@ -10,6 +10,7 @@ import {
   AssetDistributionRenderer,
   CuratorRatingRenderer,
   NetworkBadgesRenderer,
+  ProtocolBadgesRenderer,
 } from "./cellRenderers";
 import type { CuratorDashboardItem } from "@/lib/types/api";
 
@@ -52,6 +53,14 @@ export function CuratorGrid({ curators }: CuratorGridProps) {
         headerName: "Networks",
         field: "networks",
         cellRenderer: NetworkBadgesRenderer,
+        flex: 1,
+        minWidth: 120,
+        sortable: false,
+      },
+      {
+        headerName: "Protocols",
+        field: "protocols",
+        cellRenderer: ProtocolBadgesRenderer,
         flex: 1,
         minWidth: 120,
         sortable: false,

@@ -10,6 +10,8 @@ interface DailyAggregated {
   vaultCount: number;
   curatorSet: Set<string>;
   curatorAUM: Record<string, number>; // AUM breakdown by curator
+  protocolAUM: Record<string, number>; // AUM breakdown by protocol
+  networkAUM: Record<string, number>; // AUM breakdown by network
 }
 
 // Color palette for curators (distinct colors)
@@ -26,12 +28,44 @@ const CURATOR_COLORS = [
   "#6366F1", // indigo
 ];
 
+// Protocol colors derived from ProtocolBadge.tsx PROTOCOL_STYLES
+const PROTOCOL_COLORS: Record<string, string> = {
+  morpho: "#3B82F6",    // blue-500
+  aave: "#8B5CF6",      // purple-500
+  euler: "#10B981",     // emerald-500
+  compound: "#22C55E",  // green-500
+  spark: "#F97316",     // orange-500
+  fluid: "#06B6D4",     // cyan-500
+  yearn: "#60A5FA",     // blue-400
+  pendle: "#6366F1",    // indigo-500
+  silo: "#F59E0B",      // amber-500
+  maker: "#14B8A6",     // teal-500
+  sky: "#0EA5E9",       // sky-500
+  gearbox: "#EF4444",   // red-500
+  instadapp: "#EC4899", // pink-500
+};
+
+// Network colors derived from NetworkBadge.tsx NETWORK_STYLES
+const NETWORK_COLORS: Record<string, string> = {
+  ethereum: "#64748B",  // slate-500
+  katana: "#EF4444",    // red-500
+  arbitrum: "#3B82F6",  // blue-500
+  avalanche: "#F43F5E", // rose-500
+  polygon: "#8B5CF6",   // purple-500
+  base: "#60A5FA",      // blue-400
+  optimism: "#F87171",  // red-400
+  scroll: "#F59E0B",    // amber-500
+  "bnb chain": "#EAB308", // yellow-500
+  monad: "#6366F1",     // indigo-500
+  plasma: "#14B8A6",    // teal-500
+};
+
 export async function GET() {
   try {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    // Get all snapshots from last 30 days with vault info for curator tracking
+    // Get all snapshots from last 30 days with vault info for curator/protocol/network tracking
     const snapshots = await prisma.vaultSnapshot.findMany({
       where: {
         timestamp: {
@@ -46,6 +80,8 @@ export async function GET() {
         vault: {
           select: {
             curatorAddress: true,
+            protocol: true,
+            chainName: true,
             curator: {
               select: {
                 name: true,
@@ -104,6 +140,8 @@ export async function GET() {
     // Now aggregate using the filled-in snapshots per day
     const dailyData: Record<string, DailyAggregated> = {};
     const allCurators = new Set<string>();
+    const allProtocols = new Set<string>();
+    const allNetworks = new Set<string>();
 
     for (const [day, vaultSnapshots] of Object.entries(latestSnapshotByDayVault)) {
       dailyData[day] = {
@@ -112,12 +150,16 @@ export async function GET() {
         vaultCount: 0,
         curatorSet: new Set(),
         curatorAUM: {},
+        protocolAUM: {},
+        networkAUM: {},
       };
 
       for (const snap of Object.values(vaultSnapshots)) {
         const aum = snap.totalAssetsUsd || 0;
         const apy = snap.avgNetApy || 0;
         const curatorAddress = snap.vault?.curatorAddress?.toLowerCase() || "unknown";
+        const protocol = snap.vault?.protocol || "morpho";
+        const network = snap.vault?.chainName || "Ethereum";
 
         dailyData[day].totalAUM += aum;
         dailyData[day].weightedApySum += apy * aum;
@@ -130,6 +172,20 @@ export async function GET() {
         dailyData[day].curatorAUM[curatorAddress] += aum;
         allCurators.add(curatorAddress);
 
+        // Track AUM by protocol
+        if (!dailyData[day].protocolAUM[protocol]) {
+          dailyData[day].protocolAUM[protocol] = 0;
+        }
+        dailyData[day].protocolAUM[protocol] += aum;
+        allProtocols.add(protocol);
+
+        // Track AUM by network
+        if (!dailyData[day].networkAUM[network]) {
+          dailyData[day].networkAUM[network] = 0;
+        }
+        dailyData[day].networkAUM[network] += aum;
+        allNetworks.add(network);
+
         // Track unique curators per day
         if (snap.vault?.curatorAddress) {
           dailyData[day].curatorSet.add(snap.vault.curatorAddress);
@@ -137,7 +193,7 @@ export async function GET() {
       }
     }
 
-    // Get top curators by total AUM
+    // --- Curator meta (top 8 + Other) ---
     const curatorTotals: Record<string, number> = {};
     for (const data of Object.values(dailyData)) {
       for (const [curator, aum] of Object.entries(data.curatorAUM)) {
@@ -145,14 +201,12 @@ export async function GET() {
       }
     }
 
-    // Sort by total AUM and take top 8, rest become "Other"
     const sortedCurators = Object.entries(curatorTotals)
       .sort((a, b) => b[1] - a[1])
       .map(([addr]) => addr);
     const topCurators = sortedCurators.slice(0, 8);
     const otherCurators = new Set(sortedCurators.slice(8));
 
-    // Build curator metadata for frontend
     const curatorMeta = topCurators.map((addr, i) => ({
       id: addr,
       name: curatorNames[addr] || `${addr.slice(0, 6)}...${addr.slice(-4)}`,
@@ -167,7 +221,63 @@ export async function GET() {
       });
     }
 
-    // Convert to chart data format with curator breakdown
+    // --- Protocol meta (top 8 + Other) ---
+    const protocolTotals: Record<string, number> = {};
+    for (const data of Object.values(dailyData)) {
+      for (const [protocol, aum] of Object.entries(data.protocolAUM)) {
+        protocolTotals[protocol] = (protocolTotals[protocol] || 0) + aum;
+      }
+    }
+
+    const sortedProtocols = Object.entries(protocolTotals)
+      .sort((a, b) => b[1] - a[1])
+      .map(([p]) => p);
+    const topProtocols = sortedProtocols.slice(0, 8);
+    const otherProtocols = new Set(sortedProtocols.slice(8));
+
+    const protocolMeta = topProtocols.map((p, i) => ({
+      id: `proto_${p}`,
+      name: p.charAt(0).toUpperCase() + p.slice(1),
+      color: PROTOCOL_COLORS[p.toLowerCase()] || CURATOR_COLORS[i % CURATOR_COLORS.length],
+    }));
+
+    if (otherProtocols.size > 0) {
+      protocolMeta.push({
+        id: "proto_other",
+        name: "Other Protocols",
+        color: "#737373",
+      });
+    }
+
+    // --- Network meta (top 8 + Other) ---
+    const networkTotals: Record<string, number> = {};
+    for (const data of Object.values(dailyData)) {
+      for (const [network, aum] of Object.entries(data.networkAUM)) {
+        networkTotals[network] = (networkTotals[network] || 0) + aum;
+      }
+    }
+
+    const sortedNetworks = Object.entries(networkTotals)
+      .sort((a, b) => b[1] - a[1])
+      .map(([n]) => n);
+    const topNetworks = sortedNetworks.slice(0, 8);
+    const otherNetworks = new Set(sortedNetworks.slice(8));
+
+    const networkMeta = topNetworks.map((n, i) => ({
+      id: `net_${n}`,
+      name: n,
+      color: NETWORK_COLORS[n.toLowerCase()] || CURATOR_COLORS[i % CURATOR_COLORS.length],
+    }));
+
+    if (otherNetworks.size > 0) {
+      networkMeta.push({
+        id: "net_other",
+        name: "Other Networks",
+        color: "#737373",
+      });
+    }
+
+    // Convert to chart data format with curator, protocol, and network breakdowns
     const chartData = Object.entries(dailyData)
       .map(([date, data]) => {
         const point: Record<string, unknown> = {
@@ -182,23 +292,51 @@ export async function GET() {
         };
 
         // Add curator breakdown
-        let otherAUM = 0;
+        let otherCuratorAUM = 0;
         for (const [curator, aum] of Object.entries(data.curatorAUM)) {
           if (topCurators.includes(curator)) {
             point[curator] = Math.round(aum);
           } else {
-            otherAUM += aum;
+            otherCuratorAUM += aum;
           }
         }
         if (otherCurators.size > 0) {
-          point["other"] = Math.round(otherAUM);
+          point["other"] = Math.round(otherCuratorAUM);
+        }
+        for (const curator of topCurators) {
+          if (!(curator in point)) point[curator] = 0;
         }
 
-        // Ensure all curators have a value (0 if not present)
-        for (const curator of topCurators) {
-          if (!(curator in point)) {
-            point[curator] = 0;
+        // Add protocol breakdown
+        let otherProtocolAUM = 0;
+        for (const [protocol, aum] of Object.entries(data.protocolAUM)) {
+          if (topProtocols.includes(protocol)) {
+            point[`proto_${protocol}`] = Math.round(aum);
+          } else {
+            otherProtocolAUM += aum;
           }
+        }
+        if (otherProtocols.size > 0) {
+          point["proto_other"] = Math.round(otherProtocolAUM);
+        }
+        for (const protocol of topProtocols) {
+          if (!(`proto_${protocol}` in point)) point[`proto_${protocol}`] = 0;
+        }
+
+        // Add network breakdown
+        let otherNetworkAUM = 0;
+        for (const [network, aum] of Object.entries(data.networkAUM)) {
+          if (topNetworks.includes(network)) {
+            point[`net_${network}`] = Math.round(aum);
+          } else {
+            otherNetworkAUM += aum;
+          }
+        }
+        if (otherNetworks.size > 0) {
+          point["net_other"] = Math.round(otherNetworkAUM);
+        }
+        for (const network of topNetworks) {
+          if (!(`net_${network}` in point)) point[`net_${network}`] = 0;
         }
 
         return point;
@@ -277,11 +415,26 @@ export async function GET() {
           };
 
           // Distribute mock AUM across curators proportionally
-          const curatorCount2 = curatorMeta.length;
-          if (curatorCount2 > 0) {
-            const perCurator = mockAum / curatorCount2;
-            for (let j = 0; j < curatorMeta.length; j++) {
-              point[curatorMeta[j].id] = Math.round(perCurator * (1 + (Math.random() - 0.5) * 0.3));
+          if (curatorMeta.length > 0) {
+            const perCurator = mockAum / curatorMeta.length;
+            for (const cm of curatorMeta) {
+              point[cm.id] = Math.round(perCurator * (1 + (Math.random() - 0.5) * 0.3));
+            }
+          }
+
+          // Distribute mock AUM across protocols proportionally
+          if (protocolMeta.length > 0) {
+            const perProtocol = mockAum / protocolMeta.length;
+            for (const pm of protocolMeta) {
+              point[pm.id] = Math.round(perProtocol * (1 + (Math.random() - 0.5) * 0.3));
+            }
+          }
+
+          // Distribute mock AUM across networks proportionally
+          if (networkMeta.length > 0) {
+            const perNetwork = mockAum / networkMeta.length;
+            for (const nm of networkMeta) {
+              point[nm.id] = Math.round(perNetwork * (1 + (Math.random() - 0.5) * 0.3));
             }
           }
 
@@ -293,6 +446,8 @@ export async function GET() {
         success: true,
         data: mockData,
         curatorMeta,
+        protocolMeta,
+        networkMeta,
       });
     }
 
@@ -300,6 +455,8 @@ export async function GET() {
       success: true,
       data: chartData,
       curatorMeta,
+      protocolMeta,
+      networkMeta,
     });
   } catch (error) {
     console.error("Error fetching AUM growth data:", error);
