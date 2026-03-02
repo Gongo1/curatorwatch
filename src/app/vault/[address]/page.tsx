@@ -22,6 +22,7 @@ import { RecentChanges } from "@/components/RecentChanges";
 import { CuratorSection, CuratorPlaceholder } from "@/components/CuratorSection";
 import { FeesCard } from "@/components/FeesCard";
 import { ProtocolBadge } from "@/components/ProtocolBadge";
+import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 
 interface PageProps {
@@ -155,6 +156,7 @@ export default function VaultDetailPage({ params }: PageProps) {
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
+            <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
             <ProtocolBadge protocol={vault.protocol ?? "morpho"} size="md" />
             {vault.dataSource !== "turtle" && (
               <a href={getMorphoVaultUrl(vault.address, vault.name)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15 transition-colors">

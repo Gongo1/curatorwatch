@@ -118,6 +118,10 @@ async function upsertTurtleVault(
         },
       });
 
+      // Turtle API returns estimatedApr as percentage (e.g. 53.69 = 53.69%),
+      // but the DB stores APY as decimal (0.5369). Divide by 100.
+      const aprDecimal = opp.estimatedApr != null ? opp.estimatedApr / 100 : null;
+
       // Create snapshot
       await prisma.vaultSnapshot.create({
         data: {
@@ -126,15 +130,19 @@ async function upsertTurtleVault(
           totalAssetsUsd: opp.tvl,
           totalSupply: "0",
           sharePrice: 1,
-          apy: opp.estimatedApr ?? null,
-          netApy: opp.estimatedApr ?? null,
-          avgApy: opp.estimatedApr ?? null,
-          avgNetApy: opp.estimatedApr ?? null,
+          apy: aprDecimal,
+          netApy: aprDecimal,
+          avgApy: aprDecimal,
+          avgNetApy: aprDecimal,
         },
       });
 
       return { upserted: true, curatorCreated: false };
     }
+
+    // Turtle API returns estimatedApr as percentage (e.g. 53.69 = 53.69%),
+    // but the DB stores APY as decimal (0.5369). Divide by 100.
+    const aprDecimal = opp.estimatedApr != null ? opp.estimatedApr / 100 : null;
 
     // Create new vault
     const vault = await prisma.vault.create({
@@ -163,10 +171,10 @@ async function upsertTurtleVault(
         totalAssetsUsd: opp.tvl,
         totalSupply: "0",
         sharePrice: 1,
-        apy: opp.estimatedApr ?? null,
-        netApy: opp.estimatedApr ?? null,
-        avgApy: opp.estimatedApr ?? null,
-        avgNetApy: opp.estimatedApr ?? null,
+        apy: aprDecimal,
+        netApy: aprDecimal,
+        avgApy: aprDecimal,
+        avgNetApy: aprDecimal,
       },
     });
 

@@ -7,6 +7,7 @@ import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency, formatPercentage, formatAddress } from "@/lib/utils/format";
 import { ProtocolBadge } from "@/components/ProtocolBadge";
+import { NetworkBadge } from "@/components/NetworkBadge";
 import type { CuratorVaultSummary } from "@/lib/types/api";
 
 interface CuratorVaultGridProps {
@@ -63,6 +64,17 @@ export function CuratorVaultGrid({ vaults }: CuratorVaultGridProps) {
         flex: 0.6,
         minWidth: 70,
         cellClass: "text-text-primary text-sm",
+      },
+      {
+        headerName: "Network",
+        valueGetter: (params) => params.data?.chainName ?? "Ethereum",
+        cellRenderer: (params: ICellRendererParams) => {
+          const network = params.value as string;
+          return <NetworkBadge network={network} />;
+        },
+        flex: 0.7,
+        minWidth: 90,
+        sortable: true,
       },
       {
         headerName: "Deposits",

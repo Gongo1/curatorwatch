@@ -18,6 +18,7 @@ import { CopyAddress } from "@/components/CopyAddress";
 import { CuratorRating } from "@/components/CuratorRating";
 import type { CuratorDetailResponse } from "@/lib/types/api";
 import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
+import { NetworkBadgeList } from "@/components/NetworkBadge";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -99,6 +100,13 @@ export default function CuratorDetailPage({ params }: PageProps) {
     const tvl = v.latestSnapshot?.totalAssetsUsd ?? 0;
     assetMap[v.asset.symbol] = (assetMap[v.asset.symbol] || 0) + tvl;
   });
+  // Collect unique networks
+  const networkSet = new Set<string>();
+  vaults.forEach(v => {
+    networkSet.add(v.chainName ?? "Ethereum");
+  });
+  const networks = Array.from(networkSet);
+
   const assetDistribution = Object.entries(assetMap)
     .map(([symbol, amount]) => ({
       symbol,
@@ -121,6 +129,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
           <div className="flex items-center gap-2">
             <CuratorAvatar address={curator.address} name={curator.name} logoUrl={curator.logoUrl} size="lg" />
             <CopyAddress address={curator.address} />
+            <NetworkBadgeList networks={networks} size="md" />
             {curator.website && (
               <a href={curator.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors text-sm">
                 <svg className="w-4 h-4 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>

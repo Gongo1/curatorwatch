@@ -5,6 +5,7 @@ import type { ICellRendererParams } from "ag-grid-community";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
 import { CuratorRating } from "@/components/CuratorRating";
 import { ProtocolBadgeList } from "@/components/ProtocolBadge";
+import { NetworkBadgeList } from "@/components/NetworkBadge";
 import { formatCurrency, formatPercentage, formatAddress } from "@/lib/utils/format";
 import { ChangeCountBadge } from "@/components/RecentChanges";
 
@@ -101,6 +102,13 @@ export function ProtocolBadgesRenderer(params: ICellRendererParams) {
   const protocols = params.value;
   if (!protocols || !Array.isArray(protocols)) return null;
   return <ProtocolBadgeList protocols={protocols} />;
+}
+
+// Network badges renderer
+export function NetworkBadgesRenderer(params: ICellRendererParams) {
+  const networks = params.value;
+  if (!networks || !Array.isArray(networks)) return null;
+  return <NetworkBadgeList networks={networks} />;
 }
 
 // Asset distribution renderer

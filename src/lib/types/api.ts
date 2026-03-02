@@ -229,6 +229,7 @@ export interface CuratorVaultSummary {
   performanceFee: number;
   protocol: string;
   dataSource: string;
+  chainName: string | null;
   latestSnapshot: VaultSnapshot | null;
 }
 
@@ -273,6 +274,7 @@ export interface CuratorDashboardItem {
   avgNetApy: number;
   assetDistribution: AssetDistribution[];
   protocols: string[];
+  networks: string[];
   lastActive: string | null;
   riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";

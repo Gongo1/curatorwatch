@@ -9,6 +9,7 @@ import {
   CurrencyRenderer,
   AssetDistributionRenderer,
   CuratorRatingRenderer,
+  NetworkBadgesRenderer,
 } from "./cellRenderers";
 import type { CuratorDashboardItem } from "@/lib/types/api";
 
@@ -46,6 +47,14 @@ export function CuratorGrid({ curators }: CuratorGridProps) {
         minWidth: 90,
         type: "numericColumn",
         cellClass: "text-text-secondary tabular-nums",
+      },
+      {
+        headerName: "Networks",
+        field: "networks",
+        cellRenderer: NetworkBadgesRenderer,
+        flex: 1,
+        minWidth: 120,
+        sortable: false,
       },
       {
         headerName: "Assets",

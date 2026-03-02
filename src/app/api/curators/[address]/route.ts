@@ -211,6 +211,7 @@ export async function GET(
         performanceFee: vault.performanceFee ?? 0,
         protocol: vault.protocol ?? "morpho",
         dataSource: vault.dataSource ?? "morpho",
+        chainName: (vault as Record<string, unknown>).chainName as string | null ?? null,
         latestSnapshot: snapshot
           ? {
               totalAssets: snapshot.totalAssets,

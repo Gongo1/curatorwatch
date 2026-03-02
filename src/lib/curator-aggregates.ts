@@ -26,6 +26,7 @@ export interface CuratorAggregates {
   avgNetApy: number;
   assetDistribution: AssetDistribution[];
   protocols: string[];
+  networks: string[];
   lastActive: Date | null;
   riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";
@@ -119,6 +120,7 @@ export async function getPaginatedCuratorAggregates(
     let weightedNetApySum = 0;
     const assetMap: Record<string, number> = {};
     const protocolSet = new Set<string>();
+    const networkSet = new Set<string>();
 
     for (const vault of vaults) {
       const snap = vault.snapshots[0];
@@ -130,6 +132,7 @@ export async function getPaginatedCuratorAggregates(
       weightedNetApySum += (snap.avgNetApy ?? 0) * tvl;
       assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
       protocolSet.add(vault.protocol ?? "morpho");
+      networkSet.add((vault as Record<string, unknown>).chainName as string ?? "Ethereum");
     }
 
     if (totalAUM === 0) continue;
@@ -167,6 +170,7 @@ export async function getPaginatedCuratorAggregates(
       avgNetApy,
       assetDistribution,
       protocols: Array.from(protocolSet),
+      networks: Array.from(networkSet),
       lastActive: null,
       riskScore,
       strategyType,
@@ -270,6 +274,7 @@ export async function getCuratorAggregates(
   let weightedNetApySum = 0;
   const assetMap: Record<string, number> = {};
   const protocolSet = new Set<string>();
+  const networkSet = new Set<string>();
 
   for (const vault of vaults) {
     const snap = vault.snapshots[0];
@@ -281,6 +286,7 @@ export async function getCuratorAggregates(
     weightedNetApySum += (snap.avgNetApy ?? 0) * tvl;
     assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
     protocolSet.add((vault as Record<string, unknown>).protocol as string ?? "morpho");
+    networkSet.add((vault as Record<string, unknown>).chainName as string ?? "Ethereum");
   }
 
   const avgApy = totalAUM > 0 ? weightedApySum / totalAUM : 0;
@@ -315,6 +321,7 @@ export async function getCuratorAggregates(
     avgNetApy,
     assetDistribution,
     protocols: Array.from(protocolSet),
+    networks: Array.from(networkSet),
     lastActive: null,
     riskScore,
     strategyType,
