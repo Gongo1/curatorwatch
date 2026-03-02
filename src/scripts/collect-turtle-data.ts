@@ -2,7 +2,7 @@
  * Turtle Club data collection pipeline.
  * Fetches managed vaults from Turtle API for cross-protocol coverage.
  *
- * Filters: type === "vault" AND tvl > $100M AND protocol !== "morpho"
+ * Filters: type === "vault" AND tvl > $1M AND protocol !== "morpho"
  * (Morpho vaults are already covered by the primary Morpho pipeline.)
  */
 
@@ -13,7 +13,7 @@ import { findOrCreateCurator } from "../lib/turtle/curator-matcher";
 import { getChainId, getChainName } from "../lib/turtle/chain-mapper";
 import type { TurtleOpportunity } from "../lib/turtle/types";
 
-const MIN_TVL_USD = 100_000_000; // $100M
+const MIN_TVL_USD = 1_000_000; // $1M
 
 export interface TurtleCollectionResult {
   success: boolean;
@@ -80,8 +80,8 @@ async function upsertTurtleVault(
     const assetSymbol = depositToken?.symbol ?? "UNKNOWN";
     const assetDecimals = depositToken?.decimals ?? 18;
 
-    // Find or create curator
-    const curatorId = await findOrCreateCurator(opp.name);
+    // Find or create curator using API curator field
+    const curatorId = await findOrCreateCurator(opp.name, opp.curator);
 
     // Check if existing by turtleId
     const existingByTurtle = await prisma.vault.findUnique({
@@ -234,7 +234,7 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
 
     // 2. Filter to relevant vaults
     const filtered = filterOpportunities(allOpportunities);
-    log(`Filtered to ${filtered.length} vaults (type=vault, TVL>$100M, non-Morpho)`);
+    log(`Filtered to ${filtered.length} vaults (type=vault, TVL>$1M, non-Morpho)`);
 
     // 3. Upsert each vault
     let vaultsUpserted = 0;

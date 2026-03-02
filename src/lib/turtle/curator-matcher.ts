@@ -1,33 +1,33 @@
 /**
  * Matches Turtle curator names to existing DB curators.
- * 1. Extract curator name from opportunity name
- * 2. Check static mapping for known variants
- * 3. Case-insensitive DB lookup
- * 4. If no match: create new Curator with synthetic address
+ * Uses the curator field from the Turtle API when available,
+ * falls back to vault name extraction for vaults without curator data.
  */
 
 import { prisma } from "@/lib/db";
 import { extractCuratorFromVaultName } from "@/lib/utils/extract-curator-name";
+import type { TurtleCurator } from "./types";
 
 /**
- * Static mapping for known curator name variants in Turtle data.
- * Maps Turtle names to canonical DB names.
+ * Maps Turtle curator names to canonical DB names.
+ * Turtle API name (lowercase) → existing DB curator name.
  */
 const CURATOR_NAME_ALIASES: Record<string, string> = {
-  "re7": "Re7 Labs",
+  "steakhouse": "Steakhouse Financial",
+  "yearn": "Yearn Finance",
   "re7 labs": "Re7 Labs",
+  "re7": "Re7 Labs",
   "re7 capital": "Re7 Labs",
   "gauntlet": "Gauntlet",
-  "steakhouse": "Steakhouse Financial",
-  "steakhouse financial": "Steakhouse Financial",
+  "hyperithm": "Hyperithm",
   "mev capital": "MEV Capital",
   "block analitica": "Block Analitica",
-  "yearn": "Yearn",
-  "yearn finance": "Yearn",
-  "morpho association": "Morpho Association",
-  "instadapp": "Instadapp",
   "idle": "Idle Finance",
   "idle finance": "Idle Finance",
+  "morpho association": "Morpho",
+  "instadapp": "Instadapp",
+  "avant": "Avantgarde Finance",
+  "avantgarde": "Avantgarde Finance",
 };
 
 function slugify(name: string): string {
@@ -39,20 +39,20 @@ function slugify(name: string): string {
 
 /**
  * Find or create a curator for a Turtle opportunity.
- * Returns the curator ID.
+ * Uses the API curator field when available, falls back to vault name extraction.
  */
 export async function findOrCreateCurator(
-  opportunityName: string
+  opportunityName: string,
+  curatorData?: TurtleCurator
 ): Promise<string> {
-  // Extract curator name from opportunity name
-  const extractedName = extractCuratorFromVaultName(opportunityName);
-  const normalizedLower = extractedName.toLowerCase();
+  // Use API curator name if available, otherwise extract from vault name
+  const rawName = curatorData?.name ?? extractCuratorFromVaultName(opportunityName);
+  const normalizedLower = rawName.toLowerCase().trim();
 
-  // Check static aliases
-  const canonicalName =
-    CURATOR_NAME_ALIASES[normalizedLower] ?? extractedName;
+  // Resolve through alias map
+  const canonicalName = CURATOR_NAME_ALIASES[normalizedLower] ?? rawName;
 
-  // Try case-insensitive DB lookup by name
+  // Try case-insensitive DB lookup by canonical name
   const existing = await prisma.curator.findFirst({
     where: {
       name: { equals: canonicalName, mode: "insensitive" },
@@ -63,15 +63,15 @@ export async function findOrCreateCurator(
     return existing.id;
   }
 
-  // Also try the extracted name directly (in case alias didn't match)
-  if (canonicalName !== extractedName) {
-    const byExtracted = await prisma.curator.findFirst({
+  // Also try the raw API name directly (in case alias didn't match but DB has it)
+  if (canonicalName !== rawName) {
+    const byRaw = await prisma.curator.findFirst({
       where: {
-        name: { equals: extractedName, mode: "insensitive" },
+        name: { equals: rawName, mode: "insensitive" },
       },
     });
-    if (byExtracted) {
-      return byExtracted.id;
+    if (byRaw) {
+      return byRaw.id;
     }
   }
 

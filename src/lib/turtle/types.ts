@@ -23,6 +23,13 @@ export interface TurtleIncentive {
   type: string;
 }
 
+export interface TurtleCurator {
+  name: string;
+  description?: string;
+  landingUrl?: string;
+  iconUrl?: string;
+}
+
 export interface TurtleOpportunity {
   id: string;
   name: string;
@@ -33,6 +40,7 @@ export interface TurtleOpportunity {
   depositTokens: TurtleToken[];
   rewardTokens: TurtleToken[];
   incentives: TurtleIncentive[];
+  curator?: TurtleCurator;
   url?: string;
   protocol?: string;
   chain?: TurtleChain;
