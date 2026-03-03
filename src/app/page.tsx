@@ -210,7 +210,7 @@ export default function Home() {
                   rel="noopener noreferrer"
                   className="underline underline-offset-2 hover:text-cyan-300 transition-colors"
                 >
-                  Turtle Club
+                  Turtle
                 </a>
               </p>
             </div>

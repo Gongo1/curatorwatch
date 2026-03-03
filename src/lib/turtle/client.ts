@@ -1,5 +1,5 @@
 /**
- * Simple fetch client for Turtle Club API
+ * Simple fetch client for Turtle API
  * Endpoint: https://earn.turtle.xyz/v1/opportunities/
  * No authentication required.
  */

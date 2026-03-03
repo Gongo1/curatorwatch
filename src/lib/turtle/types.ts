@@ -1,5 +1,5 @@
 /**
- * TypeScript interfaces for Turtle Club API responses
+ * TypeScript interfaces for Turtle API responses
  * Source: GET https://earn.turtle.xyz/v1/opportunities/
  */
 

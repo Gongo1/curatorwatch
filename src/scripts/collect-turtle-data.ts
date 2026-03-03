@@ -1,5 +1,5 @@
 /**
- * Turtle Club data collection pipeline.
+ * Turtle data collection pipeline.
  * Fetches managed vaults from Turtle API for cross-protocol coverage.
  *
  * Filters: type === "vault" AND tvl > $1M AND protocol !== "morpho"

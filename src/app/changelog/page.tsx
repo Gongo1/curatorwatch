@@ -28,7 +28,7 @@ const entries: ChangelogEntry[] = [
       },
       {
         category: "Feature",
-        text: "Added homepage announcement banner highlighting cross-protocol vault coverage powered by Turtle Club. Dismissible and persists across page loads",
+        text: "Added homepage announcement banner highlighting cross-protocol vault coverage powered by Turtle. Dismissible and persists across page loads",
       },
       {
         category: "Fix",
@@ -40,7 +40,7 @@ const entries: ChangelogEntry[] = [
       },
       {
         category: "Improvement",
-        text: "\"View on Turtle\" now deep-links to the specific opportunity page on Turtle Club instead of the homepage",
+        text: "\"View on Turtle\" now deep-links to the specific opportunity page on Turtle instead of the homepage",
       },
       {
         category: "Improvement",
@@ -69,7 +69,7 @@ const entries: ChangelogEntry[] = [
     items: [
       {
         category: "Feature",
-        text: "Multi-protocol expansion \u2014 CuratorWatch now tracks managed vaults across Aave, Euler, Compound, Spark, and other protocols via the Turtle Club API. Cross-protocol data updates every 4 hours.",
+        text: "Multi-protocol expansion \u2014 CuratorWatch now tracks managed vaults across Aave, Euler, Compound, Spark, and other protocols via the Turtle API. Cross-protocol data updates every 4 hours.",
       },
       {
         category: "Feature",

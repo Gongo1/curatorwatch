@@ -15,7 +15,7 @@ export function Footer() {
             >
               Morpho API
             </a>
-            {" "}& Turtle Club &bull; Updated hourly
+            {" "}& Turtle &bull; Updated hourly
           </p>
           <div className="flex items-center gap-3">
             <Link
