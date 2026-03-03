@@ -17,6 +17,19 @@ const PROTOCOL_STYLES: Record<string, { bg: string; text: string; label: string 
   sky: { bg: "bg-sky-500/15 border-sky-500/30", text: "text-sky-400", label: "Sky" },
   gearbox: { bg: "bg-red-500/15 border-red-500/30", text: "text-red-400", label: "Gearbox" },
   instadapp: { bg: "bg-pink-500/15 border-pink-500/30", text: "text-pink-400", label: "Instadapp" },
+  katana: { bg: "bg-red-500/15 border-red-500/30", text: "text-red-400", label: "Katana" },
+  midas: { bg: "bg-yellow-500/15 border-yellow-500/30", text: "text-yellow-400", label: "Midas" },
+  termmax: { bg: "bg-violet-500/15 border-violet-500/30", text: "text-violet-400", label: "TermMax" },
+  lido: { bg: "bg-sky-500/15 border-sky-500/30", text: "text-sky-400", label: "Lido" },
+  sierra: { bg: "bg-lime-500/15 border-lime-500/30", text: "text-lime-400", label: "Sierra" },
+  acre: { bg: "bg-orange-400/15 border-orange-400/30", text: "text-orange-300", label: "Acre" },
+  falcon: { bg: "bg-slate-500/15 border-slate-500/30", text: "text-slate-400", label: "Falcon" },
+  telosc: { bg: "bg-emerald-400/15 border-emerald-400/30", text: "text-emerald-300", label: "TelosC" },
+  mfarm: { bg: "bg-green-400/15 border-green-400/30", text: "text-green-300", label: "mFARM" },
+  trevee: { bg: "bg-fuchsia-500/15 border-fuchsia-500/30", text: "text-fuchsia-400", label: "Trevee" },
+  "9summits": { bg: "bg-cyan-400/15 border-cyan-400/30", text: "text-cyan-300", label: "9Summits" },
+  re7: { bg: "bg-rose-500/15 border-rose-500/30", text: "text-rose-400", label: "Re7" },
+  k3: { bg: "bg-amber-400/15 border-amber-400/30", text: "text-amber-300", label: "K3" },
 };
 
 const DEFAULT_STYLE = { bg: "bg-gray-500/15 border-gray-500/30", text: "text-gray-400" };

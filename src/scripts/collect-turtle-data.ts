@@ -50,7 +50,7 @@ function filterOpportunities(
     if ((opp.tvl ?? 0) < MIN_TVL_USD) return false;
 
     // Exclude Morpho (already covered by primary pipeline)
-    const protocol = extractProtocol(opp.description, opp.name);
+    const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
     if (protocol === "morpho") return false;
 
     return true;
@@ -64,7 +64,7 @@ async function upsertTurtleVault(
   opp: TurtleOpportunity
 ): Promise<{ upserted: boolean; curatorCreated: boolean; error?: string }> {
   try {
-    const protocol = extractProtocol(opp.description, opp.name);
+    const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
 
     // Extract chain info from deposit tokens
     const chainSlug =

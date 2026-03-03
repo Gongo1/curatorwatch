@@ -43,6 +43,19 @@ const PROTOCOL_COLORS: Record<string, string> = {
   sky: "#0EA5E9",       // sky-500
   gearbox: "#EF4444",   // red-500
   instadapp: "#EC4899", // pink-500
+  katana: "#EF4444",    // red-500
+  midas: "#EAB308",     // yellow-500
+  termmax: "#8B5CF6",   // violet-500
+  lido: "#0EA5E9",      // sky-500
+  sierra: "#84CC16",    // lime-500
+  acre: "#FB923C",      // orange-400
+  falcon: "#64748B",    // slate-500
+  telosc: "#34D399",    // emerald-400
+  mfarm: "#4ADE80",     // green-400
+  trevee: "#D946EF",    // fuchsia-500
+  "9summits": "#22D3EE",// cyan-400
+  re7: "#F43F5E",       // rose-500
+  k3: "#FBBF24",        // amber-400
 };
 
 // Network colors derived from NetworkBadge.tsx NETWORK_STYLES
