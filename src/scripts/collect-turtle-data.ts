@@ -120,6 +120,7 @@ async function upsertTurtleVault(
           name: opp.name,
           turtleId: opp.id,
           protocol,
+          curatorId,
           dataSource: "turtle",
           opportunityType: opp.type,
           chainName,
