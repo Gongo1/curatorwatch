@@ -213,9 +213,6 @@ export default function Home() {
                   Turtle Club
                 </a>
               </p>
-              <p className="text-xs text-text-tertiary mt-0.5">
-                Now tracking Euler, Compound, Midas, Katana, and more alongside Morpho vaults.
-              </p>
             </div>
             <button
               onClick={dismissBanner}

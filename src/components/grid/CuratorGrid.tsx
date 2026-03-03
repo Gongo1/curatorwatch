@@ -8,7 +8,6 @@ import {
   CuratorNameRenderer,
   CurrencyRenderer,
   AssetDistributionRenderer,
-  CuratorRatingRenderer,
   NetworkBadgesRenderer,
   ProtocolBadgesRenderer,
 } from "./cellRenderers";
@@ -72,15 +71,6 @@ export function CuratorGrid({ curators }: CuratorGridProps) {
         flex: 1.2,
         minWidth: 150,
         sortable: false,
-      },
-      {
-        headerName: "Grade",
-        field: "curatorAddress",
-        cellRenderer: CuratorRatingRenderer,
-        flex: 0.7,
-        minWidth: 80,
-        sortable: false,
-        cellClass: "flex justify-center",
       },
     ],
     []
