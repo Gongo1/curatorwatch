@@ -38,6 +38,22 @@ const entries: ChangelogEntry[] = [
         category: "Improvement",
         text: "Renamed \"Morpho Fees\" to \"Protocol Fees\" across the homepage, fees page, fee grids, and vault detail cards to accurately reflect multi-protocol coverage. Vault-level fee analysis now hides the protocol fee section for non-Morpho vaults.",
       },
+      {
+        category: "Improvement",
+        text: "\"View on Turtle\" now deep-links to the specific opportunity page on Turtle Club instead of the homepage",
+      },
+      {
+        category: "Improvement",
+        text: "Vaults page now shows curator name instead of truncated address in the Curator column",
+      },
+      {
+        category: "Improvement",
+        text: "Vault detail header now displays \"Curated by\" with the curator's name for clear attribution",
+      },
+      {
+        category: "Improvement",
+        text: "Removed Vault Configuration section, Risk grade column, and Risk Profile tab \u2014 streamlined UI to focus on actionable data",
+      },
     ],
   },
   {
