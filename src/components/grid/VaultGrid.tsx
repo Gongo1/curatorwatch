@@ -9,10 +9,8 @@ import {
   AssetBadgeRenderer,
   CurrencyRenderer,
   PercentageRenderer,
-  RiskBadgeRenderer,
   ChangeCountRenderer,
 } from "./cellRenderers";
-import { formatAddress } from "@/lib/utils/format";
 import type { VaultData } from "@/lib/types/api";
 
 interface VaultGridProps {
@@ -64,14 +62,6 @@ export function VaultGrid({ vaults }: VaultGridProps) {
         type: "numericColumn",
       },
       {
-        headerName: "Risk",
-        valueGetter: (params) => params.data?.riskAssessment?.overallScore ?? 0,
-        cellRenderer: RiskBadgeRenderer,
-        flex: 0.8,
-        minWidth: 100,
-        type: "numericColumn",
-      },
-      {
         headerName: "Changes",
         field: "address",
         cellRenderer: ChangeCountRenderer,
@@ -82,12 +72,13 @@ export function VaultGrid({ vaults }: VaultGridProps) {
       },
       {
         headerName: "Curator",
-        field: "curatorAddress",
-        valueFormatter: (params) =>
-          params.value ? formatAddress(params.value) : "-",
-        flex: 0.8,
-        minWidth: 100,
-        cellClass: "font-mono text-text-tertiary text-xs",
+        valueGetter: (params) => params.data?.curatorName || null,
+        valueFormatter: (params) => {
+          return params.data?.curatorName || "-";
+        },
+        flex: 1,
+        minWidth: 120,
+        cellClass: "text-text-secondary text-sm",
       },
     ],
     []

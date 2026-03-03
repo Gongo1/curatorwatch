@@ -55,11 +55,13 @@ export interface VaultData {
   chainId: number;
   asset: VaultAsset;
   curatorAddress: string | null;
+  curatorName?: string | null;
   fees: VaultFees;
   yield?: VaultYield;
   latestSnapshot: VaultSnapshot | null;
   adapters: VaultAdapter[];
   riskAssessment?: VaultRiskSummary;
+  turtleId?: string | null;
   protocol: string;
   dataSource: string;
   chainName?: string | null;

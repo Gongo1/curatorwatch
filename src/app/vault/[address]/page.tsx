@@ -6,7 +6,6 @@ import {
   formatCurrency,
   formatPercentage,
   formatAddress,
-  formatTimeAgo,
   formatDate,
   formatTokenAmount,
   formatAdapterType,
@@ -152,14 +151,14 @@ export default function VaultDetailPage({ params }: PageProps) {
     <>
       <PageHeader
         title={vault.name}
-        description={`${vault.symbol} \u2022 ${vault.asset.symbol} \u2022 ${formatAddress(vault.address)}`}
+        description={`${curatorName ? `Curated by ${curatorName} \u2022 ` : ""}${vault.symbol} \u2022 ${vault.asset.symbol} \u2022 ${formatAddress(vault.address)}`}
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
             <ProtocolBadge protocol={vault.protocol ?? "morpho"} size="md" />
             <a
-              href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.protocol)}
+              href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
               target="_blank"
               rel="noopener noreferrer"
               className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -426,44 +425,6 @@ export default function VaultDetailPage({ params }: PageProps) {
               <CuratorPlaceholder curatorAddress={vault.curatorAddress} />
             )}
 
-            {/* Configuration Section */}
-            <section className="bg-background-subtle rounded-lg border border-border">
-              <div className="px-6 py-4 border-b border-border">
-                <h2 className="text-base font-semibold text-text-primary">
-                  Vault Configuration
-                </h2>
-              </div>
-              <div className="px-6 py-4">
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-                  <ConfigItem
-                    label="Curator Address"
-                    value={vault.curatorAddress || "-"}
-                    mono
-                    copyable
-                  />
-                  <ConfigItem
-                    label="Vault Address"
-                    value={vault.address}
-                    mono
-                    copyable
-                  />
-                  <ConfigItem
-                    label="Performance Fee"
-                    value={formatPercentage(vault.fees.performance)}
-                  />
-                  <ConfigItem
-                    label="Management Fee"
-                    value={formatPercentage(vault.fees.management)}
-                  />
-                  <ConfigItem label="Created" value={formatDate(vault.createdAt)} />
-                  <ConfigItem
-                    label="Last Updated"
-                    value={formatTimeAgo(vault.updatedAt)}
-                  />
-                </dl>
-              </div>
-            </section>
-
             {/* Fee Analysis */}
             <FeesCard vaultAddress={vault.address} />
 
@@ -601,58 +562,6 @@ function MetricCard({
       >
         {value}
       </p>
-    </div>
-  );
-}
-
-
-function ConfigItem({
-  label,
-  value,
-  mono,
-  copyable,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-  copyable?: boolean;
-}) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    if (!copyable || value === "-") return;
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div>
-      <dt className="text-sm text-text-tertiary">{label}</dt>
-      <dd
-        className={`mt-1 text-sm text-text-primary flex items-center gap-2 ${
-          mono ? "font-mono" : ""
-        }`}
-      >
-        <span className={mono ? "truncate max-w-xs" : ""}>{value}</span>
-        {copyable && value !== "-" && (
-          <button
-            onClick={handleCopy}
-            className="text-text-muted hover:text-text-secondary flex-shrink-0 transition-colors"
-            title="Copy to clipboard"
-          >
-            {copied ? (
-              <svg className="h-4 w-4 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : (
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            )}
-          </button>
-        )}
-      </dd>
     </div>
   );
 }

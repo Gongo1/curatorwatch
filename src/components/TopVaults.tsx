@@ -13,6 +13,7 @@ interface TopVault {
   curatorAddress: string | null;
   curatorName?: string | null;
   dataSource?: string | null;
+  turtleId?: string | null;
   latestSnapshot: {
     totalAssetsUsd: number;
     avgNetApy: number | null;
@@ -135,7 +136,7 @@ export function TopVaults() {
               )}
             </div>
             <a
-              href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource)}
+              href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}

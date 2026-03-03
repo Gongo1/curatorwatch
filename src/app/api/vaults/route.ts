@@ -19,6 +19,9 @@ export async function GET(request: NextRequest) {
           orderBy: { timestamp: "desc" },
           take: 1,
         },
+        curator: {
+          select: { name: true },
+        },
       },
       orderBy: {
         updatedAt: "desc",
@@ -41,6 +44,7 @@ export async function GET(request: NextRequest) {
           decimals: vault.assetDecimals,
         },
         curatorAddress: vault.curatorAddress,
+        curatorName: vault.curator?.name || null,
         fees: {
           performance: vault.performanceFee,
           management: vault.managementFee,
@@ -63,6 +67,7 @@ export async function GET(request: NextRequest) {
           overallRisk: "Moderate Risk" as const,
           overallScore: 50,
         },
+        turtleId: vault.turtleId || null,
         protocol: vault.protocol,
         dataSource: vault.dataSource,
         chainName: vault.chainName,

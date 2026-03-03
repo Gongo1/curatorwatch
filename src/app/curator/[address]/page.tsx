@@ -15,7 +15,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
 import { CopyAddress } from "@/components/CopyAddress";
-import { CuratorRating } from "@/components/CuratorRating";
 import type { CuratorDetailResponse } from "@/lib/types/api";
 import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
@@ -172,7 +171,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vaults">Vaults</TabsTrigger>
             <TabsTrigger value="economics">Economics</TabsTrigger>
-            <TabsTrigger value="risk">Risk Profile</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -573,10 +571,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
             })()}
           </TabsContent>
 
-          {/* Risk Profile Tab */}
-          <TabsContent value="risk" className="pt-6">
-            <CuratorRating curatorAddress={curator.address} />
-          </TabsContent>
         </Tabs>
     </>
   );

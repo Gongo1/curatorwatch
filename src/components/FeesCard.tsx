@@ -128,7 +128,7 @@ export function FeesCard({ vaultAddress }: FeesCardProps) {
             </div>
             {fees.dataSource === "morpho" && (
               <div className="bg-background-elevated rounded-lg p-3">
-                <p className="text-xs text-text-tertiary">Morpho Protocol</p>
+                <p className="text-xs text-text-tertiary">Protocol Fee</p>
                 <p className="text-lg font-semibold text-text-primary tabular-nums">
                   {feeRates.protocolFee.toFixed(0)}%
                 </p>

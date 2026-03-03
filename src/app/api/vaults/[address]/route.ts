@@ -271,6 +271,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         performance: vault.performanceFee,
         management: vault.managementFee,
       },
+      turtleId: vault.turtleId || null,
       protocol: vault.protocol,
       dataSource: vault.dataSource,
       chainName: vault.chainName,

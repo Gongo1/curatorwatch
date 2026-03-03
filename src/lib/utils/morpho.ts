@@ -25,10 +25,13 @@ export function getVaultDepositUrl(
   vaultAddress: string,
   vaultName: string,
   dataSource?: string | null,
-  protocol?: string | null,
+  turtleId?: string | null,
 ): string {
   if (dataSource === "turtle") {
-    return "https://app.turtle.xyz/";
+    if (turtleId) {
+      return `https://app.turtle.xyz/earn/opportunities/${turtleId}`;
+    }
+    return "https://app.turtle.xyz/earn";
   }
   return getMorphoVaultUrl(vaultAddress, vaultName);
 }
