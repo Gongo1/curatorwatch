@@ -28,6 +28,7 @@ const CURATOR_NAME_ALIASES: Record<string, string> = {
   "instadapp": "Instadapp",
   "avant": "Avantgarde Finance",
   "avantgarde": "Avantgarde Finance",
+  "susdf": "Falcon Finance",
 };
 
 function slugify(name: string): string {
