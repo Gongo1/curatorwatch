@@ -5,7 +5,8 @@ interface RouteParams {
   params: Promise<{ address: string }>;
 }
 
-// Morpho protocol fee (typically 15% of interest earned goes to protocol)
+// Morpho protocol fee (15% of interest earned goes to Morpho protocol)
+// Only applies to Morpho vaults — other protocols have their own fee structures
 const MORPHO_PROTOCOL_FEE_RATE = 0.15;
 
 export async function GET(request: Request, { params }: RouteParams) {
@@ -68,10 +69,12 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Total curator fees
     const totalCuratorFees = estimatedManagementFees + estimatedPerformanceFees;
 
-    // Morpho protocol fees: estimated as % of total interest earned
-    // Interest earned ≈ TVL × grossYield × time
+    // Protocol fees: only Morpho vaults have the known 15% protocol fee
+    // For non-Morpho vaults (Turtle/Aave/Euler/etc.) we don't have protocol fee data
+    const isMorphoVault = !vault.dataSource || vault.dataSource === "morpho";
+    const protocolFeeRate = isMorphoVault ? MORPHO_PROTOCOL_FEE_RATE : 0;
     const totalInterestEarned = tvl * grossYield * operatingYears;
-    const morphoFees = totalInterestEarned * MORPHO_PROTOCOL_FEE_RATE;
+    const morphoFees = totalInterestEarned * protocolFeeRate;
 
     // Annualized projections
     const annualizedCuratorFees = operatingYears > 0 ? totalCuratorFees / operatingYears : 0;
@@ -87,10 +90,11 @@ export async function GET(request: Request, { params }: RouteParams) {
           apy,
           grossApy,
         },
+        dataSource: vault.dataSource || "morpho",
         feeRates: {
           performanceFee: performanceFee * 100, // As percentage
           managementFee: managementFee * 100,   // As percentage
-          morphoProtocolFee: MORPHO_PROTOCOL_FEE_RATE * 100,
+          protocolFee: protocolFeeRate * 100,
         },
         curator: {
           name: vault.curator?.name || "Unknown",

@@ -99,7 +99,7 @@ export function CuratorFeesGrid({ curators }: CuratorFeesGridProps) {
         valueFormatter: (params) => formatCurrency(params.value),
       },
       {
-        headerName: "Ann. Morpho Fees",
+        headerName: "Ann. Protocol Fees",
         field: "annualizedMorphoFees",
         flex: 1,
         minWidth: 120,

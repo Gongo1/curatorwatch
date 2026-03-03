@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Morpho protocol fee (15% of interest earned goes to protocol)
+// Morpho protocol fee (15% of interest earned goes to Morpho protocol)
+// Only applies to Morpho vaults — other protocols have their own fee structures
 const MORPHO_PROTOCOL_FEE_RATE = 0.15;
 
 interface VaultFeeData {
@@ -61,6 +62,7 @@ export async function GET() {
         address: true,
         name: true,
         assetSymbol: true,
+        dataSource: true,
         performanceFee: true,
         managementFee: true,
         createdAt: true,
@@ -139,15 +141,17 @@ export async function GET() {
       const estimatedPerformanceFees = tvl * grossYield * performanceFee * vaultAgeYears;
       const curatorFees = estimatedManagementFees + estimatedPerformanceFees;
 
-      // Morpho protocol fees (15% of gross interest)
+      // Protocol fees: only apply Morpho's 15% to Morpho vaults
+      const isMorphoVault = !vault.dataSource || vault.dataSource === "morpho";
+      const protocolFeeRate = isMorphoVault ? MORPHO_PROTOCOL_FEE_RATE : 0;
       const totalInterestEarned = tvl * grossYield * vaultAgeYears;
-      const morphoFees = totalInterestEarned * MORPHO_PROTOCOL_FEE_RATE;
+      const morphoFees = totalInterestEarned * protocolFeeRate;
 
       // Annualized projections
       const annualizedManagementFees = tvl * managementFee;
       const annualizedPerformanceFees = tvl * grossYield * performanceFee;
       const annualizedCuratorFees = annualizedManagementFees + annualizedPerformanceFees;
-      const annualizedMorphoFees = tvl * grossYield * MORPHO_PROTOCOL_FEE_RATE;
+      const annualizedMorphoFees = tvl * grossYield * protocolFeeRate;
 
       const curatorKey = vault.curatorId || vault.curatorAddress || "unknown";
       const curatorName = vault.curator?.name ||

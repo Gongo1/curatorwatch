@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/format";
-import { getMorphoVaultUrl } from "@/lib/utils/morpho";
+import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
 
 interface TopVault {
   address: string;
@@ -12,6 +12,7 @@ interface TopVault {
   symbol: string;
   curatorAddress: string | null;
   curatorName?: string | null;
+  dataSource?: string | null;
   latestSnapshot: {
     totalAssetsUsd: number;
     avgNetApy: number | null;
@@ -134,12 +135,16 @@ export function TopVaults() {
               )}
             </div>
             <a
-              href={getMorphoVaultUrl(vault.address, vault.name)}
+              href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-accent-green/10 text-text-muted hover:text-accent-green transition-all"
-              title="View on Morpho"
+              className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-md transition-all ${
+                vault.dataSource === "turtle"
+                  ? "hover:bg-cyan-500/10 text-text-muted hover:text-cyan-500"
+                  : "hover:bg-accent-green/10 text-text-muted hover:text-accent-green"
+              }`}
+              title={getDepositLabel(vault.dataSource)}
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />

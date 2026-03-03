@@ -179,8 +179,56 @@ export default function Home() {
   };
 
 
+  const [bannerDismissed, setBannerDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("turtle-banner-dismissed") === "true";
+    }
+    return false;
+  });
+
+  const dismissBanner = () => {
+    setBannerDismissed(true);
+    localStorage.setItem("turtle-banner-dismissed", "true");
+  };
+
   return (
     <>
+        {/* Turtle Expansion Announcement Banner */}
+        {!bannerDismissed && (
+          <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
+            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+              <svg className="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-cyan-400">
+                New: Cross-protocol vault coverage powered by{" "}
+                <a
+                  href="https://app.turtle.xyz/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 hover:text-cyan-300 transition-colors"
+                >
+                  Turtle Club
+                </a>
+              </p>
+              <p className="text-xs text-text-tertiary mt-0.5">
+                Now tracking Aave, Euler, Compound, and more protocols alongside Morpho vaults.
+              </p>
+            </div>
+            <button
+              onClick={dismissBanner}
+              className="flex-shrink-0 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-background-elevated transition-colors"
+              aria-label="Dismiss announcement"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {/* Alerts Ribbon */}
         {changeSummary && changeSummary.total > 0 && (
           <Link
@@ -265,9 +313,9 @@ export default function Home() {
               }
             />
             <StatCard
-              label="Morpho Fees (Ann.)"
+              label="Protocol Fees (Ann.)"
               value={feesStats ? formatCurrency(feesStats.annualized.morphoFees) : "-"}
-              tooltip="Estimated annualized protocol fees earned by Morpho (15% of interest)"
+              tooltip="Estimated annualized protocol fees (e.g. Morpho's 15% of interest). Only calculated for protocols with known fee structures."
               valueClass="text-accent-purple"
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -4,7 +4,8 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-// Morpho protocol fee (typically 15% of interest earned goes to protocol)
+// Morpho protocol fee (15% of interest earned goes to Morpho protocol)
+// Only applies to Morpho vaults — other protocols have their own fee structures
 const MORPHO_PROTOCOL_FEE_RATE = 0.15;
 
 export async function GET() {
@@ -12,6 +13,7 @@ export async function GET() {
     // Get all vaults with their latest snapshots
     const vaults = await prisma.vault.findMany({
       select: {
+        dataSource: true,
         performanceFee: true,
         managementFee: true,
         createdAt: true,
@@ -57,9 +59,11 @@ export async function GET() {
       const estimatedPerformanceFees = tvl * grossYield * performanceFee * operatingYears;
       const curatorFees = estimatedManagementFees + estimatedPerformanceFees;
 
-      // Morpho fees
+      // Protocol fees: only apply Morpho's 15% to Morpho vaults
+      const isMorphoVault = !vault.dataSource || vault.dataSource === "morpho";
+      const protocolFeeRate = isMorphoVault ? MORPHO_PROTOCOL_FEE_RATE : 0;
       const totalInterestEarned = tvl * grossYield * operatingYears;
-      const morphoFees = totalInterestEarned * MORPHO_PROTOCOL_FEE_RATE;
+      const morphoFees = totalInterestEarned * protocolFeeRate;
 
       totalCuratorFees += curatorFees;
       totalMorphoFees += morphoFees;

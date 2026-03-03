@@ -20,6 +20,27 @@ const categoryStyles: Record<Category, string> = {
 
 const entries: ChangelogEntry[] = [
   {
+    date: "March 2, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "Deposit CTA parity \u2014 Turtle vaults now show a \"View on Turtle\" button on vault detail pages and the Top Vaults widget, matching the existing \"View on Morpho\" flow for Morpho vaults",
+      },
+      {
+        category: "Feature",
+        text: "Added homepage announcement banner highlighting cross-protocol vault coverage powered by Turtle Club. Dismissible and persists across page loads",
+      },
+      {
+        category: "Fix",
+        text: "Fixed protocol fee calculations \u2014 Morpho's 15% protocol fee was incorrectly applied to all vaults including non-Morpho (Aave, Euler, Compound) vaults. Protocol fees are now only calculated for Morpho vaults where the fee structure is known.",
+      },
+      {
+        category: "Improvement",
+        text: "Renamed \"Morpho Fees\" to \"Protocol Fees\" across the homepage, fees page, fee grids, and vault detail cards to accurately reflect multi-protocol coverage. Vault-level fee analysis now hides the protocol fee section for non-Morpho vaults.",
+      },
+    ],
+  },
+  {
     date: "February 26, 2026",
     items: [
       {

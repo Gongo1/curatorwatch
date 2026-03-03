@@ -19,6 +19,31 @@ export function getMorphoMarketUrl(marketId: string): string {
 }
 
 /**
+ * Generate the appropriate deposit URL based on vault data source
+ */
+export function getVaultDepositUrl(
+  vaultAddress: string,
+  vaultName: string,
+  dataSource?: string | null,
+  protocol?: string | null,
+): string {
+  if (dataSource === "turtle") {
+    return "https://app.turtle.xyz/";
+  }
+  return getMorphoVaultUrl(vaultAddress, vaultName);
+}
+
+/**
+ * Get the deposit CTA label based on data source
+ */
+export function getDepositLabel(dataSource?: string | null): string {
+  if (dataSource === "turtle") {
+    return "View on Turtle";
+  }
+  return "View on Morpho";
+}
+
+/**
  * Generate Etherscan URL for address
  */
 export function getEtherscanUrl(address: string, type: 'address' | 'token' | 'tx' = 'address'): string {

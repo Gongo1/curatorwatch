@@ -108,9 +108,9 @@ export default function FeesPage() {
               highlight
             />
             <SummaryCard
-              label="Morpho Protocol Fees (Ann.)"
+              label="Protocol Fees (Annualized)"
               value={formatCurrency(summary.annualized.morphoFees)}
-              subtext="15% of interest"
+              subtext="Morpho vaults only (15% of interest)"
             />
             <SummaryCard
               label="Total Fees (Annualized)"

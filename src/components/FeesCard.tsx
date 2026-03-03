@@ -11,10 +11,11 @@ interface FeesData {
     apy: number;
     grossApy: number;
   };
+  dataSource: string;
   feeRates: {
     performanceFee: number;
     managementFee: number;
-    morphoProtocolFee: number;
+    protocolFee: number;
   };
   curator: {
     name: string;
@@ -112,7 +113,7 @@ export function FeesCard({ vaultAddress }: FeesCardProps) {
           <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3">
             Fee Rates
           </h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${fees.dataSource === "morpho" ? "grid-cols-3" : "grid-cols-2"}`}>
             <div className="bg-background-elevated rounded-lg p-3">
               <p className="text-xs text-text-tertiary">Performance Fee</p>
               <p className="text-lg font-semibold text-text-primary tabular-nums">
@@ -125,12 +126,14 @@ export function FeesCard({ vaultAddress }: FeesCardProps) {
                 {feeRates.managementFee.toFixed(2)}%
               </p>
             </div>
-            <div className="bg-background-elevated rounded-lg p-3">
-              <p className="text-xs text-text-tertiary">Morpho Protocol</p>
-              <p className="text-lg font-semibold text-text-primary tabular-nums">
-                {feeRates.morphoProtocolFee.toFixed(0)}%
-              </p>
-            </div>
+            {fees.dataSource === "morpho" && (
+              <div className="bg-background-elevated rounded-lg p-3">
+                <p className="text-xs text-text-tertiary">Morpho Protocol</p>
+                <p className="text-lg font-semibold text-text-primary tabular-nums">
+                  {feeRates.protocolFee.toFixed(0)}%
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -169,18 +172,20 @@ export function FeesCard({ vaultAddress }: FeesCardProps) {
               </div>
             </div>
 
-            {/* Morpho Fees */}
-            <div className="flex items-center justify-between py-2 border-b border-border-subtle">
-              <div>
-                <p className="text-sm text-text-primary">Morpho Protocol Fees</p>
-                <p className="text-xs text-text-tertiary">
-                  15% of interest earned
+            {/* Protocol Fees — only shown for Morpho vaults */}
+            {fees.dataSource === "morpho" && (
+              <div className="flex items-center justify-between py-2 border-b border-border-subtle">
+                <div>
+                  <p className="text-sm text-text-primary">Morpho Protocol Fees</p>
+                  <p className="text-xs text-text-tertiary">
+                    15% of interest earned
+                  </p>
+                </div>
+                <p className="text-sm font-semibold text-accent-purple tabular-nums">
+                  {formatCurrency(estimatedFees.morphoFees)}
                 </p>
               </div>
-              <p className="text-sm font-semibold text-accent-purple tabular-nums">
-                {formatCurrency(estimatedFees.morphoFees)}
-              </p>
-            </div>
+            )}
 
             {/* Total */}
             <div className="flex items-center justify-between py-3 bg-background-elevated rounded-lg px-3 mt-3">
@@ -197,19 +202,21 @@ export function FeesCard({ vaultAddress }: FeesCardProps) {
           <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3">
             Annualized Projections
           </h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid gap-4 ${fees.dataSource === "morpho" ? "grid-cols-3" : "grid-cols-2"}`}>
             <div className="text-center p-3 rounded-lg border border-accent-blue/20 bg-accent-blue/5">
               <p className="text-xs text-text-tertiary mb-1">Curator</p>
               <p className="text-base font-semibold text-accent-blue tabular-nums">
                 {formatCurrency(annualized.curatorFees)}
               </p>
             </div>
-            <div className="text-center p-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
-              <p className="text-xs text-text-tertiary mb-1">Morpho</p>
-              <p className="text-base font-semibold text-accent-purple tabular-nums">
-                {formatCurrency(annualized.morphoFees)}
-              </p>
-            </div>
+            {fees.dataSource === "morpho" && (
+              <div className="text-center p-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
+                <p className="text-xs text-text-tertiary mb-1">Morpho Protocol</p>
+                <p className="text-base font-semibold text-accent-purple tabular-nums">
+                  {formatCurrency(annualized.morphoFees)}
+                </p>
+              </div>
+            )}
             <div className="text-center p-3 rounded-lg border border-border bg-background-elevated">
               <p className="text-xs text-text-tertiary mb-1">Total</p>
               <p className="text-base font-semibold text-text-primary tabular-nums">

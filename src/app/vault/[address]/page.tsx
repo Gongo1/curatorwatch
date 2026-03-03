@@ -12,7 +12,7 @@ import {
   formatAdapterType,
   formatSharePrice,
 } from "@/lib/utils/format";
-import { getMorphoVaultUrl } from "@/lib/utils/morpho";
+import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
 import type { VaultDetail, VaultDetailApiResponse } from "@/lib/types/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { ActivityTab } from "@/components/ActivityTab";
@@ -158,12 +158,19 @@ export default function VaultDetailPage({ params }: PageProps) {
           <div className="flex items-center gap-3">
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
             <ProtocolBadge protocol={vault.protocol ?? "morpho"} size="md" />
-            {vault.dataSource !== "turtle" && (
-              <a href={getMorphoVaultUrl(vault.address, vault.name)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15 transition-colors">
-                View on Morpho
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              </a>
-            )}
+            <a
+              href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.protocol)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isTurtleVault
+                  ? "bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 hover:bg-cyan-500/15"
+                  : "bg-accent-green/10 border border-accent-green/20 text-accent-green hover:bg-accent-green/15"
+              }`}
+            >
+              {getDepositLabel(vault.dataSource)}
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            </a>
             <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-background-elevated border border-border text-text-primary">{vault.asset.symbol}</span>
           </div>
         }
