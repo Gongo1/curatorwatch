@@ -14,6 +14,15 @@ import { getChainId, getChainName } from "../lib/turtle/chain-mapper";
 import type { TurtleOpportunity } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 1_000_000; // $1M
+const COMPOUNDING_PERIODS = 365; // Daily compounding for APR → APY conversion
+
+/**
+ * Convert APR to APY assuming daily compounding.
+ * APY = (1 + APR / n)^n - 1
+ */
+function aprToApy(apr: number): number {
+  return Math.pow(1 + apr / COMPOUNDING_PERIODS, COMPOUNDING_PERIODS) - 1;
+}
 
 export interface TurtleCollectionResult {
   success: boolean;
@@ -118,9 +127,10 @@ async function upsertTurtleVault(
         },
       });
 
-      // Turtle API returns estimatedApr as percentage (e.g. 53.69 = 53.69%),
-      // but the DB stores APY as decimal (0.5369). Divide by 100.
+      // Turtle API returns estimatedApr as percentage (e.g. 53.69 = 53.69%).
+      // Convert to APY (daily compounding) and store as decimal (0.5369 → 0.7104).
       const aprDecimal = opp.estimatedApr != null ? opp.estimatedApr / 100 : null;
+      const apyDecimal = aprDecimal != null ? aprToApy(aprDecimal) : null;
 
       // Create snapshot
       await prisma.vaultSnapshot.create({
@@ -130,19 +140,20 @@ async function upsertTurtleVault(
           totalAssetsUsd: opp.tvl,
           totalSupply: "0",
           sharePrice: 1,
-          apy: aprDecimal,
-          netApy: aprDecimal,
-          avgApy: aprDecimal,
-          avgNetApy: aprDecimal,
+          apy: apyDecimal,
+          netApy: apyDecimal,
+          avgApy: apyDecimal,
+          avgNetApy: apyDecimal,
         },
       });
 
       return { upserted: true, curatorCreated: false };
     }
 
-    // Turtle API returns estimatedApr as percentage (e.g. 53.69 = 53.69%),
-    // but the DB stores APY as decimal (0.5369). Divide by 100.
+    // Turtle API returns estimatedApr as percentage (e.g. 53.69 = 53.69%).
+    // Convert to APY (daily compounding) and store as decimal.
     const aprDecimal = opp.estimatedApr != null ? opp.estimatedApr / 100 : null;
+    const apyDecimal = aprDecimal != null ? aprToApy(aprDecimal) : null;
 
     // Create new vault
     const vault = await prisma.vault.create({
@@ -171,10 +182,10 @@ async function upsertTurtleVault(
         totalAssetsUsd: opp.tvl,
         totalSupply: "0",
         sharePrice: 1,
-        apy: aprDecimal,
-        netApy: aprDecimal,
-        avgApy: aprDecimal,
-        avgNetApy: aprDecimal,
+        apy: apyDecimal,
+        netApy: apyDecimal,
+        avgApy: apyDecimal,
+        avgNetApy: apyDecimal,
       },
     });
 

@@ -203,7 +203,7 @@ export default function Home() {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-cyan-400">
-                New: Cross-protocol vault coverage powered by{" "}
+                Expanded: 50+ vaults, $780M+ TVL, 14 curators across 10+ protocols — powered by{" "}
                 <a
                   href="https://app.turtle.xyz/"
                   target="_blank"
@@ -214,7 +214,7 @@ export default function Home() {
                 </a>
               </p>
               <p className="text-xs text-text-tertiary mt-0.5">
-                Now tracking Aave, Euler, Compound, and more protocols alongside Morpho vaults.
+                Now tracking Euler, Compound, Midas, Katana, and more alongside Morpho vaults.
               </p>
             </div>
             <button

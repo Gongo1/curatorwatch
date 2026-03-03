@@ -54,6 +54,14 @@ const entries: ChangelogEntry[] = [
         category: "Improvement",
         text: "Removed Vault Configuration section, Risk grade column, and Risk Profile tab \u2014 streamlined UI to focus on actionable data",
       },
+      {
+        category: "Fix",
+        text: "Fixed APR vs APY mismatch \u2014 Turtle API reports APR while Morpho reports APY. CuratorWatch now converts APR to APY using daily compounding at ingestion for consistent cross-protocol comparison",
+      },
+      {
+        category: "Improvement",
+        text: "Updated homepage banner with live stats: 50+ vaults, $780M+ TVL, 14 curators across 10+ protocols",
+      },
     ],
   },
   {

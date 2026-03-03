@@ -270,6 +270,7 @@ export default function VaultDetailPage({ params }: PageProps) {
                 </div>
                 <p className="text-xs text-text-secondary">
                   This vault is tracked via the Turtle Club API. TVL and APY data are available, but detailed allocations, transactions, reallocations, and risk snapshots are only available for Morpho vaults.
+                  APY is calculated by CuratorWatch from the reported APR using daily compounding to enable consistent comparison across protocols.
                 </p>
               </div>
             )}
