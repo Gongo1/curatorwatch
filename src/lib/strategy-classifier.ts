@@ -40,11 +40,9 @@ export interface StrategyClassification {
   tradFiAnalog: string;
   description: string;
   edge: string[];
-  keyMetrics: Record<string, string>;
+  managementStyle: string;
   strengths: string[];
   risks: string[];
-  bestFor: string[];
-  comparable: string[];
   confidence: "high" | "medium" | "low";
 }
 
@@ -161,13 +159,7 @@ function createQuantOptimizer(metrics: StrategyMetrics): StrategyClassification 
       "Data-driven decision making"
     ],
 
-    keyMetrics: {
-      "Reallocation Frequency": `${metrics.reallocationFrequency.toFixed(0)}/month`,
-      "Capital Efficiency": `${(100 - metrics.idleCashPercent).toFixed(1)}% deployed`,
-      "Diversification": `${metrics.adapterDiversification} adapters`,
-      "Top Position": `${metrics.topAdapterConcentration.toFixed(0)}%`,
-      "Management Style": "Hyper-active"
-    },
+    managementStyle: "Hyper-active",
 
     strengths: [
       "Data-driven, systematic approach",
@@ -183,14 +175,6 @@ function createQuantOptimizer(metrics: StrategyMetrics): StrategyClassification 
       "Gas costs from frequent rebalancing"
     ],
 
-    bestFor: [
-      "Institutions comfortable with algorithmic management",
-      "Allocators seeking optimized yield",
-      "Risk-tolerant investors",
-      "Those prioritizing capital efficiency"
-    ],
-
-    comparable: ["Gauntlet", "Block Analitica", "Risk DAO"],
     confidence: metrics.reallocationFrequency > 15 ? "high" : "medium"
   };
 }
@@ -208,13 +192,7 @@ function createFixedIncomeSpecialist(metrics: StrategyMetrics): StrategyClassifi
       "Conservative risk management"
     ],
 
-    keyMetrics: {
-      "Avg LLTV": `${metrics.avgLLTV.toFixed(0)}%`,
-      "Liquidity Buffer": `${metrics.idleCashPercent.toFixed(1)}% idle cash`,
-      "Collateral Quality": "Blue-chip only",
-      "Rebalancing": `${metrics.reallocationFrequency.toFixed(0)}/month`,
-      "Management Style": "Passive"
-    },
+    managementStyle: "Passive",
 
     strengths: [
       "Capital preservation priority",
@@ -230,14 +208,6 @@ function createFixedIncomeSpecialist(metrics: StrategyMetrics): StrategyClassifi
       "May underperform in yield farming meta"
     ],
 
-    bestFor: [
-      "Conservative institutions",
-      "DAO treasuries requiring stability",
-      "Risk-averse allocators",
-      "Long-term capital preservation"
-    ],
-
-    comparable: ["Steakhouse Financial", "Idle Finance", "Morpho (direct)"],
     confidence: metrics.idleCashPercent > 15 ? "high" : "medium"
   };
 }
@@ -255,12 +225,7 @@ function createMarketMaker(metrics: StrategyMetrics): StrategyClassification {
       "Advanced MEV protection"
     ],
 
-    keyMetrics: {
-      "Activity Level": `${metrics.reallocationFrequency.toFixed(0)} moves/month`,
-      "Capital Efficiency": `${(100 - metrics.idleCashPercent).toFixed(1)}% deployed`,
-      "Concentration": `${metrics.topAdapterConcentration.toFixed(0)}% in top position`,
-      "Management Style": "Hyper-active"
-    },
+    managementStyle: "Hyper-active",
 
     strengths: [
       "Maximizes capital efficiency",
@@ -276,14 +241,6 @@ function createMarketMaker(metrics: StrategyMetrics): StrategyClassification {
       "Requires continuous monitoring"
     ],
 
-    bestFor: [
-      "Sophisticated allocators",
-      "Short to medium-term capital",
-      "Risk-tolerant institutions",
-      "Those seeking active management"
-    ],
-
-    comparable: ["Wintermute", "Professional trading desks", "MEV searchers"],
     confidence: metrics.reallocationFrequency > 25 ? "high" : "medium"
   };
 }
@@ -301,13 +258,7 @@ function createMultiStrategy(metrics: StrategyMetrics): StrategyClassification {
       "Ability to shift capital to best opportunities"
     ],
 
-    keyMetrics: {
-      "Vault Count": `${metrics.vaultCount} vaults`,
-      "Rebalancing": `${metrics.reallocationFrequency.toFixed(0)}/month`,
-      "Diversification": `${metrics.adapterDiversification} adapters`,
-      "Approach": "Mix of conservative + aggressive",
-      "Management Style": "Active"
-    },
+    managementStyle: "Active",
 
     strengths: [
       "Diversified risk sources",
@@ -323,14 +274,6 @@ function createMultiStrategy(metrics: StrategyMetrics): StrategyClassification {
       "Potential for conflicting strategies"
     ],
 
-    bestFor: [
-      "Institutions seeking diversification",
-      "Medium to long-term capital",
-      "Moderate risk tolerance",
-      "Those wanting exposure to multiple strategies"
-    ],
-
-    comparable: ["Re7 Labs", "MEV Capital", "Morpho Labs"],
     confidence: metrics.vaultCount >= 5 ? "high" : "medium"
   };
 }
@@ -348,13 +291,7 @@ function createPassiveIndex(metrics: StrategyMetrics): StrategyClassification {
       "Long-term compounding"
     ],
 
-    keyMetrics: {
-      "Activity Level": `${metrics.reallocationFrequency.toFixed(1)}/month (minimal)`,
-      "Diversification": `${metrics.adapterDiversification} adapters`,
-      "Philosophy": "Buy and hold",
-      "Idle Cash": `${metrics.idleCashPercent.toFixed(1)}%`,
-      "Management Style": "Passive"
-    },
+    managementStyle: "Passive",
 
     strengths: [
       "Low operational risk",
@@ -370,14 +307,6 @@ function createPassiveIndex(metrics: StrategyMetrics): StrategyClassification {
       "May miss yield opportunities"
     ],
 
-    bestFor: [
-      "Long-term holders",
-      "Cost-conscious allocators",
-      "Simple governance requirements",
-      "Those preferring transparency"
-    ],
-
-    comparable: ["Yearn (some vaults)", "Basic lending protocols", "Community vaults"],
     confidence: metrics.reallocationFrequency < 2 ? "high" : "medium"
   };
 }
@@ -395,12 +324,7 @@ function createVentureHighRisk(metrics: StrategyMetrics): StrategyClassification
       "Risk tolerance for emerging opportunities"
     ],
 
-    keyMetrics: {
-      "Concentration": `${metrics.topAdapterConcentration.toFixed(0)}% in top position`,
-      "Avg LLTV": `${metrics.avgLLTV.toFixed(0)}%`,
-      "Collateral Mix": "Includes newer/exotic assets",
-      "Management Style": "Active"
-    },
+    managementStyle: "Active",
 
     strengths: [
       "High upside potential",
@@ -416,14 +340,6 @@ function createVentureHighRisk(metrics: StrategyMetrics): StrategyClassification
       "Liquidity risk in exotic assets"
     ],
 
-    bestFor: [
-      "Risk-seeking allocators",
-      "Long-term, patient capital",
-      "Investors with strong DD capabilities",
-      "Those seeking outsized returns"
-    ],
-
-    comparable: ["Early-stage DeFi curators", "Experimental vaults", "New protocol integrators"],
     confidence: metrics.avgLLTV > 90 ? "high" : "medium"
   };
 }
@@ -443,13 +359,7 @@ function createBalanced(metrics: StrategyMetrics): StrategyClassification {
       "Adaptable to conditions"
     ],
 
-    keyMetrics: {
-      "Rebalancing": `${metrics.reallocationFrequency.toFixed(0)}/month`,
-      "Diversification": `${metrics.adapterDiversification} adapters`,
-      "Top Position": `${metrics.topAdapterConcentration.toFixed(0)}%`,
-      "Idle Cash": `${metrics.idleCashPercent.toFixed(1)}%`,
-      "Management Style": style
-    },
+    managementStyle: style,
 
     strengths: [
       "Balanced approach",
@@ -465,14 +375,6 @@ function createBalanced(metrics: StrategyMetrics): StrategyClassification {
       "Jack of all trades risk"
     ],
 
-    bestFor: [
-      "General allocators",
-      "Those seeking moderate exposure",
-      "Diversified portfolios",
-      "Medium-term capital"
-    ],
-
-    comparable: ["Various curators", "Emerging managers"],
     confidence: "low"
   };
 }
