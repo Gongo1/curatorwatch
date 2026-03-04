@@ -56,8 +56,7 @@ export const VAULT_CURATOR_OVERRIDES: Record<string, string> = {
   "0xfa17f7aadbfac2c5d3c8125555404c1ae17df853": "clearstar",   // Clearstar Yield USDC
   "0x69a238ae7ebeb3c53ff3b544e48b96a2142fc284": "clearstar",   // Clearstar USDC Core
   "0xf3cc5c9a25508d8d959618fd48f6abc18ca4db49": "clearstar",   // Clearstar Boring USDC
-  // Re Ecosystem vault — on-chain curator is Re7 but actual curator is Re Ecosystem
-  "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": "reecosystem", // Re Ecosystem Vault
+  "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": "clearstar",   // Re Ecosystem Vault (Clearstar)
 };
 
 /**

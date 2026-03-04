@@ -104,6 +104,7 @@ export const CURATOR_PROFILES: Record<string, CuratorProfile> = {
     jurisdiction: "Switzerland",
     description:
       "Clearstar Labs AG is a Swiss corporation managing Morpho vaults with distinct strategies, previously grouped under Re7 Labs on-chain.",
+    foundedYear: 2022,
     isRegulated: false,
   },
 
