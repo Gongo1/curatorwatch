@@ -60,9 +60,20 @@ export interface CuratorRiskRating {
 // ============================================================================
 
 const BLUE_CHIP_COLLATERAL = [
+  // Stablecoins
   "USDC", "USDT", "DAI", "FRAX", "LUSD", "crvUSD", "GHO", "PYUSD", "USDS",
+  "EURC", "EURCV", "AUSD", "sDAI", "sUSDe", "USDe", "FDUSD", "TUSD", "USDD",
+  // ETH & LSTs
   "WETH", "ETH", "wstETH", "stETH", "rETH", "cbETH", "weETH", "ezETH",
-  "WBTC", "cbBTC", "tBTC"
+  "swETH", "mETH", "osETH", "ankrETH", "sfrxETH", "frxETH",
+  // BTC
+  "WBTC", "cbBTC", "tBTC", "sBTC", "LBTC",
+  // Wrapped/vault variants (Turtle protocol wrappers)
+  "vbUSDC", "vbWETH", "vbWBTC", "vbUSDT",
+  // Blue-chip DeFi
+  "MKR", "AAVE", "CRV", "LDO", "UNI", "LINK", "COMP", "SNX",
+  // Wrapped staked tokens
+  "stkAAVE", "wstMKR",
 ];
 
 // Known curators with track records (lowercase addresses)
@@ -173,7 +184,7 @@ export async function calculateCuratorRating(curatorAddress: string): Promise<Cu
   const greenFlags: GreenFlag[] = [];
 
   // Calculate curator metrics
-  const monthsOperating = getMonthsOperating(curator.createdAt);
+  const monthsOperating = getMonthsOperating(curator.foundedYear, curator.createdAt);
   const totalAUM = curator.totalAssetsManaged ?? 0;
   const vaultCount = curator.vaults.length;
   const curatorName = curator.name?.toLowerCase() ?? "";
@@ -265,37 +276,40 @@ export async function calculateCuratorRating(curatorAddress: string): Promise<Cu
   // =========================================================================
   const collateralAnalysis = analyzeCollateralQuality(curator.vaults);
 
-  if (collateralAnalysis.blueChipOnly) {
-    score += 15;
-    greenFlags.push({
-      type: "BLUE_CHIP_ONLY",
-      description: "Conservative collateral standards - only established assets accepted",
-      impact: 15
-    });
-  } else if (collateralAnalysis.exoticPercentage > 50) {
-    score -= 25;
-    redFlags.push({
-      type: "HIGH_EXOTIC_EXPOSURE",
-      severity: "high",
-      description: `${collateralAnalysis.exoticPercentage.toFixed(0)}% in exotic/synthetic collateral - Stream-level contagion risk`,
-      impact: -25
-    });
-  } else if (collateralAnalysis.exoticPercentage > 25) {
-    score -= 15;
-    redFlags.push({
-      type: "MODERATE_EXOTIC_EXPOSURE",
-      severity: "medium",
-      description: `${collateralAnalysis.exoticPercentage.toFixed(0)}% non-blue-chip collateral`,
-      impact: -15
-    });
-  } else if (collateralAnalysis.exoticPercentage > 10) {
-    score -= 5;
-    redFlags.push({
-      type: "SOME_EXOTIC_EXPOSURE",
-      severity: "low",
-      description: `${collateralAnalysis.exoticPercentage.toFixed(0)}% exotic collateral - monitor closely`,
-      impact: -5
-    });
+  // Only score collateral quality if we have actual market allocation data
+  if (collateralAnalysis.hasData) {
+    if (collateralAnalysis.blueChipOnly) {
+      score += 15;
+      greenFlags.push({
+        type: "BLUE_CHIP_ONLY",
+        description: "Conservative collateral standards - only established assets accepted",
+        impact: 15
+      });
+    } else if (collateralAnalysis.exoticPercentage > 50) {
+      score -= 25;
+      redFlags.push({
+        type: "HIGH_EXOTIC_EXPOSURE",
+        severity: "high",
+        description: `${collateralAnalysis.exoticPercentage.toFixed(0)}% in exotic/synthetic collateral - Stream-level contagion risk`,
+        impact: -25
+      });
+    } else if (collateralAnalysis.exoticPercentage > 25) {
+      score -= 15;
+      redFlags.push({
+        type: "MODERATE_EXOTIC_EXPOSURE",
+        severity: "medium",
+        description: `${collateralAnalysis.exoticPercentage.toFixed(0)}% non-blue-chip collateral`,
+        impact: -15
+      });
+    } else if (collateralAnalysis.exoticPercentage > 10) {
+      score -= 5;
+      redFlags.push({
+        type: "SOME_EXOTIC_EXPOSURE",
+        severity: "low",
+        description: `${collateralAnalysis.exoticPercentage.toFixed(0)}% exotic collateral - monitor closely`,
+        impact: -5
+      });
+    }
   }
 
   // Check for synthetic asset creation (MAJOR RED FLAG - xUSD pattern)
@@ -342,34 +356,12 @@ export async function calculateCuratorRating(curatorAddress: string): Promise<Cu
   }
 
   // =========================================================================
-  // FACTOR 5: Concentration Risk (Elixir lesson: 65% in one = disaster)
+  // FACTOR 5: Concentration Risk — DISABLED
+  // Adapter allocation data only has one entry per Morpho vault (the vault
+  // itself at 100%). Real diversification is at the market level, but that
+  // data is too sparse to score reliably. Re-enable when market allocation
+  // collection is comprehensive.
   // =========================================================================
-  const concentrationAnalysis = analyzeConcentration(curator.vaults);
-
-  if (concentrationAnalysis.maxConcentration > 80) {
-    score -= 20;
-    redFlags.push({
-      type: "EXTREME_CONCENTRATION",
-      severity: "high",
-      description: `${concentrationAnalysis.maxConcentration.toFixed(0)}% in single position - Elixir-level risk`,
-      impact: -20
-    });
-  } else if (concentrationAnalysis.maxConcentration > 60) {
-    score -= 10;
-    redFlags.push({
-      type: "HIGH_CONCENTRATION",
-      severity: "medium",
-      description: `${concentrationAnalysis.maxConcentration.toFixed(0)}% in top adapter`,
-      impact: -10
-    });
-  } else if (concentrationAnalysis.maxConcentration < 40) {
-    score += 10;
-    greenFlags.push({
-      type: "WELL_DIVERSIFIED",
-      description: `Well-diversified: ${concentrationAnalysis.maxConcentration.toFixed(0)}% max concentration`,
-      impact: 10
-    });
-  }
 
   // =========================================================================
   // FACTOR 6: Governance & Safety Mechanisms (Steakhouse standard)
@@ -508,8 +500,14 @@ export async function calculateCuratorRating(curatorAddress: string): Promise<Cu
 // HELPER FUNCTIONS
 // ============================================================================
 
-function getMonthsOperating(createdAt: Date): number {
+function getMonthsOperating(foundedYear: number | null, createdAt: Date): number {
   const now = new Date();
+  if (foundedYear) {
+    // Use foundedYear as Jan 1 of that year — more accurate than DB createdAt
+    const founded = new Date(foundedYear, 0, 1);
+    const diffMs = now.getTime() - founded.getTime();
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30));
+  }
   const diffMs = now.getTime() - createdAt.getTime();
   return Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30));
 }
@@ -524,6 +522,7 @@ function checkBadDebtHistory(curatorName: string): { exposure: number; event: st
 }
 
 interface CollateralAnalysis {
+  hasData: boolean;
   blueChipOnly: boolean;
   exoticPercentage: number;
   hasSyntheticCreation: boolean;
@@ -549,7 +548,7 @@ function analyzeCollateralQuality(vaults: Array<{
       allCollateral.push(m.collateralAssetSymbol);
       totalAllocation += m.allocationPct;
 
-      if (!BLUE_CHIP_COLLATERAL.includes(m.collateralAssetSymbol.toUpperCase())) {
+      if (!BLUE_CHIP_COLLATERAL.some(bc => bc.toUpperCase() === m.collateralAssetSymbol.toUpperCase())) {
         exoticAllocation += m.allocationPct;
       }
     }
@@ -557,7 +556,7 @@ function analyzeCollateralQuality(vaults: Array<{
 
   const uniqueCollateral = [...new Set(allCollateral)];
   const blueChipOnly = uniqueCollateral.every(c =>
-    BLUE_CHIP_COLLATERAL.includes(c.toUpperCase())
+    BLUE_CHIP_COLLATERAL.some(bc => bc.toUpperCase() === c.toUpperCase())
   );
 
   // Check for synthetic patterns (x-prefixed tokens, wrapped versions, etc.)
@@ -567,7 +566,8 @@ function analyzeCollateralQuality(vaults: Array<{
   );
 
   return {
-    blueChipOnly: blueChipOnly || uniqueCollateral.length === 0,
+    hasData: uniqueCollateral.length > 0,
+    blueChipOnly: blueChipOnly && uniqueCollateral.length > 0,
     exoticPercentage: totalAllocation > 0 ? (exoticAllocation / totalAllocation) * 100 : 0,
     hasSyntheticCreation,
     collateralTypes: uniqueCollateral
@@ -657,6 +657,7 @@ function analyzeConcentration(vaults: Array<{
 async function calculateAllPeerScores(curators: Array<{
   name: string | null;
   createdAt: Date;
+  foundedYear: number | null;
   totalAssetsManaged: number | null;
   isRegulated: boolean;
   vaults: Array<{ snapshots: Array<{ avgNetApy: number | null }> }>;
@@ -664,7 +665,7 @@ async function calculateAllPeerScores(curators: Array<{
   // Simplified scoring for peer comparison
   return curators.map(c => {
     let score = 50;
-    const months = getMonthsOperating(c.createdAt);
+    const months = getMonthsOperating(c.foundedYear, c.createdAt);
 
     if (months >= 24) score += 15;
     else if (months >= 12) score += 10;

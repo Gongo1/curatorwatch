@@ -18,6 +18,7 @@ import { CopyAddress } from "@/components/CopyAddress";
 import type { CuratorDetailResponse } from "@/lib/types/api";
 import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
+import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -171,6 +172,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="vaults">Vaults</TabsTrigger>
             <TabsTrigger value="economics">Economics</TabsTrigger>
+            <TabsTrigger value="risk-profile">Risk Profile</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -234,6 +236,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                     )}
                   </dl>
                 </section>
+
               </div>
 
               {/* Right Column */}
@@ -569,6 +572,11 @@ export default function CuratorDetailPage({ params }: PageProps) {
                 </div>
               );
             })()}
+          </TabsContent>
+
+          {/* Risk Profile Tab */}
+          <TabsContent value="risk-profile" className="pt-6">
+            <CuratorRiskProfile curatorAddress={curator.address} />
           </TabsContent>
 
         </Tabs>
