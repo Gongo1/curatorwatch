@@ -8,7 +8,7 @@ import {
   formatTimeAgo,
 } from "@/lib/utils/format";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
-import { CuratorRating } from "@/components/CuratorRating";
+import { curatorSlug } from "@/lib/curator-aliases";
 import { ProtocolBadgeList } from "@/components/ProtocolBadge";
 
 type SortField = "name" | "aum" | "vaults";
@@ -122,9 +122,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
               <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-left">
                 Assets
               </th>
-              <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-center">
-                Grade
-              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border-subtle">
@@ -135,7 +132,7 @@ export function CuratorTable({ curators }: CuratorTableProps) {
               >
                 {/* Curator Name */}
                 <td className="px-4 py-4 whitespace-nowrap">
-                  <Link href={`/curator/${curator.curatorAddress}`} className="block group">
+                  <Link href={`/curator/${curatorSlug(curator.name, curator.curatorAddress)}`} className="block group">
                     <div className="flex items-center gap-3">
                       <CuratorAvatar
                         address={curator.curatorAddress}
@@ -195,11 +192,6 @@ export function CuratorTable({ curators }: CuratorTableProps) {
                   </div>
                 </td>
 
-                {/* Curator Rating */}
-                <td className="px-4 py-4 whitespace-nowrap text-center">
-                  <CuratorRating curatorAddress={curator.curatorAddress} compact />
-                </td>
-
               </tr>
             ))}
           </tbody>
@@ -211,7 +203,7 @@ export function CuratorTable({ curators }: CuratorTableProps) {
         {sortedCurators.map((curator) => (
           <Link
             key={curator.curatorId}
-            href={`/curator/${curator.curatorAddress}`}
+            href={`/curator/${curatorSlug(curator.name, curator.curatorAddress)}`}
             className="block bg-background-subtle border border-border rounded-lg p-4 hover:bg-background-hover transition-colors"
           >
             <div className="flex items-start gap-3">
@@ -278,7 +270,7 @@ export function CuratorTableSkeleton() {
         <table className="min-w-full">
           <thead className="bg-background-elevated border-b border-border">
             <tr>
-              {["Curator", "Total AUM", "# Vaults", "Protocols", "Assets", "Grade"].map((header) => (
+              {["Curator", "Total AUM", "# Vaults", "Protocols", "Assets"].map((header) => (
                 <th key={header} className="px-4 py-3 text-left">
                   <div className="h-3 w-16 bg-background-elevated rounded" />
                 </th>

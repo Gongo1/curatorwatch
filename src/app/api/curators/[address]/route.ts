@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { resolveCuratorAddress } from "@/lib/curator-aliases";
+import { resolveCuratorSlug } from "@/lib/curator-aliases";
 import type {
   CuratorDetailResponse,
   CuratorProfile,
@@ -116,7 +116,7 @@ export async function GET(
 ): Promise<NextResponse<CuratorDetailResponse>> {
   try {
     const { address } = await params;
-    const resolvedAddress = resolveCuratorAddress(address);
+    const resolvedAddress = await resolveCuratorSlug(address);
 
     // Fetch curator by address with risk data for strategy calculation
     const curator = await prisma.curator.findUnique({

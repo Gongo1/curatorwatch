@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { VaultCurator } from "@/lib/types/api";
 import { formatCurrency, formatPercentage, formatTimeAgo } from "@/lib/utils/format";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 interface CuratorSectionProps {
   curator: VaultCurator;
@@ -236,7 +237,7 @@ export function CuratorSection({ curator }: CuratorSectionProps) {
             ))}
             {curator.otherVaults.length > 5 && (
               <Link
-                href={`/curator/${curator.address}`}
+                href={`/curator/${curatorSlug(curator.name, curator.address)}`}
                 className="block text-center py-2 text-sm text-accent-blue hover:text-accent-blue-hover transition-colors"
               >
                 View all {curator.vaultCount} vaults →
@@ -289,7 +290,7 @@ export function CuratorSection({ curator }: CuratorSectionProps) {
           </div>
           {curator.news.length > 3 && (
             <Link
-              href={`/curator/${curator.address}`}
+              href={`/curator/${curatorSlug(curator.name, curator.address)}`}
               className="block text-center pt-3 text-sm text-accent-blue hover:text-accent-blue-hover transition-colors"
             >
               View all news →

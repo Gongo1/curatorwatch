@@ -60,6 +60,46 @@ export const VAULT_CURATOR_OVERRIDES: Record<string, string> = {
   "0xd1e9242e075db4bdd3f3c721d7d5fd4180a94a7e": "reecosystem", // Re Ecosystem Vault
 };
 
+/**
+ * Generate a URL-friendly slug from a curator name.
+ * Falls back to the raw address if no name is available.
+ */
+export function curatorSlug(name: string | null, address: string): string {
+  if (!name) return address.toLowerCase();
+  return name
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")       // spaces/underscores → hyphens
+    .replace(/[^a-z0-9-]/g, "")    // strip non-alphanumeric (except hyphens)
+    .replace(/-{2,}/g, "-")        // collapse multiple hyphens
+    .replace(/^-|-$/g, "");        // trim leading/trailing hyphens
+}
+
+/**
+ * Resolve a curator slug (or hex address) to the primary curator address.
+ * - If the input starts with `0x`, delegates to `resolveCuratorAddress`.
+ * - Otherwise queries Prisma for a curator whose name slugifies to the input.
+ */
+export async function resolveCuratorSlug(slug: string): Promise<string> {
+  if (slug.startsWith("0x")) {
+    return resolveCuratorAddress(slug);
+  }
+
+  // Lazy-import prisma to avoid circular deps in non-server contexts
+  const { prisma } = await import("@/lib/db");
+  const curators = await prisma.curator.findMany({
+    select: { address: true, name: true },
+  });
+
+  const match = curators.find(
+    (c) => c.name && curatorSlug(c.name, c.address) === slug.toLowerCase()
+  );
+
+  if (match) return match.address.toLowerCase();
+
+  // No match — return the slug as-is (will 404 downstream)
+  return slug.toLowerCase();
+}
+
 /** Pre-built lookup: alias address -> primary address */
 const aliasToPrimary = new Map<string, string>();
 for (const group of CURATOR_ALIAS_GROUPS) {

@@ -12,6 +12,7 @@ import {
   ProtocolBadgesRenderer,
 } from "./cellRenderers";
 import type { CuratorDashboardItem } from "@/lib/types/api";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 interface CuratorGridProps {
   curators: CuratorDashboardItem[];
@@ -80,7 +81,7 @@ export function CuratorGrid({ curators }: CuratorGridProps) {
     <DataGrid<CuratorDashboardItem>
       rowData={curators}
       columnDefs={columnDefs}
-      onRowClicked={(data) => router.push(`/curator/${data.curatorAddress}`)}
+      onRowClicked={(data) => router.push(`/curator/${curatorSlug(data.name, data.curatorAddress)}`)}
     />
   );
 }

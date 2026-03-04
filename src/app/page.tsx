@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { formatTimeAgo, formatCurrency, formatPercentage } from "@/lib/utils/format";
 import { InfoTooltip } from "@/components/Tooltip";
 import type { CuratorDashboardResponse, CuratorDashboardItem, CuratorDashboardStats, PaginationInfo } from "@/lib/types/api";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 interface ChangeSummary {
   critical: number;
@@ -419,7 +420,7 @@ export default function Home() {
                             e.preventDefault();
                             setShowDropdown(false);
                             setSearchQuery("");
-                            router.push(`/curator/${curator.curatorAddress}`);
+                            router.push(`/curator/${curatorSlug(curator.name, curator.curatorAddress)}`);
                           }}
                         >
                           <div className="min-w-0">

@@ -3,11 +3,11 @@
 import Link from "next/link";
 import type { ICellRendererParams } from "ag-grid-community";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
-import { CuratorRating } from "@/components/CuratorRating";
 import { ProtocolBadgeList } from "@/components/ProtocolBadge";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
 import { formatCurrency, formatPercentage, formatAddress } from "@/lib/utils/format";
 import { ChangeCountBadge } from "@/components/RecentChanges";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 // Currency cell renderer - font-mono formatted
 export function CurrencyRenderer(params: ICellRendererParams) {
@@ -40,7 +40,7 @@ export function CuratorNameRenderer(params: ICellRendererParams) {
   const logoUrl = data.logoUrl;
 
   return (
-    <Link href={`/curator/${address}`} className="flex items-center gap-2.5 group min-w-0">
+    <Link href={`/curator/${curatorSlug(data.name || data.curatorName || null, address)}`} className="flex items-center gap-2.5 group min-w-0">
       <CuratorAvatar address={address} name={name} logoUrl={logoUrl} size="sm" />
       <div className="min-w-0">
         <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
@@ -132,13 +132,6 @@ export function AssetDistributionRenderer(params: ICellRendererParams) {
       )}
     </div>
   );
-}
-
-// Curator rating renderer
-export function CuratorRatingRenderer(params: ICellRendererParams) {
-  const data = params.data;
-  if (!data) return null;
-  return <CuratorRating curatorAddress={data.curatorAddress} compact />;
 }
 
 // Change count badge renderer

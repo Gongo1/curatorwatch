@@ -19,6 +19,7 @@ import { RiskTab } from "@/components/RiskTab";
 import { StrategyIntelligence } from "@/components/StrategyIntelligence";
 import { RecentChanges } from "@/components/RecentChanges";
 import { CuratorSection, CuratorPlaceholder } from "@/components/CuratorSection";
+import { curatorSlug } from "@/lib/curator-aliases";
 import { FeesCard } from "@/components/FeesCard";
 import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
@@ -138,7 +139,7 @@ export default function VaultDetailPage({ params }: PageProps) {
   const breadcrumbs = curatorAddress
     ? [
         { label: "Dashboard", href: "/" },
-        { label: curatorName || formatAddress(curatorAddress), href: `/curator/${curatorAddress}` },
+        { label: curatorName || formatAddress(curatorAddress), href: `/curator/${curatorSlug(curatorName, curatorAddress)}` },
         { label: vault.name },
       ]
     : [

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { calculateCuratorRating } from "@/lib/curator-rating";
-import { resolveCuratorAddress } from "@/lib/curator-aliases";
+import { calculateCuratorRiskProfile } from "@/lib/curator-risk-profile";
+import { resolveCuratorSlug } from "@/lib/curator-aliases";
 
 interface RouteParams {
   params: Promise<{ address: string }>;
@@ -9,18 +9,18 @@ interface RouteParams {
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { address } = await params;
-    const resolvedAddress = resolveCuratorAddress(address);
+    const resolvedAddress = await resolveCuratorSlug(address);
 
-    const rating = await calculateCuratorRating(resolvedAddress);
+    const profile = await calculateCuratorRiskProfile(resolvedAddress);
 
     return NextResponse.json({
       success: true,
-      data: rating,
+      data: profile,
     });
   } catch (error) {
-    console.error("Error calculating curator rating:", error);
+    console.error("Error calculating curator risk profile:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to calculate rating" },
+      { success: false, error: "Failed to calculate risk profile" },
       { status: 500 }
     );
   }

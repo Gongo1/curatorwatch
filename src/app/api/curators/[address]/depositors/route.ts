@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { morphoClient } from "@/lib/graphql/client";
 import { GET_VAULT_POSITIONS, VaultPositionsResponse, VaultPosition } from "@/lib/graphql/queries";
 import { prisma } from "@/lib/db";
-import { resolveCuratorAddress } from "@/lib/curator-aliases";
+import { resolveCuratorSlug } from "@/lib/curator-aliases";
 
 interface CuratorDepositor {
   address: string;
@@ -32,7 +32,7 @@ export async function GET(
 ): Promise<NextResponse<CuratorDepositorsResponse>> {
   try {
     const { address } = await params;
-    const resolvedAddress = resolveCuratorAddress(address);
+    const resolvedAddress = await resolveCuratorSlug(address);
     const searchParams = request.nextUrl.searchParams;
     const limit = Math.min(parseInt(searchParams.get("limit") || "20"), 50);
 

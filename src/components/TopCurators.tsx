@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
-import { CuratorRating } from "@/components/CuratorRating";
 import { formatCurrency } from "@/lib/utils/format";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 interface TopCurator {
   curatorId: string;
@@ -75,7 +75,7 @@ export function TopCurators() {
         {curators.map((curator, index) => (
           <Link
             key={curator.curatorId}
-            href={`/curator/${curator.curatorAddress}`}
+            href={`/curator/${curatorSlug(curator.name, curator.curatorAddress)}`}
             className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-background-hover transition-colors group"
           >
             <span className="w-5 text-xs font-medium text-text-muted text-center">
@@ -91,9 +91,6 @@ export function TopCurators() {
               <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
                 {curator.name || `Curator ${curator.curatorAddress.slice(0, 6)}...`}
               </p>
-              <div className="mt-0.5">
-                <CuratorRating curatorAddress={curator.curatorAddress} compact />
-              </div>
             </div>
             <span className="text-sm font-semibold text-text-primary tabular-nums">
               {formatCurrency(curator.totalAUM)}
