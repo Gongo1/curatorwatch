@@ -134,29 +134,37 @@ export async function GET(request: Request, { params }: RouteParams) {
       }
 
       // Build collateral list with blue-chip classification
-      // Use latest market allocations, or fall back to all market allocations if latest snapshot is empty
       const marketSource = latestMarketAllocations.length > 0
         ? latestMarketAllocations
         : vault.marketAllocations;
 
-      const seenSymbols = new Set<string>();
-      for (const m of marketSource) {
-        if (!seenSymbols.has(m.collateralAssetSymbol)) {
-          seenSymbols.add(m.collateralAssetSymbol);
-          collateral.push({
-            symbol: m.collateralAssetSymbol,
-            allocationPct: m.allocationPct,
-            isBlueChip: BLUE_CHIP_COLLATERAL.includes(m.collateralAssetSymbol.toUpperCase()),
-          });
-        } else {
-          // Aggregate allocation for duplicate symbols
-          const existing = collateral.find((c) => c.symbol === m.collateralAssetSymbol);
-          if (existing) {
-            existing.allocationPct += m.allocationPct;
+      if (marketSource.length > 0) {
+        const seenSymbols = new Set<string>();
+        for (const m of marketSource) {
+          if (!seenSymbols.has(m.collateralAssetSymbol)) {
+            seenSymbols.add(m.collateralAssetSymbol);
+            collateral.push({
+              symbol: m.collateralAssetSymbol,
+              allocationPct: m.allocationPct,
+              isBlueChip: BLUE_CHIP_COLLATERAL.includes(m.collateralAssetSymbol.toUpperCase()),
+            });
+          } else {
+            const existing = collateral.find((c) => c.symbol === m.collateralAssetSymbol);
+            if (existing) {
+              existing.allocationPct += m.allocationPct;
+            }
           }
         }
+        collateral.sort((a, b) => b.allocationPct - a.allocationPct);
+      } else {
+        // No market allocation data — use the vault's denomination asset as the only known collateral signal
+        const symbol = vault.assetSymbol;
+        collateral.push({
+          symbol,
+          allocationPct: 100,
+          isBlueChip: BLUE_CHIP_COLLATERAL.includes(symbol.toUpperCase()),
+        });
       }
-      collateral.sort((a, b) => b.allocationPct - a.allocationPct);
     }
 
     // Get recent alert summary
