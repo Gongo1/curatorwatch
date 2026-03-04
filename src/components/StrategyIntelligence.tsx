@@ -41,32 +41,17 @@ interface StrategyIntelligenceProps {
   strategy?: StrategyClassification;
 }
 
-interface RiskMetrics {
-  smartContract: number;
-  oracle: number;
-  collateral: number;
-  lltv: number;
-  operational: number;
-}
-
 export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }: StrategyIntelligenceProps) {
   const [strategy, setStrategy] = useState<StrategyClassification | null>(initialStrategy || null);
-  const [riskMetrics, setRiskMetrics] = useState<RiskMetrics | null>(null);
   const [curator, setCurator] = useState<CuratorProfile | null>(null);
   const [collateral, setCollateral] = useState<CollateralAsset[]>([]);
   const [alertSummary, setAlertSummary] = useState<AlertSummary | null>(null);
   const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
   const [loading, setLoading] = useState(!initialStrategy);
   const [error, setError] = useState<string | null>(null);
-  const [showTechnical, setShowTechnical] = useState(false);
 
   useEffect(() => {
-    if (!initialStrategy) {
-      fetchStrategy();
-    } else {
-      // Even with initial strategy, fetch full data for new sections
-      fetchStrategy();
-    }
+    fetchStrategy();
   }, [vaultAddress]);
 
   async function fetchStrategy() {
@@ -80,7 +65,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
       }
 
       setStrategy(data.data.strategy);
-      setRiskMetrics(data.data.riskMetrics);
       setCurator(data.data.curator);
       setCollateral(data.data.collateral ?? []);
       setAlertSummary(data.data.alertSummary ?? null);
@@ -112,114 +96,91 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
   }
 
   const archetypeInfo = ARCHETYPE_DESCRIPTIONS[strategy.archetype];
+  const isKnownCurator = !!(curator && curator.name);
+  const hasCriticalAlerts = (alertSummary?.critical ?? 0) > 0;
+  const blueChipCount = collateral.filter((c) => c.isBlueChip).length;
+  const exoticCount = collateral.filter((c) => !c.isBlueChip).length;
+
+  // Downgrade confidence if curator is unknown or critical alerts present
+  let effectiveConfidence = strategy.confidence;
+  if (!isKnownCurator) effectiveConfidence = "low";
+  else if (hasCriticalAlerts && effectiveConfidence === "high") effectiveConfidence = "medium";
+
   const confidenceColors = {
     high: "text-accent-green bg-accent-green/10 border-accent-green/30",
     medium: "text-accent-yellow bg-accent-yellow/10 border-accent-yellow/30",
     low: "text-text-tertiary bg-background-elevated border-border",
   };
 
-  const blueChipCount = collateral.filter((c) => c.isBlueChip).length;
-  const exoticCount = collateral.filter((c) => !c.isBlueChip).length;
-
   return (
     <div className="space-y-6">
-      {/* Strategy Header */}
-      <div className="bg-gradient-to-r from-accent-blue/10 to-accent-purple/10 border border-accent-blue/20 rounded-xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+      {/* Unknown Curator Warning */}
+      {!isKnownCurator && (
+        <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4 flex items-start gap-3">
+          <AlertTriangleIcon className="w-5 h-5 text-accent-red flex-shrink-0 mt-0.5" />
           <div>
-            <div className="flex items-center gap-2 text-sm text-text-tertiary mb-2">
-              <span>Strategy Classification</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${confidenceColors[strategy.confidence]}`}>
-                {strategy.confidence} confidence
-              </span>
-            </div>
-            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-3">
-              <span className="text-3xl">{archetypeInfo.emoji}</span>
-              {strategy.archetype}
-            </h2>
-            <p className="text-text-secondary mt-1">
-              TradFi Analog: <span className="text-text-primary">{strategy.tradFiAnalog}</span>
+            <p className="font-semibold text-accent-red text-sm">Unknown Curator — Exercise Caution</p>
+            <p className="text-sm text-text-secondary mt-1">
+              No profile data available for this vault's curator. Classification confidence has been downgraded.
             </p>
           </div>
-          <div className="text-left sm:text-right">
-            <div className="text-sm text-text-tertiary">Management Style</div>
-            <div className="text-lg font-semibold text-text-primary capitalize">
-              {strategy.managementStyle}
-            </div>
+        </div>
+      )}
+
+      {/* Risk Overview */}
+      <div className="bg-background-subtle border border-border rounded-lg p-5">
+        <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <ShieldIcon className="w-5 h-5 text-accent-blue" />
+          Risk Overview
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-text-tertiary mb-1">Recent Alerts (7d)</p>
+            {alertSummary && alertSummary.total > 0 ? (
+              <div className="flex items-center gap-2">
+                {alertSummary.critical > 0 && (
+                  <span className="text-sm font-semibold text-accent-red">{alertSummary.critical} Critical</span>
+                )}
+                {alertSummary.warning > 0 && (
+                  <span className="text-sm font-semibold text-accent-yellow">{alertSummary.warning} Warning</span>
+                )}
+                {alertSummary.info > 0 && (
+                  <span className="text-sm font-semibold text-text-secondary">{alertSummary.info} Info</span>
+                )}
+              </div>
+            ) : (
+              <span className="text-sm font-semibold text-accent-green">None</span>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-text-tertiary mb-1">Collateral Type</p>
+            <p className="text-sm font-semibold text-text-primary">
+              {collateral.length > 0 ? (
+                <>
+                  {exoticCount > 0 && <span className="text-accent-yellow">{exoticCount} Exotic</span>}
+                  {exoticCount > 0 && blueChipCount > 0 && <span className="text-text-muted">, </span>}
+                  {blueChipCount > 0 && <span className="text-accent-green">{blueChipCount} Blue-chip</span>}
+                </>
+              ) : (
+                <span className="text-text-muted">N/A</span>
+              )}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs text-text-tertiary mb-1">Curator</p>
+            <p className="text-sm font-semibold">
+              {isKnownCurator ? (
+                <span className="text-text-primary">{curator!.name}</span>
+              ) : (
+                <span className="text-accent-red">Unknown</span>
+              )}
+            </p>
           </div>
         </div>
-
-        <p className="text-text-secondary leading-relaxed">{strategy.description}</p>
       </div>
 
-      {/* Curator Context & Collateral Overview */}
+      {/* Collateral & Alerts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Curator Context */}
-        <div className="bg-background-subtle border border-border rounded-lg p-5">
-          <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
-            <UserIcon className="w-5 h-5 text-accent-blue" />
-            Curator
-          </h3>
-          {curator && curator.name ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-lg font-semibold text-text-primary">{curator.name}</span>
-                {curator.isRegulated && (
-                  <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green/10 text-accent-green border border-accent-green/30">
-                    Regulated
-                  </span>
-                )}
-              </div>
-              <div className="space-y-2 text-sm">
-                {curator.entityType && (
-                  <div className="flex justify-between">
-                    <span className="text-text-tertiary">Entity Type</span>
-                    <span className="font-medium text-text-primary">{curator.entityType}</span>
-                  </div>
-                )}
-                {curator.jurisdiction && (
-                  <div className="flex justify-between">
-                    <span className="text-text-tertiary">Jurisdiction</span>
-                    <span className="font-medium text-text-primary">{curator.jurisdiction}</span>
-                  </div>
-                )}
-                {curator.foundedYear && (
-                  <div className="flex justify-between">
-                    <span className="text-text-tertiary">Founded</span>
-                    <span className="font-medium text-text-primary">{curator.foundedYear}</span>
-                  </div>
-                )}
-                {curator.totalAssetsManaged > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-text-tertiary">AUM</span>
-                    <span className="font-medium text-text-primary">
-                      ${formatLargeNumber(curator.totalAssetsManaged)}
-                    </span>
-                  </div>
-                )}
-                {curator.vaultCount > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-text-tertiary">Vaults Managed</span>
-                    <span className="font-medium text-text-primary">{curator.vaultCount}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="bg-accent-red/10 border border-accent-red/30 rounded-lg p-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangleIcon className="w-5 h-5 text-accent-red flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-accent-red text-sm">Unknown Curator</p>
-                  <p className="text-sm text-text-secondary mt-1">
-                    No profile data available. Exercise caution when depositing into vaults managed by unidentified curators.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Collateral Overview */}
         <div className="bg-background-subtle border border-border rounded-lg p-5">
           <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
@@ -257,25 +218,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
           ) : (
             <p className="text-sm text-text-tertiary">No collateral data available.</p>
           )}
-        </div>
-      </div>
-
-      {/* Competitive Edge & Recent Alerts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Competitive Edge */}
-        <div className="bg-background-subtle border border-border rounded-lg p-5">
-          <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
-            <TargetIcon className="w-5 h-5 text-accent-blue" />
-            Competitive Edge
-          </h3>
-          <ul className="space-y-3">
-            {strategy.edge.map((item, i) => (
-              <li key={i} className="flex items-start gap-3 text-sm">
-                <CheckCircleIcon className="w-4 h-4 text-accent-green mt-0.5 flex-shrink-0" />
-                <span className="text-text-secondary">{item}</span>
-              </li>
-            ))}
-          </ul>
         </div>
 
         {/* Recent Alerts */}
@@ -339,9 +281,90 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
         </div>
       </div>
 
+      {/* Strategy Classification */}
+      <div className="bg-gradient-to-r from-accent-blue/10 to-accent-purple/10 border border-accent-blue/20 rounded-xl p-6">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+          <div>
+            <div className="flex items-center gap-2 text-sm text-text-tertiary mb-2">
+              <span>Strategy Classification</span>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${confidenceColors[effectiveConfidence]}`}>
+                {effectiveConfidence} confidence
+              </span>
+            </div>
+            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-3">
+              <span className="text-3xl">{archetypeInfo.emoji}</span>
+              {strategy.archetype}
+            </h2>
+            <p className="text-text-secondary mt-1">
+              TradFi Analog: <span className="text-text-primary">{strategy.tradFiAnalog}</span>
+            </p>
+          </div>
+          <div className="text-left sm:text-right">
+            <div className="text-sm text-text-tertiary">Management Style</div>
+            <div className="text-lg font-semibold text-text-primary capitalize">
+              {strategy.managementStyle}
+            </div>
+          </div>
+        </div>
+
+        <p className="text-text-secondary leading-relaxed">{strategy.description}</p>
+
+        {/* Curator details inline */}
+        {isKnownCurator && (
+          <div className="mt-4 pt-4 border-t border-accent-blue/20">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+              {curator!.entityType && (
+                <div>
+                  <span className="text-text-tertiary">Entity: </span>
+                  <span className="text-text-primary font-medium">{curator!.entityType}</span>
+                </div>
+              )}
+              {curator!.jurisdiction && (
+                <div>
+                  <span className="text-text-tertiary">Jurisdiction: </span>
+                  <span className="text-text-primary font-medium">{curator!.jurisdiction}</span>
+                </div>
+              )}
+              {curator!.foundedYear && (
+                <div>
+                  <span className="text-text-tertiary">Founded: </span>
+                  <span className="text-text-primary font-medium">{curator!.foundedYear}</span>
+                </div>
+              )}
+              {curator!.totalAssetsManaged > 0 && (
+                <div>
+                  <span className="text-text-tertiary">AUM: </span>
+                  <span className="text-text-primary font-medium">${formatLargeNumber(curator!.totalAssetsManaged)}</span>
+                </div>
+              )}
+              {curator!.isRegulated && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green/10 text-accent-green border border-accent-green/30">
+                  Regulated
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Competitive Edge */}
+      <div className="bg-background-subtle border border-border rounded-lg p-5">
+        <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
+          <TargetIcon className="w-5 h-5 text-accent-blue" />
+          Competitive Edge
+        </h3>
+        <ul className="space-y-3">
+          {strategy.edge.map((item, i) => (
+            <li key={i} className="flex items-start gap-3 text-sm">
+              <CheckCircleIcon className="w-4 h-4 text-accent-green mt-0.5 flex-shrink-0" />
+              <span className="text-text-secondary">{item}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {/* Strengths & Risks */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Strengths */}
         <div className="bg-background-subtle border border-border rounded-lg p-5">
           <h3 className="font-semibold mb-4 flex items-center gap-2 text-accent-green">
             <TrendingUpIcon className="w-5 h-5" />
@@ -357,7 +380,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
           </ul>
         </div>
 
-        {/* Risk Considerations */}
         <div className="bg-background-subtle border border-border rounded-lg p-5">
           <h3 className="font-semibold mb-4 flex items-center gap-2 text-accent-yellow">
             <AlertTriangleIcon className="w-5 h-5" />
@@ -374,37 +396,13 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
         </div>
       </div>
 
-      {/* Technical Risk Breakdown (Collapsible) */}
-      <div className="bg-background-subtle border border-border rounded-lg overflow-hidden">
-        <button
-          onClick={() => setShowTechnical(!showTechnical)}
-          className="w-full p-5 flex items-center justify-between hover:bg-background-hover transition-colors"
-        >
-          <span className="font-semibold text-text-primary">Technical Risk Breakdown (Advanced)</span>
-          <ChevronIcon className={`w-5 h-5 text-text-tertiary transition-transform ${showTechnical ? "rotate-180" : ""}`} />
-        </button>
-
-        {showTechnical && riskMetrics && (
-          <div className="px-5 pb-5 pt-0 space-y-4 border-t border-border">
-            <p className="text-sm text-text-tertiary pt-4">
-              Quantitative risk scores based on observable on-chain behavior:
-            </p>
-            <RiskMetricBar label="Smart Contract Risk" score={riskMetrics.smartContract} description="Protocol maturity, audits, complexity" />
-            <RiskMetricBar label="Oracle Risk" score={riskMetrics.oracle} description="Price feed reliability, manipulation resistance" />
-            <RiskMetricBar label="Collateral Risk" score={riskMetrics.collateral} description="Asset quality, concentration, liquidity" />
-            <RiskMetricBar label="LLTV Risk" score={riskMetrics.lltv} description="Loan-to-value exposure thresholds" />
-            <RiskMetricBar label="Operational Risk" score={riskMetrics.operational} description="Curator reputation, track record" />
-          </div>
-        )}
-      </div>
-
       {/* Methodology Note */}
       <div className="p-4 rounded-lg bg-background-elevated border border-border-subtle">
         <p className="text-xs text-text-tertiary leading-relaxed">
           <span className="font-medium text-text-secondary">Methodology:</span> Strategy classification based on
           observable on-chain behavior patterns including reallocation frequency, capital efficiency, adapter
           diversification, and collateral selection. Archetypes map to TradFi fund manager categories for
-          institutional context. Classification confidence depends on data availability and consistency of behavior.
+          institutional context. Classification confidence depends on curator identity, alert history, and data consistency.
         </p>
       </div>
     </div>
@@ -428,57 +426,20 @@ function formatTimeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-// Risk Metric Bar Component
-function RiskMetricBar({
-  label,
-  score,
-  description,
-}: {
-  label: string;
-  score: number;
-  description: string;
-}) {
-  const getScoreColor = (s: number) => {
-    if (s >= 70) return "bg-accent-green";
-    if (s >= 40) return "bg-accent-yellow";
-    return "bg-accent-red";
-  };
-
-  const getScoreLabel = (s: number) => {
-    if (s >= 70) return "Low";
-    if (s >= 40) return "Moderate";
-    return "High";
-  };
-
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <div>
-          <span className="text-sm font-medium text-text-primary">{label}</span>
-          <span className="text-xs text-text-muted ml-2">({description})</span>
-        </div>
-        <span className="text-sm font-medium text-text-secondary">
-          {getScoreLabel(score)} ({score})
-        </span>
-      </div>
-      <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-        <div
-          className={`h-full ${getScoreColor(score)} rounded-full transition-all`}
-          style={{ width: `${score}%` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 // Skeleton Loading State
 function StrategyIntelligenceSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="bg-background-subtle rounded-xl border border-border p-6">
-        <div className="h-4 w-32 bg-background-elevated rounded mb-3" />
-        <div className="h-8 w-64 bg-background-elevated rounded mb-2" />
-        <div className="h-4 w-48 bg-background-elevated/50 rounded" />
+      <div className="bg-background-subtle rounded-lg border border-border p-5">
+        <div className="h-5 w-32 bg-background-elevated rounded mb-4" />
+        <div className="grid grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i}>
+              <div className="h-3 w-20 bg-background-elevated/50 rounded mb-2" />
+              <div className="h-5 w-24 bg-background-elevated rounded" />
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -494,17 +455,10 @@ function StrategyIntelligenceSkeleton() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {[1, 2].map((i) => (
-          <div key={i} className="bg-background-subtle rounded-lg border border-border p-5">
-            <div className="h-5 w-24 bg-background-elevated rounded mb-4" />
-            <div className="space-y-2">
-              {[1, 2, 3, 4].map((j) => (
-                <div key={j} className="h-4 bg-background-elevated/50 rounded" />
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="bg-background-subtle rounded-xl border border-border p-6">
+        <div className="h-4 w-32 bg-background-elevated rounded mb-3" />
+        <div className="h-8 w-64 bg-background-elevated rounded mb-2" />
+        <div className="h-4 w-48 bg-background-elevated/50 rounded" />
       </div>
     </div>
   );
@@ -543,22 +497,6 @@ function AlertTriangleIcon({ className }: { className?: string }) {
   );
 }
 
-function ChevronIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  );
-}
-
-function UserIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-    </svg>
-  );
-}
-
 function ShieldIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -571,6 +509,14 @@ function BellIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+    </svg>
+  );
+}
+
+function UserIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   );
 }
