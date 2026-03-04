@@ -107,7 +107,7 @@ export interface CuratorOtherVault {
   name: string;
   symbol: string;
   totalAssetsUsd: number;
-  avgNetApy: number | null;
+  netApy: number | null;
 }
 
 // Curator data included in vault detail

@@ -227,9 +227,9 @@ export function CuratorSection({ curator }: CuratorSectionProps) {
                   <span className="text-text-secondary tabular-nums">
                     {formatCurrency(vault.totalAssetsUsd)}
                   </span>
-                  {vault.avgNetApy !== null && (
+                  {vault.netApy !== null && (
                     <span className="text-accent-green tabular-nums">
-                      {formatPercentage(vault.avgNetApy)}
+                      {formatPercentage(vault.netApy)}
                     </span>
                   )}
                 </div>

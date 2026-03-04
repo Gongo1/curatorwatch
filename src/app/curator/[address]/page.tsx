@@ -336,7 +336,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
             {(() => {
               const vaultEcon = vaults.map((v) => {
                 const tvl = v.latestSnapshot?.totalAssetsUsd ?? 0;
-                const netApy = v.latestSnapshot?.avgNetApy ?? 0;
+                const netApy = v.latestSnapshot?.netApy ?? 0;
                 const fee = v.performanceFee ?? 0;
                 const annualYield = tvl * netApy;
                 const annualFees = tvl * fee;

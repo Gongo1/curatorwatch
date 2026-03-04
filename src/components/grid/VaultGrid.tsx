@@ -47,7 +47,7 @@ export function VaultGrid({ vaults }: VaultGridProps) {
       },
       {
         headerName: "APY",
-        valueGetter: (params) => params.data?.latestSnapshot?.avgApy ?? 0,
+        valueGetter: (params) => params.data?.latestSnapshot?.apy ?? 0,
         cellRenderer: PercentageRenderer,
         flex: 0.7,
         minWidth: 80,
@@ -55,7 +55,7 @@ export function VaultGrid({ vaults }: VaultGridProps) {
       },
       {
         headerName: "Net APY",
-        valueGetter: (params) => params.data?.latestSnapshot?.avgNetApy ?? 0,
+        valueGetter: (params) => params.data?.latestSnapshot?.netApy ?? 0,
         cellRenderer: PercentageRenderer,
         flex: 0.7,
         minWidth: 80,
