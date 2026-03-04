@@ -71,6 +71,7 @@ export function DataGrid<T>({
         overlayNoRowsTemplate={overlayNoRowsTemplate}
         suppressCellFocus={true}
         enableCellTextSelection={true}
+        tooltipShowDelay={300}
       />
     </div>
   );

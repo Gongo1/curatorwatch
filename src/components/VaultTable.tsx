@@ -9,6 +9,7 @@ import {
   formatAddress,
 } from "@/lib/utils/format";
 import { ChangeCountBadge } from "./RecentChanges";
+import { InfoTooltip } from "./Tooltip";
 
 type SortField = "name" | "asset" | "tvl" | "apy" | "netApy" | "risk" | "curator";
 type SortDirection = "asc" | "desc";
@@ -129,10 +130,12 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
     field,
     children,
     align = "left",
+    tooltip,
   }: {
     field: SortField;
     children: React.ReactNode;
     align?: "left" | "right";
+    tooltip?: string;
   }) => (
     <th
       className={`px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider cursor-pointer hover:text-text-primary group select-none transition-colors ${
@@ -142,6 +145,7 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
     >
       <span className="inline-flex items-center">
         {children}
+        {tooltip && <span onClick={(e) => e.stopPropagation()}><InfoTooltip content={tooltip} /></span>}
         <SortIcon field={field} />
       </span>
     </th>
@@ -155,8 +159,8 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
             <HeaderCell field="name">Vault</HeaderCell>
             <HeaderCell field="asset">Asset</HeaderCell>
             <HeaderCell field="tvl" align="right">Deposits</HeaderCell>
-            <HeaderCell field="apy" align="right">APY</HeaderCell>
-            <HeaderCell field="netApy" align="right">Net APY</HeaderCell>
+            <HeaderCell field="apy" align="right" tooltip="Time-weighted average annual yield before fees">APY</HeaderCell>
+            <HeaderCell field="netApy" align="right" tooltip="Time-weighted average annual yield after fees — the actual return depositors earn">Net APY</HeaderCell>
             <HeaderCell field="risk" align="right">Risk</HeaderCell>
             <th className="px-4 py-3 text-xs font-medium text-text-secondary uppercase tracking-wider text-center">
               Changes

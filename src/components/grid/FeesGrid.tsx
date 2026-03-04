@@ -176,6 +176,7 @@ export function VaultFeesGrid({ vaults }: VaultFeesGridProps) {
       },
       {
         headerName: "Net APY",
+        headerTooltip: "Time-weighted average annual yield after fees — the actual return depositors earn",
         field: "apy",
         flex: 0.7,
         minWidth: 80,

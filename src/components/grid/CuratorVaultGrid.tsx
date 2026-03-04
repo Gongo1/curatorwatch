@@ -88,6 +88,7 @@ export function CuratorVaultGrid({ vaults }: CuratorVaultGridProps) {
       },
       {
         headerName: "APY",
+        headerTooltip: "Time-weighted average annual yield before fees",
         valueGetter: (params) => params.data?.latestSnapshot?.avgApy ?? 0,
         valueFormatter: (params) => formatPercentage(params.value),
         flex: 0.7,
@@ -97,6 +98,7 @@ export function CuratorVaultGrid({ vaults }: CuratorVaultGridProps) {
       },
       {
         headerName: "Net APY",
+        headerTooltip: "Time-weighted average annual yield after fees — the actual return depositors earn",
         valueGetter: (params) => params.data?.latestSnapshot?.avgNetApy ?? 0,
         valueFormatter: (params) => formatPercentage(params.value),
         flex: 0.7,

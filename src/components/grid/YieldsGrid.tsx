@@ -85,6 +85,7 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
       },
       {
         headerName: "Gross APY",
+        headerTooltip: "Time-weighted average annual yield before fees",
         field: "grossApy",
         flex: 0.7,
         minWidth: 90,
@@ -94,6 +95,7 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
       },
       {
         headerName: "Net APY",
+        headerTooltip: "Time-weighted average annual yield after fees — the actual return depositors earn",
         field: "netApy",
         flex: 0.7,
         minWidth: 90,

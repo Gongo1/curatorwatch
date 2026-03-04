@@ -47,6 +47,7 @@ export function VaultGrid({ vaults }: VaultGridProps) {
       },
       {
         headerName: "APY",
+        headerTooltip: "Time-weighted average annual yield before fees",
         valueGetter: (params) => params.data?.latestSnapshot?.avgApy ?? 0,
         cellRenderer: PercentageRenderer,
         flex: 0.7,
@@ -55,6 +56,7 @@ export function VaultGrid({ vaults }: VaultGridProps) {
       },
       {
         headerName: "Net APY",
+        headerTooltip: "Time-weighted average annual yield after fees — the actual return depositors earn",
         valueGetter: (params) => params.data?.latestSnapshot?.avgNetApy ?? 0,
         cellRenderer: PercentageRenderer,
         flex: 0.7,

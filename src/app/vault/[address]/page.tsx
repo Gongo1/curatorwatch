@@ -24,6 +24,7 @@ import { FeesCard } from "@/components/FeesCard";
 import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { InfoTooltip } from "@/components/Tooltip";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -190,11 +191,13 @@ export default function VaultDetailPage({ params }: PageProps) {
           <MetricCard
             label="APY"
             value={formatPercentage(snapshot?.avgApy)}
+            tooltip="Time-weighted average annual yield before fees"
           />
           <MetricCard
             label="Net APY"
             value={formatPercentage(snapshot?.avgNetApy)}
             valueClass="text-accent-green"
+            tooltip="Time-weighted average annual yield after fees — the actual return depositors earn"
           />
           <MetricCard
             label="Share Price"
@@ -542,11 +545,13 @@ function MetricCard({
   value,
   highlight,
   valueClass,
+  tooltip,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
   valueClass?: string;
+  tooltip?: string;
 }) {
   return (
     <div
@@ -556,7 +561,10 @@ function MetricCard({
           : "border-border bg-background-subtle"
       }`}
     >
-      <p className="text-sm text-text-secondary">{label}</p>
+      <div className="flex items-center gap-1">
+        <p className="text-sm text-text-secondary">{label}</p>
+        {tooltip && <InfoTooltip content={tooltip} />}
+      </div>
       <p
         className={`mt-1 text-2xl font-semibold tabular-nums ${
           valueClass || (highlight ? "text-accent-blue" : "text-text-primary")
