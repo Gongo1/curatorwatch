@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import type { StrategyClassification } from "@/lib/strategy-classifier";
-import { ARCHETYPE_DESCRIPTIONS } from "@/data/curator-strategies";
 
 interface CuratorProfile {
   address: string;
@@ -128,22 +127,9 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
     );
   }
 
-  const archetypeInfo = ARCHETYPE_DESCRIPTIONS[strategy.archetype];
   const isKnownCurator = !!(curator && curator.name);
-  const hasCriticalAlerts = (alertSummary?.critical ?? 0) > 0;
   const blueChipCount = collateral.filter((c) => c.isBlueChip).length;
   const exoticCount = collateral.filter((c) => !c.isBlueChip).length;
-
-  // Downgrade confidence if curator is unknown or critical alerts present
-  let effectiveConfidence = strategy.confidence;
-  if (!isKnownCurator) effectiveConfidence = "low";
-  else if (hasCriticalAlerts && effectiveConfidence === "high") effectiveConfidence = "medium";
-
-  const confidenceColors = {
-    high: "text-accent-green bg-accent-green/10 border-accent-green/30",
-    medium: "text-accent-yellow bg-accent-yellow/10 border-accent-yellow/30",
-    low: "text-text-tertiary bg-background-elevated border-border",
-  };
 
   // Curator color based on green tabs (top/above-avg factors out of 7)
   const curatorColor =
@@ -339,130 +325,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
         </div>
       </div>
 
-      {/* Strategy Classification */}
-      <div className="bg-gradient-to-r from-accent-blue/10 to-accent-purple/10 border border-accent-blue/20 rounded-xl p-6">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-text-tertiary mb-2">
-              <span>Strategy Classification</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${confidenceColors[effectiveConfidence]}`}>
-                {effectiveConfidence} confidence
-              </span>
-            </div>
-            <h2 className="text-2xl font-bold text-text-primary flex items-center gap-3">
-              <span className="text-3xl">{archetypeInfo.emoji}</span>
-              {strategy.archetype}
-            </h2>
-            <p className="text-text-secondary mt-1">
-              TradFi Analog: <span className="text-text-primary">{strategy.tradFiAnalog}</span>
-            </p>
-          </div>
-          <div className="text-left sm:text-right">
-            <div className="text-sm text-text-tertiary">Management Style</div>
-            <div className="text-lg font-semibold text-text-primary capitalize">
-              {strategy.managementStyle}
-            </div>
-          </div>
-        </div>
-
-        <p className="text-text-secondary leading-relaxed">{strategy.description}</p>
-
-        {/* Curator details inline */}
-        {isKnownCurator && (
-          <div className="mt-4 pt-4 border-t border-accent-blue/20">
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm items-center">
-              <div>
-                <span className="text-text-tertiary">Curator: </span>
-                <Link
-                  href={curatorHref!}
-                  className={`font-medium hover:underline ${curatorColor}`}
-                >
-                  {curator!.name}
-                </Link>
-              </div>
-              {curator!.entityType && (
-                <div>
-                  <span className="text-text-tertiary">Entity: </span>
-                  <span className="text-text-primary font-medium">{curator!.entityType}</span>
-                </div>
-              )}
-              {curator!.jurisdiction && (
-                <div>
-                  <span className="text-text-tertiary">Jurisdiction: </span>
-                  <span className="text-text-primary font-medium">{curator!.jurisdiction}</span>
-                </div>
-              )}
-              {curator!.foundedYear && (
-                <div>
-                  <span className="text-text-tertiary">Founded: </span>
-                  <span className="text-text-primary font-medium">{curator!.foundedYear}</span>
-                </div>
-              )}
-              {curator!.totalAssetsManaged > 0 && (
-                <div>
-                  <span className="text-text-tertiary">AUM: </span>
-                  <span className="text-text-primary font-medium">${formatLargeNumber(curator!.totalAssetsManaged)}</span>
-                </div>
-              )}
-              {curator!.isRegulated && (
-                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green/10 text-accent-green border border-accent-green/30">
-                  Regulated
-                </span>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Competitive Edge */}
-      <div className="bg-background-subtle border border-border rounded-lg p-5">
-        <h3 className="font-semibold text-text-primary mb-4 flex items-center gap-2">
-          <TargetIcon className="w-5 h-5 text-accent-blue" />
-          Competitive Edge
-        </h3>
-        <ul className="space-y-3">
-          {strategy.edge.map((item, i) => (
-            <li key={i} className="flex items-start gap-3 text-sm">
-              <CheckCircleIcon className="w-4 h-4 text-accent-green mt-0.5 flex-shrink-0" />
-              <span className="text-text-secondary">{item}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Strengths & Risks */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-background-subtle border border-border rounded-lg p-5">
-          <h3 className="font-semibold mb-4 flex items-center gap-2 text-accent-green">
-            <TrendingUpIcon className="w-5 h-5" />
-            Strengths
-          </h3>
-          <ul className="space-y-2">
-            {strategy.strengths.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-accent-green mt-0.5 font-bold">+</span>
-                <span className="text-text-secondary">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="bg-background-subtle border border-border rounded-lg p-5">
-          <h3 className="font-semibold mb-4 flex items-center gap-2 text-accent-yellow">
-            <AlertTriangleIcon className="w-5 h-5" />
-            Risk Considerations
-          </h3>
-          <ul className="space-y-2">
-            {strategy.risks.map((item, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="text-accent-yellow mt-0.5 font-bold">!</span>
-                <span className="text-text-secondary">{item}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
-
       {/* Methodology Note */}
       <div className="p-4 rounded-lg bg-background-elevated border border-border-subtle">
         <p className="text-xs text-text-tertiary leading-relaxed">
@@ -532,26 +394,10 @@ function StrategyIntelligenceSkeleton() {
 }
 
 // Icons
-function TargetIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  );
-}
-
 function CheckCircleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function TrendingUpIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
   );
 }
