@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import type { StrategyClassification } from "@/lib/strategy-classifier";
 import { ARCHETYPE_DESCRIPTIONS } from "@/data/curator-strategies";
 
@@ -41,12 +42,23 @@ interface StrategyIntelligenceProps {
   strategy?: StrategyClassification;
 }
 
+function curatorSlugFromName(name: string | null, address: string): string {
+  if (!name) return address.toLowerCase();
+  return name
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }: StrategyIntelligenceProps) {
   const [strategy, setStrategy] = useState<StrategyClassification | null>(initialStrategy || null);
   const [curator, setCurator] = useState<CuratorProfile | null>(null);
   const [collateral, setCollateral] = useState<CollateralAsset[]>([]);
   const [alertSummary, setAlertSummary] = useState<AlertSummary | null>(null);
   const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
+  const [curatorGreenTabs, setCuratorGreenTabs] = useState<number | null>(null);
   const [loading, setLoading] = useState(!initialStrategy);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,10 +82,31 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
       setAlertSummary(data.data.alertSummary ?? null);
       setRecentAlerts(data.data.recentAlerts ?? []);
       setError(null);
+
+      // Fetch curator risk profile for color coding
+      if (data.data.curator?.address) {
+        fetchCuratorRating(data.data.curator.address);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load strategy");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchCuratorRating(curatorAddress: string) {
+    try {
+      const response = await fetch(`/api/curators/${curatorAddress}/rating`);
+      const data = await response.json();
+      if (data.success && data.data?.factors) {
+        // Count "green" tabs: top or above-avg tiers
+        const greenCount = data.data.factors.filter(
+          (f: { peer: { tier: string } }) => f.peer.tier === "top" || f.peer.tier === "above-avg"
+        ).length;
+        setCuratorGreenTabs(greenCount);
+      }
+    } catch {
+      // Non-critical, silently ignore
     }
   }
 
@@ -111,6 +144,20 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
     medium: "text-accent-yellow bg-accent-yellow/10 border-accent-yellow/30",
     low: "text-text-tertiary bg-background-elevated border-border",
   };
+
+  // Curator color based on green tabs (top/above-avg factors out of 7)
+  const curatorColor =
+    curatorGreenTabs === null
+      ? "text-text-primary"
+      : curatorGreenTabs >= 5
+      ? "text-accent-green"
+      : curatorGreenTabs >= 3
+      ? "text-accent-yellow"
+      : "text-accent-red";
+
+  const curatorHref = isKnownCurator
+    ? `/curator/${curatorSlugFromName(curator!.name, curator!.address)}`
+    : null;
 
   return (
     <div className="space-y-6">
@@ -168,13 +215,24 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
           </div>
           <div>
             <p className="text-xs text-text-tertiary mb-1">Curator</p>
-            <p className="text-sm font-semibold">
-              {isKnownCurator ? (
-                <span className="text-text-primary">{curator!.name}</span>
-              ) : (
-                <span className="text-accent-red">Unknown</span>
-              )}
-            </p>
+            {isKnownCurator ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={curatorHref!}
+                  className={`text-sm font-semibold hover:underline ${curatorColor}`}
+                >
+                  {curator!.name}
+                </Link>
+                <Link
+                  href={`${curatorHref}#risk-profile`}
+                  className="text-xs text-accent-blue hover:underline"
+                >
+                  View Risk Profile →
+                </Link>
+              </div>
+            ) : (
+              <span className="text-sm font-semibold text-accent-red">Unknown</span>
+            )}
           </div>
         </div>
       </div>
@@ -312,7 +370,16 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
         {/* Curator details inline */}
         {isKnownCurator && (
           <div className="mt-4 pt-4 border-t border-accent-blue/20">
-            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm items-center">
+              <div>
+                <span className="text-text-tertiary">Curator: </span>
+                <Link
+                  href={curatorHref!}
+                  className={`font-medium hover:underline ${curatorColor}`}
+                >
+                  {curator!.name}
+                </Link>
+              </div>
               {curator!.entityType && (
                 <div>
                   <span className="text-text-tertiary">Entity: </span>
@@ -509,14 +576,6 @@ function BellIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-    </svg>
-  );
-}
-
-function UserIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   );
 }
