@@ -88,7 +88,7 @@ export function CuratorVaultGrid({ vaults }: CuratorVaultGridProps) {
       },
       {
         headerName: "APY",
-        valueGetter: (params) => params.data?.latestSnapshot?.apy ?? 0,
+        valueGetter: (params) => params.data?.latestSnapshot?.avgApy ?? 0,
         valueFormatter: (params) => formatPercentage(params.value),
         flex: 0.7,
         minWidth: 80,
@@ -97,7 +97,7 @@ export function CuratorVaultGrid({ vaults }: CuratorVaultGridProps) {
       },
       {
         headerName: "Net APY",
-        valueGetter: (params) => params.data?.latestSnapshot?.netApy ?? 0,
+        valueGetter: (params) => params.data?.latestSnapshot?.avgNetApy ?? 0,
         valueFormatter: (params) => formatPercentage(params.value),
         flex: 0.7,
         minWidth: 80,

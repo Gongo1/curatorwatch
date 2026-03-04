@@ -189,11 +189,11 @@ export default function VaultDetailPage({ params }: PageProps) {
           />
           <MetricCard
             label="APY"
-            value={formatPercentage(snapshot?.apy)}
+            value={formatPercentage(snapshot?.avgApy)}
           />
           <MetricCard
             label="Net APY"
-            value={formatPercentage(snapshot?.netApy)}
+            value={formatPercentage(snapshot?.avgNetApy)}
             valueClass="text-accent-green"
           />
           <MetricCard

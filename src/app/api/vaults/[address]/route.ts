@@ -118,7 +118,7 @@ export async function GET(request: Request, { params }: RouteParams) {
               name: v.name,
               symbol: v.symbol,
               totalAssetsUsd: v.snapshots[0]?.totalAssetsUsd ?? 0,
-              netApy: v.snapshots[0]?.netApy ?? null,
+              avgNetApy: v.snapshots[0]?.avgNetApy ?? null,
             }))
             .sort((a, b) => b.totalAssetsUsd - a.totalAssetsUsd),
         }
@@ -240,7 +240,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Calculate yield metrics
     const tvl = latestSnapshot?.totalAssetsUsd || 0;
-    const netApy = latestSnapshot?.netApy || 0;
+    const netApy = latestSnapshot?.avgNetApy || 0;
     const vaultAgeMs = vault.createdAt
       ? Date.now() - new Date(vault.createdAt).getTime()
       : 0;

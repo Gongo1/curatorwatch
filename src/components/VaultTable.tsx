@@ -66,12 +66,12 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
           bValue = b.latestSnapshot?.totalAssetsUsd ?? 0;
           break;
         case "apy":
-          aValue = a.latestSnapshot?.apy ?? 0;
-          bValue = b.latestSnapshot?.apy ?? 0;
+          aValue = a.latestSnapshot?.avgApy ?? 0;
+          bValue = b.latestSnapshot?.avgApy ?? 0;
           break;
         case "netApy":
-          aValue = a.latestSnapshot?.netApy ?? 0;
-          bValue = b.latestSnapshot?.netApy ?? 0;
+          aValue = a.latestSnapshot?.avgNetApy ?? 0;
+          bValue = b.latestSnapshot?.avgNetApy ?? 0;
           break;
         case "risk":
           aValue = a.riskAssessment?.overallScore ?? 0;
@@ -199,12 +199,12 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-right">
                 <span className="text-sm text-text-secondary tabular-nums">
-                  {formatPercentage(vault.latestSnapshot?.apy)}
+                  {formatPercentage(vault.latestSnapshot?.avgApy)}
                 </span>
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-right">
                 <span className="text-sm font-medium text-accent-green tabular-nums">
-                  {formatPercentage(vault.latestSnapshot?.netApy)}
+                  {formatPercentage(vault.latestSnapshot?.avgNetApy)}
                 </span>
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-right">

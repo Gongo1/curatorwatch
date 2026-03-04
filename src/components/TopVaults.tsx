@@ -16,7 +16,7 @@ interface TopVault {
   turtleId?: string | null;
   latestSnapshot: {
     totalAssetsUsd: number;
-    netApy: number | null;
+    avgNetApy: number | null;
   } | null;
   riskAssessment?: {
     overallRisk: string;
@@ -129,9 +129,9 @@ export function TopVaults() {
               <p className="text-sm font-semibold text-text-primary tabular-nums">
                 {formatCurrency(vault.latestSnapshot?.totalAssetsUsd || 0)}
               </p>
-              {vault.latestSnapshot?.netApy && (
+              {vault.latestSnapshot?.avgNetApy && (
                 <p className="text-xs text-accent-green tabular-nums">
-                  {(vault.latestSnapshot.netApy * 100).toFixed(2)}% APY
+                  {(vault.latestSnapshot.avgNetApy * 100).toFixed(2)}% APY
                 </p>
               )}
             </div>
