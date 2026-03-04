@@ -20,6 +20,23 @@ const categoryStyles: Record<Category, string> = {
 
 const entries: ChangelogEntry[] = [
   {
+    date: "March 3, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "Name-based curator URLs \u2014 curator pages now use human-readable slugs (e.g. /curator/steakhouse, /curator/re7-labs) instead of raw hex addresses. All links across the homepage grid, search dropdown, Top Curators, vault breadcrumbs, and curator sections use slug URLs. Old 0x-prefixed URLs remain backwards compatible.",
+      },
+      {
+        category: "Feature",
+        text: "Replaced composite letter-grade rating with Risk Profile tab on curator detail pages \u2014 shows 7 individual risk factors (bad debt, time in operation, collateral quality, governance, scale, vault count, team transparency) as cards with peer-relative color scales. No composite score or letter grade; just the data with context.",
+      },
+      {
+        category: "Improvement",
+        text: "Removed Grade column from homepage curator grid and rating badges from Top Curators widget \u2014 composite ratings had data quality issues with hardcoded/disabled factors. Risk data is now available on the dedicated Risk Profile tab per curator.",
+      },
+    ],
+  },
+  {
     date: "March 2, 2026",
     items: [
       {
