@@ -55,6 +55,7 @@ export interface CuratorQueryOptions {
   search?: string;
   sortBy?: "aum" | "vaults" | "apy" | "name";
   sortOrder?: "asc" | "desc";
+  dataSource?: string;
 }
 
 /**
@@ -69,17 +70,23 @@ export async function getPaginatedCuratorAggregates(
     search,
     sortBy = "aum",
     sortOrder = "desc",
+    dataSource,
   } = options;
 
   // Build where clause
+  const vaultFilter: Record<string, unknown> = {};
+  if (dataSource) {
+    vaultFilter.dataSource = dataSource;
+  }
+
   const whereClause: Record<string, unknown> = {
-    vaults: { some: {} },
+    vaults: { some: Object.keys(vaultFilter).length > 0 ? vaultFilter : {} },
   };
 
   if (search && search.trim()) {
     const trimmed = search.trim();
     whereClause.AND = [
-      { vaults: { some: {} } },
+      { vaults: { some: Object.keys(vaultFilter).length > 0 ? vaultFilter : {} } },
       {
         OR: [
           { name: { contains: trimmed, mode: "insensitive" } },
@@ -112,7 +119,9 @@ export async function getPaginatedCuratorAggregates(
   const aggregates: CuratorAggregates[] = [];
 
   for (const curator of curators) {
-    const vaults = curator.vaults;
+    const vaults = dataSource
+      ? curator.vaults.filter((v) => (v as Record<string, unknown>).dataSource === dataSource)
+      : curator.vaults;
     if (vaults.length === 0) continue;
 
     let totalAUM = 0;

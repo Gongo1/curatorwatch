@@ -18,6 +18,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
     const search = searchParams.get("search") || undefined;
     const sortBy = (searchParams.get("sortBy") as "aum" | "vaults" | "name") || "aum";
     const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
+    const dataSource = searchParams.get("dataSource") || undefined;
 
     const [paginatedResult, stats] = await Promise.all([
       getPaginatedCuratorAggregates({
@@ -26,6 +27,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
         search,
         sortBy,
         sortOrder,
+        dataSource,
       }),
       getCuratorSummaryStats(),
     ]);

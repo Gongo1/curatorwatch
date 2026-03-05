@@ -34,6 +34,21 @@ interface YieldStats {
   dailyAvg: number;
 }
 
+interface RecentChange {
+  id: string;
+  vault: { name: string; symbol: string; address: string };
+  severity: string;
+  title: string;
+  detectedAt: string;
+}
+
+interface ProtocolCoverageItem {
+  dataSource: string;
+  vaultCount: number;
+  totalAUM: number;
+  curatorCount: number;
+}
+
 const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 const PAGE_SIZE = 20;
 
@@ -50,6 +65,9 @@ export default function Home() {
   const [changeSummary, setChangeSummary] = useState<ChangeSummary | null>(null);
   const [feesStats, setFeesStats] = useState<FeesStats | null>(null);
   const [yieldStats, setYieldStats] = useState<YieldStats | null>(null);
+  const [aumChange30d, setAumChange30d] = useState<number | null>(null);
+  const [recentChanges, setRecentChanges] = useState<RecentChange[]>([]);
+  const [protocolCoverage, setProtocolCoverage] = useState<ProtocolCoverageItem[]>([]);
 
   // Search and pagination state
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,17 +94,23 @@ export default function Home() {
         params.set("search", search.trim());
       }
 
-      const [curatorsResponse, changesResponse, feesResponse, yieldResponse] = await Promise.all([
+      const [curatorsResponse, changesResponse, feesResponse, yieldResponse, aumGrowthResponse, recentChangesResponse, coverageResponse] = await Promise.all([
         fetch(`/api/curators?${params.toString()}`),
         fetch("/api/changes?hours=24&limit=0"),
         fetch("/api/stats/fees"),
         fetch("/api/stats/yield-growth"),
+        fetch("/api/stats/aum-growth"),
+        fetch("/api/changes?hours=168&limit=10"),
+        fetch("/api/stats/protocol-coverage"),
       ]);
 
       const curatorsData: CuratorDashboardResponse = await curatorsResponse.json();
       const changesData = await changesResponse.json();
       const feesData = await feesResponse.json();
       const yieldData = await yieldResponse.json();
+      const aumGrowthData = await aumGrowthResponse.json();
+      const recentChangesData = await recentChangesResponse.json();
+      const coverageData = await coverageResponse.json();
 
       if (!curatorsData.success) {
         throw new Error(curatorsData.error || "Failed to fetch curators");
@@ -115,6 +139,26 @@ export default function Home() {
           yield30d: latestYield,
           dailyAvg,
         });
+      }
+
+      // Compute 30-day AUM change from growth data
+      if (aumGrowthData.success && aumGrowthData.data.length >= 2) {
+        const points = aumGrowthData.data;
+        const latest = points[points.length - 1].aum;
+        const oldest = points[0].aum;
+        if (oldest > 0) {
+          setAumChange30d(((latest - oldest) / oldest) * 100);
+        }
+      }
+
+      // Recent activity
+      if (recentChangesData.success && recentChangesData.data?.changes) {
+        setRecentChanges(recentChangesData.data.changes);
+      }
+
+      // Protocol coverage
+      if (coverageData.success && coverageData.data) {
+        setProtocolCoverage(coverageData.data);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
@@ -180,78 +224,39 @@ export default function Home() {
   };
 
 
-  const [bannerDismissed, setBannerDismissed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("turtle-banner-dismissed") === "true";
-    }
-    return false;
-  });
-
-  const dismissBanner = () => {
-    setBannerDismissed(true);
-    localStorage.setItem("turtle-banner-dismissed", "true");
-  };
-
   return (
     <>
-        {/* Turtle Expansion Announcement Banner */}
-        {!bannerDismissed && (
-          <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-lg bg-cyan-500/10 border border-cyan-500/20">
-            <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-cyan-500/20 flex items-center justify-center">
-              <svg className="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-cyan-400">
-                Expanded: 50+ vaults, $780M+ TVL, 14 curators across 10+ protocols — powered by{" "}
-                <a
-                  href="https://app.turtle.xyz/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline underline-offset-2 hover:text-cyan-300 transition-colors"
-                >
-                  Turtle
-                </a>
-              </p>
-            </div>
-            <button
-              onClick={dismissBanner}
-              className="flex-shrink-0 p-1 rounded-md text-text-muted hover:text-text-primary hover:bg-background-elevated transition-colors"
-              aria-label="Dismiss announcement"
+      <PageHeader
+        title="CuratorWatch"
+        description="Real-time vault curator intelligence"
+        actions={
+          changeSummary && changeSummary.total > 0 ? (
+            <Link
+              href="/alerts"
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors hover:opacity-90 ${
+                changeSummary.critical > 0
+                  ? "bg-accent-red/15 text-accent-red"
+                  : changeSummary.warning > 0
+                    ? "bg-accent-yellow/15 text-accent-yellow"
+                    : "bg-accent-blue/10 text-accent-blue"
+              }`}
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <span className="relative flex h-2 w-2">
+                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  changeSummary.critical > 0 ? "bg-accent-red" : changeSummary.warning > 0 ? "bg-accent-yellow" : "bg-accent-blue"
+                }`} />
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                  changeSummary.critical > 0 ? "bg-accent-red" : changeSummary.warning > 0 ? "bg-accent-yellow" : "bg-accent-blue"
+                }`} />
+              </span>
+              {changeSummary.total} alert{changeSummary.total !== 1 ? "s" : ""}
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-            </button>
-          </div>
-        )}
-
-        {/* Alerts Ribbon */}
-        {changeSummary && changeSummary.total > 0 && (
-          <Link
-            href="/alerts"
-            className={`mb-4 flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors hover:opacity-90 ${
-              changeSummary.critical > 0
-                ? "bg-accent-red/15 text-accent-red"
-                : changeSummary.warning > 0
-                  ? "bg-accent-yellow/15 text-accent-yellow"
-                  : "bg-accent-blue/10 text-accent-blue"
-            }`}
-          >
-            <span className="font-medium">
-              {changeSummary.total} change{changeSummary.total !== 1 ? "s" : ""} in 24h
-            </span>
-            {changeSummary.critical > 0 && (
-              <span className="font-semibold">{changeSummary.critical} critical</span>
-            )}
-            <svg className="w-3 h-3 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
-        )}
-
-      <PageHeader title="CuratorWatch" description="Real-time vault curator intelligence" />
+            </Link>
+          ) : undefined
+        }
+      />
 
         {/* Stats Row */}
         {stats && (
@@ -271,6 +276,7 @@ export default function Home() {
               value={formatCurrency(stats.totalAUM)}
               tooltip="Total Assets Under Management across all tracked vaults"
               highlight
+              change={aumChange30d}
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -350,6 +356,99 @@ export default function Home() {
             <TopCurators />
             <TopVaults />
           </div>
+        </div>
+
+        {/* Protocol Coverage */}
+        {protocolCoverage.length > 0 && (
+          <div className="mb-5">
+            <h3 className="text-sm font-semibold text-text-primary mb-3">Protocol Coverage</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {protocolCoverage
+                .sort((a, b) => b.totalAUM - a.totalAUM)
+                .map((item) => (
+                  <div
+                    key={item.dataSource}
+                    className="rounded-xl border border-border bg-background-subtle p-4"
+                  >
+                    <div className="flex items-center gap-2 mb-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          item.dataSource === "turtle"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {item.dataSource === "turtle" ? "Turtle" : "Morpho V2"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <p className="text-xs text-text-secondary">Vaults</p>
+                        <p className="text-lg font-bold text-text-primary tabular-nums">{item.vaultCount}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-secondary">AUM</p>
+                        <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(item.totalAUM)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-secondary">Curators</p>
+                        <p className="text-lg font-bold text-text-primary tabular-nums">{item.curatorCount}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Recent Activity */}
+        <div className="mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-text-primary">Recent Activity</h3>
+            <Link
+              href="/alerts"
+              className="text-xs text-accent-blue hover:text-accent-blue-hover transition-colors"
+            >
+              View all
+            </Link>
+          </div>
+          {recentChanges.length === 0 ? (
+            <div className="rounded-xl border border-border bg-background-subtle p-6 text-center">
+              <p className="text-sm text-text-muted">No recent activity</p>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-border bg-background-subtle divide-y divide-border">
+              {recentChanges.map((change) => (
+                <Link
+                  key={change.id}
+                  href={`/vault/${change.vault.address}`}
+                  className="flex items-center gap-3 px-4 py-2.5 hover:bg-background-hover transition-colors first:rounded-t-xl last:rounded-b-xl"
+                >
+                  <span
+                    className={`flex-shrink-0 w-2 h-2 rounded-full ${
+                      change.severity === "critical"
+                        ? "bg-accent-red"
+                        : change.severity === "warning"
+                          ? "bg-accent-yellow"
+                          : "bg-accent-blue"
+                    }`}
+                  />
+                  <span className="text-xs text-text-muted w-12 flex-shrink-0 tabular-nums">
+                    {formatTimeAgo(change.detectedAt)}
+                  </span>
+                  <span className="text-xs font-medium text-text-secondary flex-shrink-0">
+                    {change.vault.symbol}
+                  </span>
+                  <span className="text-xs text-text-primary truncate flex-1">
+                    {change.title}
+                  </span>
+                  <svg className="w-3 h-3 text-text-muted flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* All Curators Section */}
@@ -595,6 +694,7 @@ function StatCard({
   valueClass,
   icon,
   tooltip,
+  change,
 }: {
   label: string;
   value: string;
@@ -602,6 +702,7 @@ function StatCard({
   valueClass?: string;
   icon?: React.ReactNode;
   tooltip?: string;
+  change?: number | null;
 }) {
   return (
     <div
@@ -629,6 +730,15 @@ function StatCard({
       >
         {value}
       </p>
+      {change != null && (
+        <p
+          className={`text-[11px] font-medium tabular-nums mt-0.5 ${
+            change >= 0 ? "text-emerald-500" : "text-accent-red"
+          }`}
+        >
+          {change >= 0 ? "\u25B2" : "\u25BC"} {Math.abs(change).toFixed(1)}% 30d
+        </p>
+      )}
     </div>
   );
 }

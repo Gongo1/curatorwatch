@@ -1,0 +1,53 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+
+export const dynamic = "force-dynamic";
+
+export async function GET() {
+  try {
+    const vaults = await prisma.vault.findMany({
+      where: { active: true },
+      select: {
+        dataSource: true,
+        curatorAddress: true,
+        snapshots: {
+          orderBy: { timestamp: "desc" },
+          take: 1,
+          select: { totalAssetsUsd: true },
+        },
+      },
+    });
+
+    const coverage: Record<string, { vaults: number; aum: number; curators: Set<string> }> = {};
+
+    for (const vault of vaults) {
+      const ds = vault.dataSource || "morpho";
+      if (!coverage[ds]) {
+        coverage[ds] = { vaults: 0, aum: 0, curators: new Set() };
+      }
+      coverage[ds].vaults += 1;
+      coverage[ds].aum += vault.snapshots[0]?.totalAssetsUsd || 0;
+      if (vault.curatorAddress) {
+        coverage[ds].curators.add(vault.curatorAddress.toLowerCase());
+      }
+    }
+
+    const result = Object.entries(coverage).map(([dataSource, data]) => ({
+      dataSource,
+      vaultCount: data.vaults,
+      totalAUM: data.aum,
+      curatorCount: data.curators.size,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    console.error("Error fetching protocol coverage:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to fetch protocol coverage" },
+      { status: 500 }
+    );
+  }
+}

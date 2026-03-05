@@ -14,14 +14,32 @@ interface TopCurator {
   totalAUM: number;
 }
 
+type DataSourceFilter = "all" | "morpho" | "turtle";
+
+const DATA_SOURCE_OPTIONS: { value: DataSourceFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "morpho", label: "Morpho V2" },
+  { value: "turtle", label: "Turtle" },
+];
+
 export function TopCurators() {
   const [curators, setCurators] = useState<TopCurator[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dataSourceFilter, setDataSourceFilter] = useState<DataSourceFilter>("all");
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const response = await fetch("/api/curators?pageSize=5&sortBy=aum&sortOrder=desc");
+        setLoading(true);
+        const params = new URLSearchParams({
+          pageSize: "5",
+          sortBy: "aum",
+          sortOrder: "desc",
+        });
+        if (dataSourceFilter !== "all") {
+          params.set("dataSource", dataSourceFilter);
+        }
+        const response = await fetch(`/api/curators?${params.toString()}`);
         const result = await response.json();
 
         if (result.success && result.data?.curators) {
@@ -35,7 +53,7 @@ export function TopCurators() {
     }
 
     fetchData();
-  }, []);
+  }, [dataSourceFilter]);
 
   if (loading) {
     return (
@@ -62,7 +80,7 @@ export function TopCurators() {
 
   return (
     <div className="bg-background-subtle border border-border rounded-xl p-4">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-text-primary">Top Curators</h3>
         <Link
           href="/"
@@ -70,6 +88,21 @@ export function TopCurators() {
         >
           View all
         </Link>
+      </div>
+      <div className="flex items-center gap-1 mb-3">
+        {DATA_SOURCE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            onClick={() => setDataSourceFilter(opt.value)}
+            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+              dataSourceFilter === opt.value
+                ? "bg-accent-blue text-white"
+                : "bg-background-elevated text-text-muted hover:text-text-primary"
+            }`}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
       <div className="space-y-2">
         {curators.map((curator, index) => (

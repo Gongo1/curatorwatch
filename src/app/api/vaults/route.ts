@@ -5,10 +5,14 @@ export async function GET(request: NextRequest) {
   try {
     // Optional protocol filter
     const protocolFilter = request.nextUrl.searchParams.get("protocol");
+    const dataSourceFilter = request.nextUrl.searchParams.get("dataSource");
 
     const whereClause: Record<string, unknown> = {};
     if (protocolFilter) {
       whereClause.protocol = protocolFilter;
+    }
+    if (dataSourceFilter) {
+      whereClause.dataSource = dataSourceFilter;
     }
 
     // MINIMAL query - just vaults with latest snapshot

@@ -170,7 +170,7 @@ export async function GET() {
       for (const snap of Object.values(vaultSnapshots)) {
         const aum = snap.totalAssetsUsd || 0;
         const apy = snap.avgNetApy || 0;
-        const curatorAddress = snap.vault?.curatorAddress?.toLowerCase() || "unknown";
+        const curatorAddress = snap.vault?.curatorAddress?.toLowerCase() || "__unassigned__";
         const protocol = snap.vault?.protocol || "morpho";
         const network = snap.vault?.chainName || "Ethereum";
 
@@ -222,8 +222,8 @@ export async function GET() {
 
     const curatorMeta = topCurators.map((addr, i) => ({
       id: addr,
-      name: curatorNames[addr] || `${addr.slice(0, 6)}...${addr.slice(-4)}`,
-      color: CURATOR_COLORS[i % CURATOR_COLORS.length],
+      name: addr === "__unassigned__" ? "Unassigned" : (curatorNames[addr] || `${addr.slice(0, 6)}...${addr.slice(-4)}`),
+      color: addr === "__unassigned__" ? "#737373" : CURATOR_COLORS[i % CURATOR_COLORS.length],
     }));
 
     if (otherCurators.size > 0) {
