@@ -9,6 +9,7 @@ interface VaultFeeData {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
+  protocol?: string;
   assetSymbol: string;
   curatorName: string | null;
   curatorAddress: string | null;

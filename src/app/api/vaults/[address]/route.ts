@@ -117,6 +117,7 @@ export async function GET(request: Request, { params }: RouteParams) {
               address: v.address,
               name: v.name,
               symbol: v.symbol,
+              protocol: v.protocol,
               totalAssetsUsd: v.snapshots[0]?.totalAssetsUsd ?? 0,
               avgNetApy: v.snapshots[0]?.avgNetApy ?? null,
             }))

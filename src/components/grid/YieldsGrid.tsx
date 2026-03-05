@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { ColDef } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency } from "@/lib/utils/format";
+import { ProtocolBadge } from "@/components/ProtocolBadge";
 
 // Re-export for use by the yields page - these are thin wrappers
 // The yields page has 4 different table views with complex expandable rows.
@@ -14,6 +15,7 @@ interface VaultYieldRow {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
+  protocol?: string;
   assetSymbol: string;
   curatorName: string | null;
   tvl: number;
@@ -60,7 +62,12 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
           if (!params.data) return null;
           return (
             <div>
-              <div className="font-medium text-text-primary">{params.data.vaultName}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium text-text-primary">{params.data.vaultName}</span>
+                {params.data.protocol && params.data.protocol !== "morpho" && (
+                  <ProtocolBadge protocol={params.data.protocol} />
+                )}
+              </div>
               <div className="text-xs text-text-tertiary">{params.data.assetSymbol}</div>
             </div>
           );
