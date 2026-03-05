@@ -5,13 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/format";
 import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
-import { ProtocolBadge } from "./ProtocolBadge";
 
 interface TopVault {
   address: string;
   name: string;
   symbol: string;
-  protocol?: string;
   curatorAddress: string | null;
   curatorName?: string | null;
   dataSource?: string | null;
@@ -117,14 +115,9 @@ export function TopVaults() {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
-                  {vault.name}
-                </p>
-                {vault.protocol && vault.protocol !== "morpho" && (
-                  <ProtocolBadge protocol={vault.protocol} />
-                )}
-              </div>
+              <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
+                {vault.name}
+              </p>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-xs text-text-tertiary">{vault.symbol}</span>
                 {vault.riskAssessment && (

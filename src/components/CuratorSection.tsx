@@ -5,7 +5,6 @@ import type { VaultCurator } from "@/lib/types/api";
 import { formatCurrency, formatPercentage, formatTimeAgo } from "@/lib/utils/format";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
 import { curatorSlug } from "@/lib/curator-aliases";
-import { ProtocolBadge } from "@/components/ProtocolBadge";
 
 interface CuratorSectionProps {
   curator: VaultCurator;
@@ -218,14 +217,11 @@ export function CuratorSection({ curator }: CuratorSectionProps) {
                 href={`/vault/${vault.address}`}
                 className="flex items-center justify-between py-2 px-3 rounded-lg bg-background-elevated hover:bg-background-hover transition-colors group"
               >
-                <div className="flex items-center gap-1.5">
+                <div>
                   <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
                     {vault.name}
                   </span>
-                  {vault.protocol && vault.protocol !== "morpho" && (
-                    <ProtocolBadge protocol={vault.protocol} />
-                  )}
-                  <span className="text-xs text-text-muted">{vault.symbol}</span>
+                  <span className="text-xs text-text-muted ml-2">{vault.symbol}</span>
                 </div>
                 <div className="flex items-center gap-4 text-sm">
                   <span className="text-text-secondary tabular-nums">

@@ -8,7 +8,6 @@ interface VaultYieldData {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
-  protocol: string;
   assetSymbol: string;
   curatorId: string | null;
   curatorName: string | null;
@@ -54,7 +53,6 @@ export async function GET() {
         id: true,
         address: true,
         name: true,
-        protocol: true,
         assetSymbol: true,
         performanceFee: true,
         managementFee: true,
@@ -142,7 +140,6 @@ export async function GET() {
         vaultId: vault.id,
         vaultAddress: vault.address,
         vaultName: vault.name,
-        protocol: vault.protocol,
         assetSymbol: vault.assetSymbol,
         curatorId: vault.curatorId,
         curatorName,

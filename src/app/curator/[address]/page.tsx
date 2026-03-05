@@ -18,7 +18,6 @@ import { CopyAddress } from "@/components/CopyAddress";
 import type { CuratorDetailResponse } from "@/lib/types/api";
 import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
-import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 
 interface PageProps {
@@ -423,14 +422,9 @@ export default function CuratorDetailPage({ params }: PageProps) {
                             <tr key={v.id} className="hover:bg-background-elevated/30 transition-colors">
                               <td className="px-4 py-3">
                                 <Link href={`/vault/${v.address}`} className="group">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                                      {v.name}
-                                    </span>
-                                    {v.protocol && v.protocol !== "morpho" && (
-                                      <ProtocolBadge protocol={v.protocol} />
-                                    )}
-                                  </div>
+                                  <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                                    {v.name}
+                                  </span>
                                   <span className="block text-xs text-text-tertiary">{v.asset.symbol}</span>
                                 </Link>
                               </td>

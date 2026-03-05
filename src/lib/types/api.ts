@@ -106,7 +106,6 @@ export interface CuratorOtherVault {
   address: string;
   name: string;
   symbol: string;
-  protocol: string;
   totalAssetsUsd: number;
   avgNetApy: number | null;
 }
