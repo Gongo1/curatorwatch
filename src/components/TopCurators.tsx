@@ -18,7 +18,7 @@ type DataSourceFilter = "all" | "morpho" | "turtle";
 
 const DATA_SOURCE_OPTIONS: { value: DataSourceFilter; label: string }[] = [
   { value: "all", label: "All" },
-  { value: "morpho", label: "Morpho V2" },
+  { value: "morpho", label: "Morpho [TBA]" },
   { value: "turtle", label: "Turtle" },
 ];
 

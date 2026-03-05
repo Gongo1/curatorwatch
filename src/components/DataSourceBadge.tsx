@@ -11,7 +11,7 @@ export function DataSourceBadge({ dataSource }: { dataSource?: string | null }) 
           : "bg-blue-100 text-blue-800"
       }`}
     >
-      {isTurtle ? "Turtle" : "Morpho V2"}
+      {isTurtle ? "Turtle" : "Morpho [TBA]"}
     </span>
   );
 }

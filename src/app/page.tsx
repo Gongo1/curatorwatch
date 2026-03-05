@@ -378,7 +378,7 @@ export default function Home() {
                             : "bg-blue-100 text-blue-800"
                         }`}
                       >
-                        {item.dataSource === "turtle" ? "Turtle" : "Morpho V2"}
+                        {item.dataSource === "turtle" ? "Turtle" : "Morpho [TBA]"}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
