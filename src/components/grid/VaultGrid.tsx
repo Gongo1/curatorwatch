@@ -2,19 +2,48 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { ColDef } from "ag-grid-community";
+import Link from "next/link";
+import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import {
-  VaultNameRenderer,
-  AssetBadgeRenderer,
   CurrencyRenderer,
   PercentageRenderer,
   ChangeCountRenderer,
 } from "./cellRenderers";
+import { DataSourceBadge } from "@/components/DataSourceBadge";
+import { curatorSlug } from "@/lib/curator-aliases";
 import type { VaultData } from "@/lib/types/api";
 
 interface VaultGridProps {
   vaults: VaultData[];
+}
+
+function AssetCellRenderer(params: ICellRendererParams) {
+  const data = params.data as VaultData;
+  if (!data) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-medium text-text-primary">{data.asset.symbol}</span>
+      <DataSourceBadge dataSource={data.dataSource} />
+    </div>
+  );
+}
+
+function CuratorCellRenderer(params: ICellRendererParams) {
+  const data = params.data as VaultData;
+  if (!data) return null;
+  const name = data.curatorName;
+  const address = data.curatorAddress;
+  if (!name || !address) return <span className="text-text-muted">-</span>;
+  return (
+    <Link
+      href={`/curator/${curatorSlug(name, address)}`}
+      className="text-accent-blue hover:underline text-sm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {name}
+    </Link>
+  );
 }
 
 export function VaultGrid({ vaults }: VaultGridProps) {
@@ -23,18 +52,18 @@ export function VaultGrid({ vaults }: VaultGridProps) {
   const columnDefs = useMemo<ColDef<VaultData>[]>(
     () => [
       {
-        headerName: "Vault",
-        field: "name",
-        cellRenderer: VaultNameRenderer,
-        flex: 2,
-        minWidth: 200,
-      },
-      {
         headerName: "Asset",
         valueGetter: (params) => params.data?.asset?.symbol,
-        cellRenderer: AssetBadgeRenderer,
-        flex: 0.7,
-        minWidth: 80,
+        cellRenderer: AssetCellRenderer,
+        flex: 1.2,
+        minWidth: 140,
+      },
+      {
+        headerName: "Curator",
+        valueGetter: (params) => params.data?.curatorName || null,
+        cellRenderer: CuratorCellRenderer,
+        flex: 1,
+        minWidth: 120,
       },
       {
         headerName: "Deposits",
@@ -71,16 +100,6 @@ export function VaultGrid({ vaults }: VaultGridProps) {
         minWidth: 80,
         sortable: false,
         cellClass: "flex justify-center",
-      },
-      {
-        headerName: "Curator",
-        valueGetter: (params) => params.data?.curatorName || null,
-        valueFormatter: (params) => {
-          return params.data?.curatorName || "-";
-        },
-        flex: 1,
-        minWidth: 120,
-        cellClass: "text-text-secondary text-sm",
       },
     ],
     []
