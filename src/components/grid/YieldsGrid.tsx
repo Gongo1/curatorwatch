@@ -1,15 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import type { ColDef } from "ag-grid-community";
+import Link from "next/link";
+import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency } from "@/lib/utils/format";
 import { DataSourceBadge } from "@/components/DataSourceBadge";
-
-// Re-export for use by the yields page - these are thin wrappers
-// The yields page has 4 different table views with complex expandable rows.
-// Since AG Grid CE doesn't support Master/Detail, the yields page will use
-// DataGrid directly with its own column definitions.
+import { curatorSlug } from "@/lib/curator-aliases";
 
 interface VaultYieldRow {
   vaultId: string;
@@ -18,6 +15,7 @@ interface VaultYieldRow {
   dataSource?: string;
   assetSymbol: string;
   curatorName: string | null;
+  curatorAddress?: string | null;
   tvl: number;
   grossApy: number;
   netApy: number;
@@ -40,6 +38,34 @@ const timeFrameLabels: Record<string, string> = {
   annualized: "Annualized",
 };
 
+function AssetCellRenderer(params: ICellRendererParams) {
+  const data = params.data as VaultYieldRow;
+  if (!data) return null;
+  return (
+    <div className="flex items-center gap-2">
+      <span className="font-medium text-text-primary">{data.assetSymbol}</span>
+      <DataSourceBadge dataSource={data.dataSource} />
+    </div>
+  );
+}
+
+function CuratorCellRenderer(params: ICellRendererParams) {
+  const data = params.data as VaultYieldRow;
+  if (!data) return null;
+  const name = data.curatorName;
+  const address = data.curatorAddress;
+  if (!name || !address) return <span className="text-text-muted">-</span>;
+  return (
+    <Link
+      href={`/curator/${curatorSlug(name, address)}`}
+      className="text-accent-blue hover:underline text-sm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {name}
+    </Link>
+  );
+}
+
 export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
   const getYield = (vault: VaultYieldRow) => {
     switch (timeFrame) {
@@ -53,31 +79,18 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
   const columnDefs = useMemo<ColDef<VaultYieldRow>[]>(
     () => [
       {
-        headerName: "Vault",
-        field: "vaultName",
-        flex: 2,
-        minWidth: 180,
-        cellClass: "font-medium text-text-primary",
-        cellRenderer: (params: { data: VaultYieldRow }) => {
-          if (!params.data) return null;
-          return (
-            <div>
-              <div className="flex items-center font-medium text-text-primary">
-                {params.data.vaultName}
-                <DataSourceBadge dataSource={params.data.dataSource} />
-              </div>
-              <div className="text-xs text-text-tertiary">{params.data.assetSymbol}</div>
-            </div>
-          );
-        },
+        headerName: "Asset",
+        field: "assetSymbol",
+        cellRenderer: AssetCellRenderer,
+        flex: 1.2,
+        minWidth: 140,
       },
       {
         headerName: "Curator",
-        field: "curatorName",
+        valueGetter: (params) => params.data?.curatorName || null,
+        cellRenderer: CuratorCellRenderer,
         flex: 1,
         minWidth: 120,
-        cellClass: "text-text-secondary text-sm",
-        valueFormatter: (params) => params.value || "-",
       },
       {
         headerName: "TVL",

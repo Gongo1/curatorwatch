@@ -7,6 +7,7 @@ import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency, formatPercentage } from "@/lib/utils/format";
 import { DataSourceBadge } from "@/components/DataSourceBadge";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 // Curator fees grid
 interface CuratorFeeRow {
@@ -123,6 +124,7 @@ interface VaultFeeRow {
   dataSource?: string;
   assetSymbol: string;
   curatorName: string | null;
+  curatorAddress?: string | null;
   tvl: number;
   apy: number;
   performanceFee: number;
@@ -134,16 +136,30 @@ interface VaultFeesGridProps {
   vaults: VaultFeeRow[];
 }
 
-function VaultFeeCellRenderer(params: ICellRendererParams) {
+function AssetCellRenderer(params: ICellRendererParams) {
   const data = params.data as VaultFeeRow;
   if (!data) return null;
   return (
-    <Link href={`/vault/${data.vaultAddress}`} className="group">
-      <div className="flex items-center font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-        {data.vaultName}
-        <DataSourceBadge dataSource={data.dataSource} />
-      </div>
-      <div className="text-xs text-text-tertiary">{data.assetSymbol}</div>
+    <div className="flex items-center gap-2">
+      <span className="font-medium text-text-primary">{data.assetSymbol}</span>
+      <DataSourceBadge dataSource={data.dataSource} />
+    </div>
+  );
+}
+
+function VaultCuratorCellRenderer(params: ICellRendererParams) {
+  const data = params.data as VaultFeeRow;
+  if (!data) return null;
+  const name = data.curatorName;
+  const address = data.curatorAddress;
+  if (!name || !address) return <span className="text-text-muted">-</span>;
+  return (
+    <Link
+      href={`/curator/${curatorSlug(name, address)}`}
+      className="text-accent-blue hover:underline text-sm"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {name}
     </Link>
   );
 }
@@ -154,19 +170,18 @@ export function VaultFeesGrid({ vaults }: VaultFeesGridProps) {
   const columnDefs = useMemo<ColDef<VaultFeeRow>[]>(
     () => [
       {
-        headerName: "Vault",
-        field: "vaultName",
-        cellRenderer: VaultFeeCellRenderer,
-        flex: 2,
-        minWidth: 180,
+        headerName: "Asset",
+        field: "assetSymbol",
+        cellRenderer: AssetCellRenderer,
+        flex: 1.2,
+        minWidth: 140,
       },
       {
         headerName: "Curator",
-        field: "curatorName",
+        valueGetter: (params) => params.data?.curatorName || null,
+        cellRenderer: VaultCuratorCellRenderer,
         flex: 1,
-        minWidth: 100,
-        cellClass: "text-text-secondary text-sm",
-        valueFormatter: (params) => params.value || "-",
+        minWidth: 120,
       },
       {
         headerName: "TVL",
