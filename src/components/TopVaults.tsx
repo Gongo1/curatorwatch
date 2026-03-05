@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/format";
 import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
+import { DataSourceBadge } from "./DataSourceBadge";
 
 interface TopVault {
   address: string;
@@ -115,9 +116,10 @@ export function TopVaults() {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
+              <div className="flex items-center text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
                 {vault.name}
-              </p>
+                <DataSourceBadge dataSource={vault.dataSource} />
+              </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-xs text-text-tertiary">{vault.symbol}</span>
                 {vault.riskAssessment && (

@@ -25,6 +25,7 @@ import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
+import { DataSourceBadge } from "@/components/DataSourceBadge";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -157,8 +158,8 @@ export default function VaultDetailPage({ params }: PageProps) {
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
+            <DataSourceBadge dataSource={vault.dataSource} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
-            <ProtocolBadge protocol={vault.protocol ?? "morpho"} size="md" />
             <a
               href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
               target="_blank"

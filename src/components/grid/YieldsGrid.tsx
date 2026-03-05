@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { ColDef } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency } from "@/lib/utils/format";
+import { DataSourceBadge } from "@/components/DataSourceBadge";
 
 // Re-export for use by the yields page - these are thin wrappers
 // The yields page has 4 different table views with complex expandable rows.
@@ -14,6 +15,7 @@ interface VaultYieldRow {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
+  dataSource?: string;
   assetSymbol: string;
   curatorName: string | null;
   tvl: number;
@@ -60,7 +62,10 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
           if (!params.data) return null;
           return (
             <div>
-              <div className="font-medium text-text-primary">{params.data.vaultName}</div>
+              <div className="flex items-center font-medium text-text-primary">
+                {params.data.vaultName}
+                <DataSourceBadge dataSource={params.data.dataSource} />
+              </div>
               <div className="text-xs text-text-tertiary">{params.data.assetSymbol}</div>
             </div>
           );

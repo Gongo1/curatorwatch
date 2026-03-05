@@ -10,6 +10,7 @@ interface VaultYieldData {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
+  dataSource?: string;
   assetSymbol: string;
   curatorId: string | null;
   curatorName: string | null;

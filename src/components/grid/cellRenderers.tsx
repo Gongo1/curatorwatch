@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ICellRendererParams } from "ag-grid-community";
 import { CuratorAvatar } from "@/components/CuratorAvatar";
 import { ProtocolBadgeList } from "@/components/ProtocolBadge";
+import { DataSourceBadge } from "@/components/DataSourceBadge";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
 import { formatCurrency, formatPercentage, formatAddress } from "@/lib/utils/format";
 import { ChangeCountBadge } from "@/components/RecentChanges";
@@ -74,8 +75,9 @@ export function VaultNameRenderer(params: ICellRendererParams) {
         {symbol.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0">
-        <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
+        <div className="flex items-center text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
           {data.name || data.vaultName}
+          <DataSourceBadge dataSource={data.dataSource} />
         </div>
         <div className="text-xs text-text-tertiary font-mono">
           {formatAddress(address)}

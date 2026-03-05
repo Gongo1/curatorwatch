@@ -10,6 +10,7 @@ import {
 } from "@/lib/utils/format";
 import { ChangeCountBadge } from "./RecentChanges";
 import { InfoTooltip } from "./Tooltip";
+import { DataSourceBadge } from "./DataSourceBadge";
 
 type SortField = "name" | "asset" | "tvl" | "apy" | "netApy" | "risk" | "curator";
 type SortDirection = "asc" | "desc";
@@ -181,8 +182,9 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
                       {vault.symbol.slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                      <div className="flex items-center text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
                         {vault.name}
+                        <DataSourceBadge dataSource={vault.dataSource} />
                       </div>
                       <div className="text-xs text-text-tertiary font-mono">
                         {formatAddress(vault.address)}

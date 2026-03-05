@@ -12,6 +12,7 @@ interface VaultFeeData {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
+  dataSource: string;
   assetSymbol: string;
   curatorId: string | null;
   curatorName: string | null;
@@ -161,6 +162,7 @@ export async function GET() {
         vaultId: vault.id,
         vaultAddress: vault.address,
         vaultName: vault.name,
+        dataSource: vault.dataSource,
         assetSymbol: vault.assetSymbol,
         curatorId: vault.curatorId,
         curatorName,

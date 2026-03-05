@@ -6,8 +6,8 @@ import Link from "next/link";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency, formatPercentage, formatAddress } from "@/lib/utils/format";
-import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
+import { DataSourceBadge } from "@/components/DataSourceBadge";
 import type { CuratorVaultSummary } from "@/lib/types/api";
 
 interface CuratorVaultGridProps {
@@ -30,13 +30,9 @@ function VaultCellRenderer(params: ICellRendererParams) {
         {data.symbol.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0">
-        <div className="flex items-center gap-1.5">
-          <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
-            {data.name}
-          </span>
-          {data.protocol && data.protocol !== "morpho" && (
-            <ProtocolBadge protocol={data.protocol} />
-          )}
+        <div className="flex items-center text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
+          {data.name}
+          <DataSourceBadge dataSource={data.dataSource} />
         </div>
         <div className="text-xs text-text-tertiary font-mono">
           {formatAddress(data.address)}

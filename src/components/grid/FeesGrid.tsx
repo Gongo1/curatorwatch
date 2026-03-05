@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency, formatPercentage } from "@/lib/utils/format";
+import { DataSourceBadge } from "@/components/DataSourceBadge";
 
 // Curator fees grid
 interface CuratorFeeRow {
@@ -119,6 +120,7 @@ interface VaultFeeRow {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
+  dataSource?: string;
   assetSymbol: string;
   curatorName: string | null;
   tvl: number;
@@ -137,8 +139,9 @@ function VaultFeeCellRenderer(params: ICellRendererParams) {
   if (!data) return null;
   return (
     <Link href={`/vault/${data.vaultAddress}`} className="group">
-      <div className="font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+      <div className="flex items-center font-medium text-text-primary group-hover:text-accent-blue transition-colors">
         {data.vaultName}
+        <DataSourceBadge dataSource={data.dataSource} />
       </div>
       <div className="text-xs text-text-tertiary">{data.assetSymbol}</div>
     </Link>
