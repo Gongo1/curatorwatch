@@ -9,6 +9,7 @@ export async function GET() {
       where: { active: true },
       select: {
         dataSource: true,
+        curatorId: true,
         curatorAddress: true,
         snapshots: {
           orderBy: { timestamp: "desc" },
@@ -27,8 +28,9 @@ export async function GET() {
       }
       coverage[ds].vaults += 1;
       coverage[ds].aum += vault.snapshots[0]?.totalAssetsUsd || 0;
-      if (vault.curatorAddress) {
-        coverage[ds].curators.add(vault.curatorAddress.toLowerCase());
+      const curatorKey = vault.curatorId || vault.curatorAddress;
+      if (curatorKey) {
+        coverage[ds].curators.add(curatorKey.toLowerCase());
       }
     }
 
