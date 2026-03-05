@@ -361,7 +361,7 @@ export default function Home() {
         {/* Protocol Coverage */}
         {protocolCoverage.length > 0 && (
           <div className="mb-5">
-            <h3 className="text-sm font-semibold text-text-primary mb-3">Protocol Coverage</h3>
+            <h3 className="text-sm font-semibold text-text-primary mb-3">Distributor Coverage</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {protocolCoverage
                 .sort((a, b) => b.totalAUM - a.totalAUM)
