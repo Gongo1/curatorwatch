@@ -36,7 +36,7 @@ export function PercentageRenderer(params: ICellRendererParams) {
 export function CuratorNameRenderer(params: ICellRendererParams) {
   const data = params.data;
   if (!data) return null;
-  const name = data.name || data.curatorName || `Curator ${formatAddress(data.curatorAddress)}`;
+  const name = data.name || data.curatorName || "Unknown Curator";
   const address = data.curatorAddress;
   const logoUrl = data.logoUrl;
 

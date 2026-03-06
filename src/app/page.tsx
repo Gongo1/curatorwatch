@@ -526,8 +526,8 @@ export default function Home() {
                             <div className="text-sm font-medium text-text-primary truncate">
                               {curator.name || "Unknown Curator"}
                             </div>
-                            <div className="text-xs text-text-muted font-mono truncate">
-                              {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
+                            <div className="text-xs text-text-muted truncate">
+                              {curator.vaultCount} vault{curator.vaultCount !== 1 ? "s" : ""}
                             </div>
                           </div>
                           <div className="flex-shrink-0 text-right">

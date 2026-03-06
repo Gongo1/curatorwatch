@@ -14,7 +14,6 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
-import { CopyAddress } from "@/components/CopyAddress";
 import type { CuratorDetailResponse } from "@/lib/types/api";
 import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
@@ -129,7 +128,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
         actions={
           <div className="flex items-center gap-2">
             <CuratorAvatar address={curator.address} name={curator.name} logoUrl={curator.logoUrl} size="lg" />
-            <CopyAddress address={curator.address} />
             <NetworkBadgeList networks={networks} size="md" />
             {curator.website && (
               <a href={curator.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background-elevated hover:bg-background-hover border border-border transition-colors text-sm">

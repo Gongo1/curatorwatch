@@ -461,12 +461,7 @@ function CuratorRow({
       >
         <td className="px-4 py-3">
           <Link href={`/curator/${curatorSlug(curator.curatorName, curator.curatorAddress)}`} className="flex items-center gap-3 group" onClick={(e) => e.stopPropagation()}>
-            <div>
-              <p className="font-medium text-text-primary group-hover:text-accent-blue transition-colors">{curator.curatorName}</p>
-              <p className="text-xs text-text-tertiary font-mono">
-                {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
-              </p>
-            </div>
+            <p className="font-medium text-text-primary group-hover:text-accent-blue transition-colors">{curator.curatorName}</p>
           </Link>
         </td>
         <td className="text-right px-4 py-3">

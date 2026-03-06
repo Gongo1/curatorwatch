@@ -32,9 +32,6 @@ function CuratorFeeCellRenderer(params: ICellRendererParams) {
   return (
     <Link href={`/curator/${curatorSlug(data.curatorName, data.curatorAddress)}`} className="group" onClick={(e) => e.stopPropagation()}>
       <div className="font-medium text-text-primary group-hover:text-accent-blue transition-colors">{data.curatorName}</div>
-      <div className="text-xs text-text-tertiary font-mono">
-        {data.curatorAddress.slice(0, 6)}...{data.curatorAddress.slice(-4)}
-      </div>
     </Link>
   );
 }

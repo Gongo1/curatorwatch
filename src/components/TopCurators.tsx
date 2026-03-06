@@ -122,7 +122,7 @@ export function TopCurators() {
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
-                {curator.name || `Curator ${curator.curatorAddress.slice(0, 6)}...`}
+                {curator.name || "Unknown Curator"}
               </p>
             </div>
             <span className="text-sm font-semibold text-text-primary tabular-nums">
