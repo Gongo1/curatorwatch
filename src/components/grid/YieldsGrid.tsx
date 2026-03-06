@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
@@ -67,6 +68,7 @@ function CuratorCellRenderer(params: ICellRendererParams) {
 }
 
 export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
+  const router = useRouter();
   const getYield = (vault: VaultYieldRow) => {
     switch (timeFrame) {
       case "daily": return vault.dailyYield;
@@ -148,6 +150,7 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
     <DataGrid<VaultYieldRow>
       rowData={vaults.slice(0, 50)}
       columnDefs={columnDefs}
+      onRowClicked={(data) => router.push(`/vault/${data.vaultAddress}`)}
     />
   );
 }

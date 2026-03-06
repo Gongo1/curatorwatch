@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency } from "@/lib/utils/format";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 interface LiquidationEvent {
   txHash: string;
@@ -229,12 +231,12 @@ function LiquidationCuratorRow({
         onClick={onToggle}
       >
         <td className="px-4 py-3">
-          <div>
-            <p className="font-medium text-text-primary">{curator.curatorName}</p>
+          <Link href={`/curator/${curatorSlug(curator.curatorName, curator.curatorAddress)}`} className="group" onClick={(e) => e.stopPropagation()}>
+            <p className="font-medium text-text-primary group-hover:text-accent-blue transition-colors">{curator.curatorName}</p>
             <p className="text-xs text-text-tertiary font-mono">
               {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
             </p>
-          </div>
+          </Link>
         </td>
         <td className="text-right px-4 py-3">
           <span className="font-medium text-text-primary tabular-nums">

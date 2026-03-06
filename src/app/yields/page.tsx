@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency } from "@/lib/utils/format";
+import { curatorSlug } from "@/lib/curator-aliases";
 import { VaultYieldsGrid } from "@/components/grid/YieldsGrid";
 
 interface VaultYieldData {
@@ -459,14 +460,14 @@ function CuratorRow({
         onClick={onToggle}
       >
         <td className="px-4 py-3">
-          <div className="flex items-center gap-3">
+          <Link href={`/curator/${curatorSlug(curator.curatorName, curator.curatorAddress)}`} className="flex items-center gap-3 group" onClick={(e) => e.stopPropagation()}>
             <div>
-              <p className="font-medium text-text-primary">{curator.curatorName}</p>
+              <p className="font-medium text-text-primary group-hover:text-accent-blue transition-colors">{curator.curatorName}</p>
               <p className="text-xs text-text-tertiary font-mono">
                 {curator.curatorAddress.slice(0, 6)}...{curator.curatorAddress.slice(-4)}
               </p>
             </div>
-          </div>
+          </Link>
         </td>
         <td className="text-right px-4 py-3">
           <span className="font-medium text-text-primary tabular-nums">
