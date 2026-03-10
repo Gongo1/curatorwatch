@@ -61,6 +61,13 @@ export async function findOrCreateCurator(
   });
 
   if (existing) {
+    // Update name if alias resolved to a better canonical name
+    if (canonicalName !== existing.name && CURATOR_NAME_ALIASES[normalizedLower]) {
+      await prisma.curator.update({
+        where: { id: existing.id },
+        data: { name: canonicalName },
+      });
+    }
     return existing.id;
   }
 
