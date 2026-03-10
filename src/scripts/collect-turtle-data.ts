@@ -108,11 +108,12 @@ async function upsertTurtleVault(
     const estTotalAPR = opp.estimatedApr ?? null;
 
     // Build APR breakdown from incentives
+    // Turtle API incentives have: name, description, rewardType, apr
     const aprBreakdown = opp.incentives?.length > 0
       ? opp.incentives.map((inc) => ({
-          source: inc.token?.symbol ?? inc.type ?? "Unknown",
+          source: inc.name ?? inc.token?.symbol ?? "Unknown",
           apr: inc.apr ?? 0,
-          type: inc.type ?? "unknown",
+          type: inc.rewardType ?? inc.type ?? "unknown",
         }))
       : null;
 

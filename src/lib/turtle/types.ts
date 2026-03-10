@@ -6,7 +6,8 @@
 export interface TurtleChain {
   slug: string;
   name: string;
-  id: number;
+  id?: number | string;
+  chainId?: string;
 }
 
 export interface TurtleToken {
@@ -18,9 +19,12 @@ export interface TurtleToken {
 }
 
 export interface TurtleIncentive {
-  token: TurtleToken;
+  name?: string;
+  description?: string;
+  rewardType?: string;
+  token?: TurtleToken;
   apr: number;
-  type: string;
+  type?: string;
 }
 
 export interface TurtleCurator {
