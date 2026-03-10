@@ -58,6 +58,8 @@ export async function GET() {
         assetSymbol: true,
         performanceFee: true,
         managementFee: true,
+        estTotalAPR: true,
+        netAPR: true,
         createdAt: true,
         curatorId: true,
         curatorAddress: true,
@@ -109,14 +111,22 @@ export async function GET() {
       const tvl = latestSnapshot.totalAssetsUsd || 0;
       if (tvl < 1000) continue; // Skip tiny vaults
 
-      const netApy = latestSnapshot.avgNetApy || 0; // This is already the NET APY (what depositors earn)
+      const isTurtle = vault.dataSource === "turtle";
       const performanceFee = vault.performanceFee || 0;
       const managementFee = vault.managementFee || 0;
 
-      // Calculate gross APY (before fees)
-      const grossApy = performanceFee < 1
-        ? (netApy + managementFee) / (1 - performanceFee)
-        : netApy;
+      // For Turtle: use APR directly (percentage); for Morpho: use APY (decimal)
+      let netApy: number; // decimal form for yield calc
+      let grossApy: number; // decimal form
+      if (isTurtle && vault.netAPR != null) {
+        netApy = vault.netAPR / 100; // Convert percentage to decimal
+        grossApy = vault.estTotalAPR != null ? vault.estTotalAPR / 100 : netApy;
+      } else {
+        netApy = latestSnapshot.avgNetApy || 0;
+        grossApy = performanceFee < 1
+          ? (netApy + managementFee) / (1 - performanceFee)
+          : netApy;
+      }
 
       // Calculate vault age in years
       const vaultAgeMs = vault.createdAt
@@ -124,15 +134,12 @@ export async function GET() {
         : 365.25 * 24 * 60 * 60 * 1000;
       const vaultAgeYears = Math.min(vaultAgeMs / (365.25 * 24 * 60 * 60 * 1000), 1);
 
-      // Calculate yield generated for depositors (based on NET APY - what they actually receive)
-      const netApyDecimal = netApy; // Already in decimal form (e.g., 0.05 = 5%)
-
-      // Yield calculations
-      const annualizedYield = tvl * netApyDecimal;
+      // Yield calculations (simple interest for Turtle, compound for Morpho)
+      const annualizedYield = tvl * netApy;
       const dailyYield = annualizedYield / 365;
       const weeklyYield = annualizedYield / 52;
       const monthlyYield = annualizedYield / 12;
-      const estimatedTotalYield = tvl * netApyDecimal * vaultAgeYears;
+      const estimatedTotalYield = tvl * netApy * vaultAgeYears;
 
       const curatorKey = vault.curatorId || vault.curatorAddress || "unknown";
       const curatorName = vault.curator?.name ||

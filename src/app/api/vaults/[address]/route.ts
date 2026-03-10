@@ -241,14 +241,21 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     // Calculate yield metrics
     const tvl = latestSnapshot?.totalAssetsUsd || 0;
-    const netApy = latestSnapshot?.avgNetApy || 0;
+    const isTurtle = vault.dataSource === "turtle";
     const vaultAgeMs = vault.createdAt
       ? Date.now() - new Date(vault.createdAt).getTime()
       : 0;
     const vaultAgeDays = vaultAgeMs / (24 * 60 * 60 * 1000);
 
-    // Yield calculations based on Net APY (what depositors actually earn)
-    const annualizedYield = tvl * netApy;
+    // For Turtle vaults: use simple interest from Est. Total APR
+    // For Morpho vaults: use compound interest from Net APY
+    let annualizedYield: number;
+    if (isTurtle && vault.netAPR != null) {
+      annualizedYield = tvl * (vault.netAPR / 100); // netAPR is percentage
+    } else {
+      const netApy = latestSnapshot?.avgNetApy || 0;
+      annualizedYield = tvl * netApy; // avgNetApy is decimal
+    }
     const dailyYield = annualizedYield / 365;
     const weeklyYield = annualizedYield / 52;
     const monthlyYield = annualizedYield / 12;
@@ -276,6 +283,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       protocol: vault.protocol,
       dataSource: vault.dataSource,
       chainName: vault.chainName,
+      estTotalAPR: vault.estTotalAPR,
+      netAPR: vault.netAPR,
+      aprBreakdown: vault.aprBreakdown,
       yield: {
         dailyYield,
         weeklyYield,

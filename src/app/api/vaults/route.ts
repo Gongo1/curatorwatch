@@ -75,6 +75,9 @@ export async function GET(request: NextRequest) {
         protocol: vault.protocol,
         dataSource: vault.dataSource,
         chainName: vault.chainName,
+        estTotalAPR: vault.estTotalAPR,
+        netAPR: vault.netAPR,
+        aprBreakdown: vault.aprBreakdown,
         updatedAt: vault.updatedAt.toISOString(),
       };
     });

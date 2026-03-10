@@ -277,8 +277,9 @@ export default function YieldsPage() {
         {/* Explainer */}
         <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/20 rounded-xl">
           <p className="text-sm text-text-secondary">
-            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and Net APY.
-            Net APY is the return depositors receive after all fees (curator + protocol). These are projected yields based on current rates.
+            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and net rate.
+            Morpho vaults use Net APY (compound interest). Turtle vaults use Net APR (simple interest) from the Turtle API.
+            These are projected yields based on current rates.
           </p>
         </div>
 
@@ -533,9 +534,16 @@ function CuratorRow({
                             <div className="flex items-center gap-4 flex-shrink-0">
                               <div className="text-right">
                                 <p className="text-sm tabular-nums">
-                                  <span className="text-text-secondary">{vault.grossApy.toFixed(2)}%</span>
+                                  <span className="text-text-secondary">
+                                    {vault.grossApy.toFixed(2)}%
+                                  </span>
                                   <span className="text-text-muted mx-1">&rarr;</span>
-                                  <span className="text-accent-green font-medium">{vault.netApy.toFixed(2)}%</span>
+                                  <span className="text-accent-green font-medium">
+                                    {vault.netApy.toFixed(2)}%
+                                  </span>
+                                  <span className="text-text-muted ml-1 text-xs">
+                                    {vault.dataSource === "turtle" ? "APR" : "APY"}
+                                  </span>
                                   {vault.performanceFee > 0 && (
                                     <span className="text-text-muted ml-1.5 text-xs">
                                       ({vault.performanceFee.toFixed(1)}% fee)

@@ -179,31 +179,53 @@ export default function VaultDetailPage({ params }: PageProps) {
       />
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+        <div className={`grid grid-cols-2 ${isTurtleVault ? "lg:grid-cols-4" : "lg:grid-cols-5"} gap-4 mb-4`}>
           <MetricCard
             label="Total Deposits"
             value={formatCurrency(snapshot?.totalAssetsUsd)}
             highlight
           />
-          <MetricCard
-            label="Liquidity"
-            value={formatCurrency(snapshot?.liquidityUsd)}
-          />
-          <MetricCard
-            label="APY"
-            value={formatPercentage(snapshot?.avgApy)}
-            tooltip="Time-weighted average annual yield before fees"
-          />
-          <MetricCard
-            label="Net APY"
-            value={formatPercentage(snapshot?.avgNetApy)}
-            valueClass="text-accent-green"
-            tooltip="Time-weighted average annual yield after fees — the actual return depositors earn"
-          />
-          <MetricCard
-            label="Share Price"
-            value={formatSharePrice(snapshot?.sharePrice)}
-          />
+          {!isTurtleVault && (
+            <MetricCard
+              label="Liquidity"
+              value={formatCurrency(snapshot?.liquidityUsd)}
+            />
+          )}
+          {isTurtleVault ? (
+            <>
+              <MetricCard
+                label="Est. Total APR"
+                value={vault.estTotalAPR != null ? `${vault.estTotalAPR.toFixed(2)}%` : "-"}
+                tooltip="Estimated Total APR reported by the Turtle API (simple interest)"
+              />
+              <MetricCard
+                label="Net APR"
+                value={vault.netAPR != null ? `${vault.netAPR.toFixed(2)}%` : "-"}
+                valueClass="text-accent-green"
+                tooltip="Est. Total APR after performance and management fees"
+              />
+            </>
+          ) : (
+            <>
+              <MetricCard
+                label="APY"
+                value={formatPercentage(snapshot?.avgApy)}
+                tooltip="Time-weighted average annual yield before fees"
+              />
+              <MetricCard
+                label="Net APY"
+                value={formatPercentage(snapshot?.avgNetApy)}
+                valueClass="text-accent-green"
+                tooltip="Time-weighted average annual yield after fees — the actual return depositors earn"
+              />
+            </>
+          )}
+          {!isTurtleVault && (
+            <MetricCard
+              label="Share Price"
+              value={formatSharePrice(snapshot?.sharePrice)}
+            />
+          )}
         </div>
 
         {/* Yield Payouts */}
@@ -266,18 +288,77 @@ export default function VaultDetailPage({ params }: PageProps) {
           <TabsContent value="overview" className="pt-6 space-y-6">
             {/* Turtle data notice */}
             {isTurtleVault && (
-              <div className="p-4 rounded-lg bg-accent-yellow/5 border border-accent-yellow/20">
-                <div className="flex items-center gap-2 mb-1">
-                  <svg className="w-4 h-4 text-accent-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span className="text-sm font-medium text-text-primary">Cross-Protocol Vault</span>
+              <>
+                <div className="p-4 rounded-lg bg-cyan-500/5 border border-cyan-500/20">
+                  <div className="flex items-center gap-2 mb-1">
+                    <svg className="w-4 h-4 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm font-medium text-text-primary">Cross-Protocol Vault</span>
+                  </div>
+                  <p className="text-xs text-text-secondary">
+                    APR from Turtle API. No transaction or allocation data available.
+                    This vault displays Est. Total APR (simple interest) directly from the Turtle API.
+                  </p>
                 </div>
-                <p className="text-xs text-text-secondary">
-                  This vault is tracked via the Turtle API. TVL and APY data are available, but detailed allocations, transactions, reallocations, and risk snapshots are only available for Morpho vaults.
-                  APY is calculated by CuratorWatch from the reported APR using daily compounding to enable consistent comparison across protocols.
-                </p>
-              </div>
+
+                {/* Fee Breakdown */}
+                {(vault.fees.performance > 0 || vault.fees.management > 0) && (
+                  <section className="bg-background-subtle rounded-lg border border-border">
+                    <div className="px-6 py-4 border-b border-border">
+                      <h2 className="text-base font-semibold text-text-primary">Fees</h2>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 px-6 py-4">
+                      <div>
+                        <p className="text-xs text-text-secondary mb-0.5">Performance Fee</p>
+                        <p className="text-lg font-semibold text-text-primary tabular-nums">
+                          {(vault.fees.performance * 100).toFixed(2)}%
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-text-secondary mb-0.5">Management Fee</p>
+                        <p className="text-lg font-semibold text-text-primary tabular-nums">
+                          {(vault.fees.management * 100).toFixed(2)}%
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {/* APR Sources / Incentive Breakdown */}
+                {vault.aprBreakdown && vault.aprBreakdown.length > 0 && (
+                  <section className="bg-background-subtle rounded-lg border border-border">
+                    <div className="px-6 py-4 border-b border-border">
+                      <h2 className="text-base font-semibold text-text-primary">APR Sources</h2>
+                      <p className="text-sm text-text-tertiary">Breakdown of yield incentives</p>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full">
+                        <thead className="bg-background-elevated border-b border-border">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Source</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Type</th>
+                            <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">APR</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-subtle">
+                          {vault.aprBreakdown.map((incentive, i) => (
+                            <tr key={i} className="hover:bg-background-hover transition-colors">
+                              <td className="px-6 py-3 whitespace-nowrap text-sm font-medium text-text-primary">{incentive.source}</td>
+                              <td className="px-6 py-3 whitespace-nowrap">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-cyan-500/10 border border-cyan-500/20 text-cyan-500">
+                                  {incentive.type}
+                                </span>
+                              </td>
+                              <td className="px-6 py-3 whitespace-nowrap text-right text-sm font-medium text-accent-green tabular-nums">{incentive.apr.toFixed(2)}%</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </section>
+                )}
+              </>
             )}
 
             {/* Allocations Section */}

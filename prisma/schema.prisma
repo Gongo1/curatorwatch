@@ -31,6 +31,11 @@ model Vault {
   opportunityType String?                      // "lending" | "vault" from Turtle
   chainName       String?                      // Human-readable chain name ("Base", "Arbitrum", etc.)
 
+  // Turtle-specific yield fields (APR, not APY)
+  estTotalAPR     Float?                       // Turtle's reported "Est. Total APR" (percentage, e.g. 8.33)
+  netAPR          Float?                       // estTotalAPR - performanceFee - managementFee
+  aprBreakdown    Json?                        // Incentive sources from Turtle API
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

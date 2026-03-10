@@ -65,6 +65,9 @@ export interface VaultData {
   protocol: string;
   dataSource: string;
   chainName?: string | null;
+  estTotalAPR?: number | null;
+  netAPR?: number | null;
+  aprBreakdown?: Array<{ source: string; apr: number; type: string }> | null;
   updatedAt: string;
 }
 
