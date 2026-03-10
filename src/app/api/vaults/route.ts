@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
           take: 1,
         },
         curator: {
-          select: { name: true },
+          select: { name: true, address: true },
         },
       },
       orderBy: {
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
           symbol: vault.assetSymbol,
           decimals: vault.assetDecimals,
         },
-        curatorAddress: vault.curatorAddress,
+        curatorAddress: vault.curatorAddress || vault.curator?.address || null,
         curatorName: vault.curator?.name || null,
         fees: {
           performance: vault.performanceFee,
