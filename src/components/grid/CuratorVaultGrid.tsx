@@ -2,7 +2,6 @@
 
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import {
@@ -18,13 +17,18 @@ interface CuratorVaultGridProps {
   vaults: CuratorVaultSummary[];
 }
 
-function AssetCellRenderer(params: ICellRendererParams) {
+function VaultNameCellRenderer(params: ICellRendererParams) {
   const data = params.data as CuratorVaultSummary;
   if (!data) return null;
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-medium text-text-primary">{data.asset.symbol}</span>
-      <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1 text-sm font-medium text-text-primary truncate">
+          {data.name}
+          <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+        </div>
+        <div className="text-xs text-text-tertiary">{data.asset.symbol}</div>
+      </div>
     </div>
   );
 }
@@ -35,11 +39,11 @@ export function CuratorVaultGrid({ vaults }: CuratorVaultGridProps) {
   const columnDefs = useMemo<ColDef<CuratorVaultSummary>[]>(
     () => [
       {
-        headerName: "Asset",
-        valueGetter: (params) => params.data?.asset?.symbol,
-        cellRenderer: AssetCellRenderer,
-        flex: 1.2,
-        minWidth: 140,
+        headerName: "Vault",
+        valueGetter: (params) => params.data?.name,
+        cellRenderer: VaultNameCellRenderer,
+        flex: 1.5,
+        minWidth: 180,
       },
       {
         headerName: "Network",

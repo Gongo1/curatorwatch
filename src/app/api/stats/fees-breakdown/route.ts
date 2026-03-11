@@ -17,6 +17,8 @@ interface VaultFeeData {
   curatorId: string | null;
   curatorName: string | null;
   curatorAddress: string | null;
+  grade: string | null;
+  gradeFailures: string[];
   tvl: number;
   apy: number;
   grossApy: number;
@@ -51,12 +53,16 @@ interface CuratorFeeData {
   annualizedTotalFees: number;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const dataSource = searchParams.get("dataSource");
+
     // Get all vaults with their latest snapshots and curator info
     const vaults = await prisma.vault.findMany({
       where: {
         active: true,
+        ...(dataSource ? { dataSource } : {}),
       },
       select: {
         id: true,
@@ -64,8 +70,12 @@ export async function GET() {
         name: true,
         assetSymbol: true,
         dataSource: true,
+        grade: true,
+        gradeFailures: true,
         performanceFee: true,
         managementFee: true,
+        netAPR: true,
+        estTotalAPR: true,
         createdAt: true,
         curatorId: true,
         curatorAddress: true,
@@ -117,7 +127,7 @@ export async function GET() {
       const tvl = latestSnapshot.totalAssetsUsd || 0;
       if (tvl < 1000) continue; // Skip tiny vaults
 
-      const netApy = latestSnapshot.avgNetApy || 0;
+      const isTurtle = vault.dataSource === "turtle";
       const performanceFee = vault.performanceFee || 0;
       const managementFee = vault.managementFee || 0;
 
@@ -127,12 +137,18 @@ export async function GET() {
         : 365.25 * 24 * 60 * 60 * 1000;
       const vaultAgeYears = Math.min(vaultAgeMs / (365.25 * 24 * 60 * 60 * 1000), 1);
 
-      // Calculate gross APY (before performance fee is taken)
-      // Net APY = Gross APY * (1 - performanceFee) - managementFee
-      // So: Gross APY ≈ (Net APY + managementFee) / (1 - performanceFee)
-      const grossApy = performanceFee < 1
-        ? (netApy + managementFee) / (1 - performanceFee)
-        : netApy;
+      // For Turtle: use APR directly (percentage); for Morpho: use APY (decimal)
+      let netApy: number;
+      let grossApy: number;
+      if (isTurtle && vault.netAPR != null) {
+        netApy = vault.netAPR / 100;
+        grossApy = vault.estTotalAPR != null ? vault.estTotalAPR / 100 : netApy;
+      } else {
+        netApy = latestSnapshot.avgNetApy || 0;
+        grossApy = performanceFee < 1
+          ? (netApy + managementFee) / (1 - performanceFee)
+          : netApy;
+      }
 
       // grossApy is already a decimal (e.g. 0.05 = 5%), no need to divide by 100
       const grossYield = grossApy;
@@ -143,8 +159,7 @@ export async function GET() {
       const curatorFees = estimatedManagementFees + estimatedPerformanceFees;
 
       // Protocol fees: only apply Morpho's 15% to Morpho vaults
-      const isMorphoVault = !vault.dataSource || vault.dataSource === "morpho";
-      const protocolFeeRate = isMorphoVault ? MORPHO_PROTOCOL_FEE_RATE : 0;
+      const protocolFeeRate = !isTurtle ? MORPHO_PROTOCOL_FEE_RATE : 0;
       const totalInterestEarned = tvl * grossYield * vaultAgeYears;
       const morphoFees = totalInterestEarned * protocolFeeRate;
 
@@ -167,6 +182,8 @@ export async function GET() {
         curatorId: vault.curatorId,
         curatorName,
         curatorAddress: vault.curatorAddress,
+        grade: vault.grade,
+        gradeFailures: vault.gradeFailures ?? [],
         tvl,
         apy: netApy * 100, // Convert to percentage
         grossApy: grossApy * 100,

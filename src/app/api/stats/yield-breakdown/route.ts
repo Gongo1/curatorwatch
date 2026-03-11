@@ -44,12 +44,16 @@ interface CuratorYieldData {
   estimatedTotalYield: number;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const dataSource = searchParams.get("dataSource");
+
     // Get all vaults with their latest snapshots and curator info
     const vaults = await prisma.vault.findMany({
       where: {
         active: true,
+        ...(dataSource ? { dataSource } : {}),
       },
       select: {
         id: true,

@@ -286,13 +286,17 @@ export function qualifiesForHighGrade(input: VaultScoreInput): {
 
   // 9. Collateral >= 80% institutional
   if (input.collateralAssets.length > 0) {
-    const blueChipCount = input.collateralAssets.filter((s) =>
-      BLUE_CHIP_COLLATERAL.some((bc) => bc.toUpperCase() === s.toUpperCase())
-    ).length;
+    const nonBlueChip = input.collateralAssets.filter((s) =>
+      !BLUE_CHIP_COLLATERAL.some((bc) => bc.toUpperCase() === s.toUpperCase())
+    );
+    const blueChipCount = input.collateralAssets.length - nonBlueChip.length;
     const pct = blueChipCount / input.collateralAssets.length;
     if (pct < 0.8) {
+      const unique = [...new Set(nonBlueChip)];
+      const listed = unique.slice(0, 3).join(", ");
+      const extra = unique.length > 3 ? ` +${unique.length - 3} more` : "";
       failures.push(
-        `Collateral ${(pct * 100).toFixed(0)}% institutional < 80% minimum`
+        `Collateral ${(pct * 100).toFixed(0)}% institutional < 80% minimum (unrecognized: ${listed}${extra})`
       );
     }
   }

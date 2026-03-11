@@ -143,6 +143,16 @@ export function ChangeCountRenderer(params: ICellRendererParams) {
   return <ChangeCountBadge vaultAddress={data.address} />;
 }
 
+// Strip curator prefix from vault name to avoid repetition with curator column
+export function stripCuratorPrefix(vaultName: string, curatorName: string | null | undefined): string {
+  if (!curatorName) return vaultName;
+  const curatorFirstWord = curatorName.split(/\s+/)[0];
+  if (curatorFirstWord && vaultName.toLowerCase().startsWith(curatorFirstWord.toLowerCase())) {
+    return vaultName.slice(curatorFirstWord.length).trim();
+  }
+  return vaultName;
+}
+
 // Risk badge renderer
 export function RiskBadgeRenderer() {
   return (

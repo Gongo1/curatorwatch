@@ -9,6 +9,7 @@ import {
   CurrencyRenderer,
   PercentageRenderer,
   ChangeCountRenderer,
+  stripCuratorPrefix,
 } from "./cellRenderers";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { curatorSlug } from "@/lib/curator-aliases";
@@ -18,13 +19,18 @@ interface VaultGridProps {
   vaults: VaultData[];
 }
 
-function AssetCellRenderer(params: ICellRendererParams) {
+function VaultNameCellRenderer(params: ICellRendererParams) {
   const data = params.data as VaultData;
   if (!data) return null;
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-medium text-text-primary">{data.asset.symbol}</span>
-      <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1 text-sm font-medium text-text-primary truncate">
+          {stripCuratorPrefix(data.name, data.curatorName)}
+          <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+        </div>
+        <div className="text-xs text-text-tertiary">{data.asset.symbol}</div>
+      </div>
     </div>
   );
 }
@@ -52,11 +58,11 @@ export function VaultGrid({ vaults }: VaultGridProps) {
   const columnDefs = useMemo<ColDef<VaultData>[]>(
     () => [
       {
-        headerName: "Asset",
-        valueGetter: (params) => params.data?.asset?.symbol,
-        cellRenderer: AssetCellRenderer,
-        flex: 1.2,
-        minWidth: 140,
+        headerName: "Vault",
+        valueGetter: (params) => params.data?.name,
+        cellRenderer: VaultNameCellRenderer,
+        flex: 1.5,
+        minWidth: 180,
       },
       {
         headerName: "Curator",

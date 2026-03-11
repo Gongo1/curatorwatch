@@ -8,6 +8,7 @@ import { DataGrid } from "./DataGrid";
 import { formatCurrency, formatPercentage } from "@/lib/utils/format";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { curatorSlug } from "@/lib/curator-aliases";
+import { stripCuratorPrefix } from "./cellRenderers";
 
 // Curator fees grid
 interface CuratorFeeRow {
@@ -133,15 +134,21 @@ interface VaultFeeRow {
 
 interface VaultFeesGridProps {
   vaults: VaultFeeRow[];
+  apyLabel?: string;
 }
 
-function AssetCellRenderer(params: ICellRendererParams) {
+function VaultNameCellRenderer(params: ICellRendererParams) {
   const data = params.data as VaultFeeRow;
   if (!data) return null;
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-medium text-text-primary">{data.assetSymbol}</span>
-      <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1 text-sm font-medium text-text-primary truncate">
+          {stripCuratorPrefix(data.vaultName, data.curatorName)}
+          <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+        </div>
+        <div className="text-xs text-text-tertiary">{data.assetSymbol}</div>
+      </div>
     </div>
   );
 }
@@ -163,17 +170,17 @@ function VaultCuratorCellRenderer(params: ICellRendererParams) {
   );
 }
 
-export function VaultFeesGrid({ vaults }: VaultFeesGridProps) {
+export function VaultFeesGrid({ vaults, apyLabel = "Net APY" }: VaultFeesGridProps) {
   const router = useRouter();
 
   const columnDefs = useMemo<ColDef<VaultFeeRow>[]>(
     () => [
       {
-        headerName: "Asset",
-        field: "assetSymbol",
-        cellRenderer: AssetCellRenderer,
-        flex: 1.2,
-        minWidth: 140,
+        headerName: "Vault",
+        valueGetter: (params) => params.data?.vaultName,
+        cellRenderer: VaultNameCellRenderer,
+        flex: 1.5,
+        minWidth: 180,
       },
       {
         headerName: "Curator",
@@ -192,7 +199,7 @@ export function VaultFeesGrid({ vaults }: VaultFeesGridProps) {
         valueFormatter: (params) => formatCurrency(params.value),
       },
       {
-        headerName: "Net APY",
+        headerName: apyLabel,
         headerTooltip: "Time-weighted average annual yield after fees — the actual return depositors earn",
         field: "apy",
         flex: 0.7,
@@ -236,7 +243,7 @@ export function VaultFeesGrid({ vaults }: VaultFeesGridProps) {
         valueFormatter: (params) => formatCurrency(params.value),
       },
     ],
-    []
+    [apyLabel]
   );
 
   return (

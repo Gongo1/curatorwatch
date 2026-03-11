@@ -8,7 +8,6 @@ import { SidebarNavItem } from "./SidebarNavItem";
 import {
   LayoutDashboard,
   Box,
-  TrendingUp,
   Coins,
   Zap,
   Bell,
@@ -61,11 +60,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
     {
       title: "Economics",
       items: [
-        {
-          href: "/yields",
-          icon: <TrendingUp className="w-5 h-5" />,
-          label: "Yields",
-        },
         {
           href: "/fees",
           icon: <Coins className="w-5 h-5" />,

@@ -8,6 +8,7 @@ import { DataGrid } from "./DataGrid";
 import { formatCurrency } from "@/lib/utils/format";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { curatorSlug } from "@/lib/curator-aliases";
+import { stripCuratorPrefix } from "./cellRenderers";
 
 interface VaultYieldRow {
   vaultId: string;
@@ -41,13 +42,18 @@ const timeFrameLabels: Record<string, string> = {
   annualized: "Annualized",
 };
 
-function AssetCellRenderer(params: ICellRendererParams) {
+function VaultNameCellRenderer(params: ICellRendererParams) {
   const data = params.data as VaultYieldRow;
   if (!data) return null;
   return (
-    <div className="flex items-center gap-2">
-      <span className="font-medium text-text-primary">{data.assetSymbol}</span>
-      <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+    <div className="flex items-center gap-2 min-w-0">
+      <div className="min-w-0">
+        <div className="flex items-center gap-1 text-sm font-medium text-text-primary truncate">
+          {stripCuratorPrefix(data.vaultName, data.curatorName)}
+          <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+        </div>
+        <div className="text-xs text-text-tertiary">{data.assetSymbol}</div>
+      </div>
     </div>
   );
 }
@@ -83,11 +89,11 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
   const columnDefs = useMemo<ColDef<VaultYieldRow>[]>(
     () => [
       {
-        headerName: "Asset",
-        field: "assetSymbol",
-        cellRenderer: AssetCellRenderer,
-        flex: 1.2,
-        minWidth: 140,
+        headerName: "Vault",
+        valueGetter: (params) => params.data?.vaultName,
+        cellRenderer: VaultNameCellRenderer,
+        flex: 1.5,
+        minWidth: 180,
       },
       {
         headerName: "Curator",

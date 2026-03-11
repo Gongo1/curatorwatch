@@ -12,7 +12,7 @@ import { ChangeCountBadge } from "./RecentChanges";
 import { InfoTooltip } from "./Tooltip";
 import { VaultGradeBadge } from "./VaultGradeBadge";
 
-type SortField = "name" | "asset" | "tvl" | "apy" | "netApy" | "risk" | "curator";
+type SortField = "name" | "tvl" | "apy" | "netApy" | "risk" | "curator";
 type SortDirection = "asc" | "desc";
 
 interface VaultTableProps {
@@ -58,10 +58,6 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
         case "name":
           aValue = a.name.toLowerCase();
           bValue = b.name.toLowerCase();
-          break;
-        case "asset":
-          aValue = a.asset.symbol.toLowerCase();
-          bValue = b.asset.symbol.toLowerCase();
           break;
         case "tvl":
           aValue = a.latestSnapshot?.totalAssetsUsd ?? 0;
@@ -158,7 +154,6 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
         <thead className="bg-background-elevated border-b border-border">
           <tr>
             <HeaderCell field="name">Vault</HeaderCell>
-            <HeaderCell field="asset">Asset</HeaderCell>
             <HeaderCell field="tvl" align="right">Deposits</HeaderCell>
             <HeaderCell field="apy" align="right" tooltip="Time-weighted average annual yield before fees">APY</HeaderCell>
             <HeaderCell field="netApy" align="right" tooltip="Time-weighted average annual yield after fees — the actual return depositors earn">Net APY</HeaderCell>
@@ -186,17 +181,12 @@ export function VaultTable({ vaults, curatorFilter }: VaultTableProps) {
                         {vault.name}
                         <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
                       </div>
-                      <div className="text-xs text-text-tertiary font-mono">
-                        {formatAddress(vault.address)}
+                      <div className="text-xs text-text-tertiary">
+                        {vault.asset.symbol} <span className="font-mono">{formatAddress(vault.address)}</span>
                       </div>
                     </div>
                   </div>
                 </Link>
-              </td>
-              <td className="px-4 py-4 whitespace-nowrap">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-background-elevated border border-border text-text-primary">
-                  {vault.asset.symbol}
-                </span>
               </td>
               <td className="px-4 py-4 whitespace-nowrap text-right">
                 <span className="text-sm font-semibold text-text-primary tabular-nums">

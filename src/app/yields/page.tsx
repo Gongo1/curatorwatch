@@ -83,7 +83,7 @@ export default function YieldsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/stats/yield-breakdown");
+        const res = await fetch("/api/stats/yield-breakdown?dataSource=morpho");
         const data = await res.json();
         if (data.success) {
           setSummary(data.data.summary);
