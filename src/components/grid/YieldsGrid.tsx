@@ -64,7 +64,8 @@ function CuratorCellRenderer(params: ICellRendererParams) {
   if (!data) return null;
   const name = data.curatorName;
   const address = data.curatorAddress;
-  if (!name || !address) return <span className="text-text-muted">-</span>;
+  if (!name) return <span className="text-text-muted">-</span>;
+  if (!address) return <span className="text-sm text-text-primary">{name}</span>;
   return (
     <Link
       href={`/curator/${curatorSlug(name, address)}`}
