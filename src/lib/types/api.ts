@@ -244,6 +244,8 @@ export interface CuratorVaultSummary {
   gradeFailures?: string[];
   chainName: string | null;
   latestSnapshot: VaultSnapshot | null;
+  netAPR: number | null;
+  estTotalAPR: number | null;
 }
 
 export interface CuratorDetailResponse {

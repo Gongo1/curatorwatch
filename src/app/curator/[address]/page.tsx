@@ -335,7 +335,11 @@ export default function CuratorDetailPage({ params }: PageProps) {
             {(() => {
               const vaultEcon = vaults.map((v) => {
                 const tvl = v.latestSnapshot?.totalAssetsUsd ?? 0;
-                const netApy = v.latestSnapshot?.avgNetApy ?? 0;
+                const isTurtle = v.dataSource === "turtle";
+                // Turtle vaults store APR in netAPR (as percentage), Morpho uses snapshot avgNetApy (as decimal)
+                const netApy = isTurtle
+                  ? (v.netAPR ?? 0) / 100
+                  : (v.latestSnapshot?.avgNetApy ?? 0);
                 const fee = v.performanceFee ?? 0;
                 const annualYield = tvl * netApy;
                 const annualFees = tvl * fee;
@@ -352,18 +356,149 @@ export default function CuratorDetailPage({ params }: PageProps) {
                 ? vaultEcon.reduce((s, v) => s + v.fee, 0) / vaultEcon.length
                 : 0;
 
-              // Group by asset
-              const assetEcon: Record<string, { aum: number; yield: number; fees: number; feeRates: number[]; vaults: typeof vaultEcon }> = {};
-              for (const v of vaultEcon) {
-                const sym = v.asset.symbol;
-                if (!assetEcon[sym]) assetEcon[sym] = { aum: 0, yield: 0, fees: 0, feeRates: [], vaults: [] };
-                assetEcon[sym].aum += v.tvl;
-                assetEcon[sym].yield += v.annualYield;
-                assetEcon[sym].fees += v.annualFees;
-                assetEcon[sym].feeRates.push(v.fee);
-                assetEcon[sym].vaults.push(v);
-              }
-              const sortedAssetEcon = Object.entries(assetEcon).sort((a, b) => b[1].aum - a[1].aum);
+              // Split by source
+              const morphoVaults = vaultEcon.filter((v) => v.dataSource !== "turtle");
+              const turtleVaults = vaultEcon.filter((v) => v.dataSource === "turtle");
+              const hasBothSources = morphoVaults.length > 0 && turtleVaults.length > 0;
+
+              // Source-level stats for supplementary line
+              const morphoTVL = morphoVaults.reduce((s, v) => s + v.tvl, 0);
+              const turtleTVL = turtleVaults.reduce((s, v) => s + v.tvl, 0);
+              const morphoYield = morphoVaults.reduce((s, v) => s + v.annualYield, 0);
+              const turtleYield = turtleVaults.reduce((s, v) => s + v.annualYield, 0);
+
+              // Group by asset per source
+              type AssetEconEntry = { aum: number; yield: number; fees: number; feeRates: number[]; vaults: typeof vaultEcon };
+              const groupByAsset = (list: typeof vaultEcon) => {
+                const map: Record<string, AssetEconEntry> = {};
+                for (const v of list) {
+                  const sym = v.asset.symbol;
+                  if (!map[sym]) map[sym] = { aum: 0, yield: 0, fees: 0, feeRates: [], vaults: [] };
+                  map[sym].aum += v.tvl;
+                  map[sym].yield += v.annualYield;
+                  map[sym].fees += v.annualFees;
+                  map[sym].feeRates.push(v.fee);
+                  map[sym].vaults.push(v);
+                }
+                return Object.entries(map).sort((a, b) => b[1].aum - a[1].aum);
+              };
+
+              // Render a vault economics table
+              const renderEconTable = (
+                rows: typeof vaultEcon,
+                title: string,
+                rateLabel: string,
+              ) => (
+                <section className="bg-background-subtle rounded-lg border border-border overflow-hidden">
+                  <div className="px-6 py-4 border-b border-border">
+                    <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-border bg-background-elevated/50">
+                          <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Vault</th>
+                          <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">TVL</th>
+                          <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">{rateLabel}</th>
+                          <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Fee</th>
+                          <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Annual Yield</th>
+                          <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Annual Fees</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {[...rows]
+                          .sort((a, b) => b.annualFees - a.annualFees)
+                          .map((v) => (
+                          <tr key={v.id} className="hover:bg-background-elevated/30 transition-colors">
+                            <td className="px-4 py-3">
+                              <Link href={`/vault/${v.address}`} className="group">
+                                <div className="flex items-center text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                                  {v.name}
+                                  <VaultGradeBadge grade={v.grade} failures={v.gradeFailures} />
+                                </div>
+                                <span className="block text-xs text-text-tertiary">{v.asset.symbol}</span>
+                              </Link>
+                            </td>
+                            <td className="text-right px-4 py-3">
+                              <span className="text-sm font-medium text-text-primary tabular-nums">
+                                {formatCurrency(v.tvl)}
+                              </span>
+                            </td>
+                            <td className="text-right px-4 py-3">
+                              <span className="text-sm text-accent-green font-medium tabular-nums">
+                                {formatPercentage(v.netApy)}
+                              </span>
+                            </td>
+                            <td className="text-right px-4 py-3">
+                              <span className="text-sm text-text-secondary tabular-nums">
+                                {formatPercentage(v.fee)}
+                              </span>
+                            </td>
+                            <td className="text-right px-4 py-3">
+                              <span className="text-sm font-semibold text-accent-green tabular-nums">
+                                {formatCurrency(v.annualYield)}
+                              </span>
+                            </td>
+                            <td className="text-right px-4 py-3">
+                              <span className="text-sm font-semibold text-accent-blue tabular-nums">
+                                {formatCurrency(v.annualFees)}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              );
+
+              // Render an asset breakdown section
+              const renderAssetBreakdown = (
+                entries: [string, AssetEconEntry][],
+                title: string,
+              ) => (
+                <section className="bg-background-subtle rounded-lg border border-border">
+                  <div className="px-6 py-4 border-b border-border">
+                    <h2 className="text-sm font-semibold text-text-primary">{title}</h2>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {entries.map(([symbol, d]) => {
+                      const assetAvgFee = d.feeRates.length > 0
+                        ? d.feeRates.reduce((s, f) => s + f, 0) / d.feeRates.length
+                        : 0;
+                      return (
+                        <div key={symbol} className="px-6 py-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-background-elevated border border-border text-text-primary">
+                                {symbol}
+                              </span>
+                              <span className="text-sm font-medium text-text-primary tabular-nums">
+                                {formatCurrency(d.aum)} AUM
+                              </span>
+                            </div>
+                            <span className="text-xs text-text-tertiary">
+                              {d.vaults.length} vault{d.vaults.length !== 1 ? "s" : ""}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-text-secondary">
+                            <span className="tabular-nums">
+                              <span className="text-accent-green font-medium">{formatCurrency(d.yield)}</span> yield
+                            </span>
+                            <span className="text-text-muted">&rarr;</span>
+                            <span className="tabular-nums">
+                              <span className="text-accent-blue font-medium">{formatCurrency(d.fees)}</span> fees
+                            </span>
+                            <span className="text-text-muted">
+                              ({formatPercentage(assetAvgFee)} avg fee)
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
 
               return (
                 <div className="space-y-6">
@@ -388,120 +523,47 @@ export default function CuratorDetailPage({ params }: PageProps) {
                   </div>
 
                   {/* Supplementary stats */}
-                  <div className="flex items-center gap-6 px-1">
+                  <div className="flex flex-wrap items-center gap-6 px-1">
                     <span className="text-sm text-text-secondary">
                       Weighted APY: <span className="font-semibold text-accent-green tabular-nums">{formatPercentage(weightedApy)}</span>
                     </span>
                     <span className="text-sm text-text-secondary">
                       Avg Fee: <span className="font-semibold text-text-primary tabular-nums">{formatPercentage(avgFee)}</span>
                     </span>
+                    {hasBothSources && (
+                      <>
+                        <span className="text-xs text-text-muted">|</span>
+                        <span className="text-sm text-text-tertiary">
+                          Morpho: {formatCurrency(morphoTVL)} AUM, {formatCurrency(morphoYield)} yield
+                        </span>
+                        <span className="text-sm text-text-tertiary">
+                          Turtle: {formatCurrency(turtleTVL)} AUM, {formatCurrency(turtleYield)} yield
+                        </span>
+                      </>
+                    )}
                   </div>
 
-                  {/* Vault Economics Table */}
-                  <section className="bg-background-subtle rounded-lg border border-border overflow-hidden">
-                    <div className="px-6 py-4 border-b border-border">
-                      <h2 className="text-sm font-semibold text-text-primary">Vault Economics</h2>
-                    </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead>
-                          <tr className="border-b border-border bg-background-elevated/50">
-                            <th className="text-left text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Vault</th>
-                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">TVL</th>
-                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">APY</th>
-                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Fee</th>
-                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Annual Yield</th>
-                            <th className="text-right text-xs font-medium text-text-secondary uppercase tracking-wider px-4 py-3">Annual Fees</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                          {vaultEcon
-                            .sort((a, b) => b.annualFees - a.annualFees)
-                            .map((v) => (
-                            <tr key={v.id} className="hover:bg-background-elevated/30 transition-colors">
-                              <td className="px-4 py-3">
-                                <Link href={`/vault/${v.address}`} className="group">
-                                  <div className="flex items-center text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                                    {v.name}
-                                    <VaultGradeBadge grade={v.grade} failures={v.gradeFailures} />
-                                  </div>
-                                  <span className="block text-xs text-text-tertiary">{v.asset.symbol}</span>
-                                </Link>
-                              </td>
-                              <td className="text-right px-4 py-3">
-                                <span className="text-sm font-medium text-text-primary tabular-nums">
-                                  {formatCurrency(v.tvl)}
-                                </span>
-                              </td>
-                              <td className="text-right px-4 py-3">
-                                <span className="text-sm text-accent-green font-medium tabular-nums">
-                                  {formatPercentage(v.netApy)}
-                                </span>
-                              </td>
-                              <td className="text-right px-4 py-3">
-                                <span className="text-sm text-text-secondary tabular-nums">
-                                  {formatPercentage(v.fee)}
-                                </span>
-                              </td>
-                              <td className="text-right px-4 py-3">
-                                <span className="text-sm font-semibold text-accent-green tabular-nums">
-                                  {formatCurrency(v.annualYield)}
-                                </span>
-                              </td>
-                              <td className="text-right px-4 py-3">
-                                <span className="text-sm font-semibold text-accent-blue tabular-nums">
-                                  {formatCurrency(v.annualFees)}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </section>
+                  {/* Vault Economics Table(s) */}
+                  {hasBothSources ? (
+                    <>
+                      {renderEconTable(morphoVaults, "Morpho Vault Economics", "APY")}
+                      {renderEconTable(turtleVaults, "Turtle Vault Economics", "APR")}
+                    </>
+                  ) : turtleVaults.length > 0 ? (
+                    renderEconTable(turtleVaults, "Vault Economics", "APR")
+                  ) : (
+                    renderEconTable(morphoVaults, "Vault Economics", "APY")
+                  )}
 
                   {/* Asset Breakdown */}
-                  <section className="bg-background-subtle rounded-lg border border-border">
-                    <div className="px-6 py-4 border-b border-border">
-                      <h2 className="text-sm font-semibold text-text-primary">By Asset</h2>
-                    </div>
-                    <div className="divide-y divide-border">
-                      {sortedAssetEcon.map(([symbol, data]) => {
-                        const assetAvgFee = data.feeRates.length > 0
-                          ? data.feeRates.reduce((s, f) => s + f, 0) / data.feeRates.length
-                          : 0;
-                        return (
-                          <div key={symbol} className="px-6 py-4">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-background-elevated border border-border text-text-primary">
-                                  {symbol}
-                                </span>
-                                <span className="text-sm font-medium text-text-primary tabular-nums">
-                                  {formatCurrency(data.aum)} AUM
-                                </span>
-                              </div>
-                              <span className="text-xs text-text-tertiary">
-                                {data.vaults.length} vault{data.vaults.length !== 1 ? "s" : ""}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-4 text-sm text-text-secondary">
-                              <span className="tabular-nums">
-                                <span className="text-accent-green font-medium">{formatCurrency(data.yield)}</span> yield
-                              </span>
-                              <span className="text-text-muted">&rarr;</span>
-                              <span className="tabular-nums">
-                                <span className="text-accent-blue font-medium">{formatCurrency(data.fees)}</span> fees
-                              </span>
-                              <span className="text-text-muted">
-                                ({formatPercentage(assetAvgFee)} avg fee)
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </section>
+                  {hasBothSources ? (
+                    <>
+                      {renderAssetBreakdown(groupByAsset(morphoVaults), "By Asset — Morpho")}
+                      {renderAssetBreakdown(groupByAsset(turtleVaults), "By Asset — Turtle")}
+                    </>
+                  ) : (
+                    renderAssetBreakdown(groupByAsset(vaultEcon), "By Asset")
+                  )}
 
                   {/* Liquidations */}
                   {data.liquidationSummary && (

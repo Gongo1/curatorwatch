@@ -214,6 +214,8 @@ export async function GET(
         grade: vault.grade ?? null,
         gradeFailures: vault.gradeFailures ?? [],
         chainName: (vault as Record<string, unknown>).chainName as string | null ?? null,
+        netAPR: vault.netAPR ?? null,
+        estTotalAPR: vault.estTotalAPR ?? null,
         latestSnapshot: snapshot
           ? {
               totalAssets: snapshot.totalAssets,
