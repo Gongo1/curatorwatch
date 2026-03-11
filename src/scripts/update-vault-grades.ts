@@ -136,7 +136,7 @@ export async function updateVaultGrades(): Promise<{
         _sum: { badDebtAssetsUsd: true },
       });
       liquidationCount = liqStats._count;
-      hasBadDebt = (liqStats._sum.badDebtAssetsUsd ?? 0) > 0;
+      hasBadDebt = (liqStats._sum.badDebtAssetsUsd ?? 0) > 1; // ignore dust below $1
     }
 
     // TVL from latest snapshot
@@ -150,25 +150,25 @@ export async function updateVaultGrades(): Promise<{
       effectiveAPR = (vault.snapshots[0]?.avgNetApy ?? 0) * 100;
     }
 
-    // Build curator input
+    // Build curator input (defensive null handling)
     let curatorInput: CuratorInput | null = null;
     if (vault.curator && vault.curatorId) {
       curatorInput = {
-        entityType: vault.curator.entityType,
-        foundedYear: vault.curator.foundedYear,
-        totalAUM: vault.curator.totalAssetsManaged ?? 0,
-        badDebtUsd: curatorBadDebt[vault.curatorId] ?? 0,
+        entityType: vault.curator.entityType || null,
+        foundedYear: vault.curator.foundedYear || null,
+        totalAUM: vault.curator.totalAssetsManaged || 0,
+        badDebtUsd: curatorBadDebt[vault.curatorId] || 0,
       };
     }
 
     const input: VaultScoreInput = {
-      tvl,
+      tvl: tvl || 0,
       createdAt: vault.createdAt,
       curator: curatorInput,
       collateralAssets,
-      liquidationCount,
-      hasBadDebt,
-      netAPR: effectiveAPR,
+      liquidationCount: liquidationCount || 0,
+      hasBadDebt: hasBadDebt || false,
+      netAPR: effectiveAPR || 0,
     };
 
     const scores = calculateVaultScores(input);

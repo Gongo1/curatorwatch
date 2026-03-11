@@ -19,6 +19,9 @@
 
 import { BLUE_CHIP_COLLATERAL } from "@/lib/curator-rating";
 
+// Dust threshold: bad debt below $1 is rounding noise from liquidations
+const BAD_DEBT_DUST_THRESHOLD = 1;
+
 // ── Tier Classification ─────────────────────────────────────────────────
 // Institutional assets by tier for collateral scoring
 
@@ -90,7 +93,7 @@ export function calculateCuratorScore(curator: CuratorInput | null): number {
   if (!curator.entityType) return 0;
 
   // Hard: zero bad debt (5 pts, any bad debt = entire category = 0)
-  if (curator.badDebtUsd > 0) return 0;
+  if ((curator.badDebtUsd || 0) > BAD_DEBT_DUST_THRESHOLD) return 0;
 
   let score = 10; // legal entity points
 
@@ -261,18 +264,18 @@ export function qualifiesForHighGrade(input: VaultScoreInput): {
   }
 
   // 5. Curator total AUM >= $10M
-  if (!input.curator || input.curator.totalAUM < 10_000_000) {
-    const aum = input.curator?.totalAUM ?? 0;
+  if (!input.curator || (input.curator.totalAUM || 0) < 10_000_000) {
+    const aum = input.curator?.totalAUM || 0;
     failures.push(`Curator AUM $${(aum / 1e6).toFixed(2)}M < $10M minimum`);
   }
 
-  // 6. Zero bad debt (curator-level)
-  if (input.curator && input.curator.badDebtUsd > 0) {
+  // 6. Zero bad debt (curator-level) — ignore dust below $1
+  if (input.curator && (input.curator.badDebtUsd || 0) > BAD_DEBT_DUST_THRESHOLD) {
     failures.push(`Curator has $${(input.curator.badDebtUsd / 1e6).toFixed(2)}M bad debt`);
   }
 
   // 7. Zero bad debt (vault liquidations)
-  if (input.hasBadDebt) {
+  if (input.hasBadDebt === true) {
     failures.push("Vault has bad debt from liquidations");
   }
 
