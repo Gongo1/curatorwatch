@@ -284,6 +284,7 @@ export default function Home() {
               tooltip="Total yield generated for depositors over the past 30 days"
               highlight
               valueClass="text-emerald-500"
+              href="/yields"
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -295,6 +296,7 @@ export default function Home() {
               value={feesStats ? formatCurrency(feesStats.annualized.curatorFees) : "-"}
               tooltip="Estimated annualized fees earned by curators (management + performance fees)"
               valueClass="text-accent-blue"
+              href="/fees"
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
@@ -306,6 +308,7 @@ export default function Home() {
               value={feesStats ? formatCurrency(feesStats.annualized.morphoFees) : "-"}
               tooltip="Estimated annualized protocol fees (e.g. Morpho's 15% of interest). Only calculated for protocols with known fee structures."
               valueClass="text-accent-purple"
+              href="/fees"
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
@@ -656,6 +659,7 @@ function StatCard({
   icon,
   tooltip,
   change,
+  href,
 }: {
   label: string;
   value: string;
@@ -664,14 +668,15 @@ function StatCard({
   icon?: React.ReactNode;
   tooltip?: string;
   change?: number | null;
+  href?: string;
 }) {
-  return (
+  const content = (
     <div
-      className={`rounded-xl border p-3 sm:p-3.5 ${
+      className={`rounded-xl border p-3 sm:p-3.5 transition-colors ${
         highlight
           ? "border-accent-blue/30 bg-accent-blue/5"
           : "border-border bg-background-subtle"
-      }`}
+      } ${href ? "hover:bg-background-hover cursor-pointer" : ""}`}
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-1">
@@ -702,4 +707,9 @@ function StatCard({
       )}
     </div>
   );
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+  return content;
 }
