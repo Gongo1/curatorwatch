@@ -89,7 +89,7 @@ export default function Home() {
       const [curatorsResponse, changesResponse, feesResponse, yieldResponse, aumGrowthResponse, coverageResponse] = await Promise.all([
         fetch(`/api/curators?${params.toString()}`),
         fetch("/api/changes?hours=24&limit=0"),
-        fetch("/api/stats/fees"),
+        fetch("/api/stats/fees-breakdown?dataSource=morpho"),
         fetch("/api/stats/yield-growth"),
         fetch("/api/stats/aum-growth"),
         fetch("/api/stats/protocol-coverage"),
@@ -118,7 +118,7 @@ export default function Home() {
       }
 
       if (feesData.success) {
-        setFeesStats(feesData.data);
+        setFeesStats(feesData.data.summary);
       }
 
       if (yieldData.success && yieldData.data.length > 0) {
