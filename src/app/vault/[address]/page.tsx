@@ -25,7 +25,8 @@ import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
-import { DataSourceBadge } from "@/components/DataSourceBadge";
+import { VaultGradeBadge } from "@/components/VaultGradeBadge";
+import { AllocationCalculator } from "@/components/AllocationCalculator";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -158,7 +159,7 @@ export default function VaultDetailPage({ params }: PageProps) {
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
-            <DataSourceBadge dataSource={vault.dataSource} />
+            <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
             <a
               href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
@@ -280,6 +281,7 @@ export default function VaultDetailPage({ params }: PageProps) {
         <Tabs defaultValue="overview">
           <TabsList className="rounded-t-lg">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="calculator">LP Calculator</TabsTrigger>
             {!isTurtleVault && <TabsTrigger value="activity">Activity</TabsTrigger>}
             {!isTurtleVault && <TabsTrigger value="strategy">Strategy Intelligence</TabsTrigger>}
             <TabsTrigger value="alerts">Alerts</TabsTrigger>
@@ -590,6 +592,10 @@ export default function VaultDetailPage({ params }: PageProps) {
             )}
           </TabsContent>
 
+          <TabsContent value="calculator" className="pt-6">
+            <AllocationCalculator vault={vault} />
+          </TabsContent>
+
           <TabsContent value="activity" className="pt-6">
             <ActivityTab
               vaultAddress={vault.address}
@@ -599,7 +605,7 @@ export default function VaultDetailPage({ params }: PageProps) {
           </TabsContent>
 
           <TabsContent value="strategy" className="pt-6">
-            <StrategyIntelligence vaultAddress={vault.address} />
+            <StrategyIntelligence vaultAddress={vault.address} grade={vault.grade} gradeFailures={vault.gradeFailures} />
           </TabsContent>
 
           <TabsContent value="alerts" className="pt-6">

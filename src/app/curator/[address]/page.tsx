@@ -17,7 +17,7 @@ import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar
 import type { CuratorDetailResponse } from "@/lib/types/api";
 import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
-import { DataSourceBadge } from "@/components/DataSourceBadge";
+import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 
 interface PageProps {
@@ -423,7 +423,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
                                 <Link href={`/vault/${v.address}`} className="group">
                                   <div className="flex items-center text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
                                     {v.name}
-                                    <DataSourceBadge dataSource={v.dataSource} />
+                                    <VaultGradeBadge grade={v.grade} failures={v.gradeFailures} />
                                   </div>
                                   <span className="block text-xs text-text-tertiary">{v.asset.symbol}</span>
                                 </Link>

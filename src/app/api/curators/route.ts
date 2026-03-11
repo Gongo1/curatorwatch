@@ -56,24 +56,31 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
       tvlChangePct30d: c.tvlChangePct30d,
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        curators,
-        stats: {
-          totalCurators: stats.totalCurators,
-          totalAUM: stats.totalAUM,
-          totalVaults: stats.totalVaults,
-          avgApy: stats.avgApy,
-        },
-        pagination: {
-          page: paginatedResult.page,
-          pageSize: paginatedResult.pageSize,
-          total: paginatedResult.total,
-          totalPages: paginatedResult.totalPages,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          curators,
+          stats: {
+            totalCurators: stats.totalCurators,
+            totalAUM: stats.totalAUM,
+            totalVaults: stats.totalVaults,
+            avgApy: stats.avgApy,
+          },
+          pagination: {
+            page: paginatedResult.page,
+            pageSize: paginatedResult.pageSize,
+            total: paginatedResult.total,
+            totalPages: paginatedResult.totalPages,
+          },
         },
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     const errorStack = error instanceof Error ? error.stack : undefined;

@@ -118,6 +118,8 @@ export async function GET(request: Request, { params }: RouteParams) {
               name: v.name,
               symbol: v.symbol,
               dataSource: v.dataSource,
+              grade: v.grade ?? null,
+              gradeFailures: v.gradeFailures ?? [],
               totalAssetsUsd: v.snapshots[0]?.totalAssetsUsd ?? 0,
               avgNetApy: v.snapshots[0]?.avgNetApy ?? null,
             }))
@@ -286,6 +288,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       estTotalAPR: vault.estTotalAPR,
       netAPR: vault.netAPR,
       aprBreakdown: vault.aprBreakdown,
+      riskScore: vault.riskScore ?? null,
+      grade: vault.grade ?? null,
+      gradeFailures: vault.gradeFailures ?? [],
       yield: {
         dailyYield,
         weeklyYield,

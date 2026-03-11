@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData } from "@/scripts/collect-data";
+import { updateVaultGrades } from "@/scripts/update-vault-grades";
 
 export const maxDuration = 800; // Pro plan allows up to 900s
 export const dynamic = "force-dynamic";
@@ -48,6 +49,14 @@ export async function GET(request: NextRequest) {
       transactions: result.transactionsCollected,
       duration: `${result.duration}s`,
     });
+
+    // Update vault risk scores and grades
+    try {
+      const gradeResult = await updateVaultGrades();
+      console.log("[CRON] Vault grades updated:", gradeResult);
+    } catch (gradeError) {
+      console.error("[CRON] Vault grade update failed (non-fatal):", gradeError);
+    }
 
     return NextResponse.json({
       success: true,

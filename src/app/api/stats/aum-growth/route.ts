@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 interface DailyAggregated {
   totalAUM: number;
@@ -455,22 +454,36 @@ export async function GET() {
         }
       }
 
-      return NextResponse.json({
+      return NextResponse.json(
+        {
+          success: true,
+          data: mockData,
+          curatorMeta,
+          protocolMeta,
+          networkMeta,
+        },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          },
+        }
+      );
+    }
+
+    return NextResponse.json(
+      {
         success: true,
-        data: mockData,
+        data: chartData,
         curatorMeta,
         protocolMeta,
         networkMeta,
-      });
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: chartData,
-      curatorMeta,
-      protocolMeta,
-      networkMeta,
-    });
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching AUM growth data:", error);
     return NextResponse.json(

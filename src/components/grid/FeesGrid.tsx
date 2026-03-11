@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency, formatPercentage } from "@/lib/utils/format";
-import { DataSourceBadge } from "@/components/DataSourceBadge";
+import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { curatorSlug } from "@/lib/curator-aliases";
 
 // Curator fees grid
@@ -119,6 +119,8 @@ interface VaultFeeRow {
   vaultAddress: string;
   vaultName: string;
   dataSource?: string;
+  grade?: string | null;
+  gradeFailures?: string[];
   assetSymbol: string;
   curatorName: string | null;
   curatorAddress?: string | null;
@@ -139,7 +141,7 @@ function AssetCellRenderer(params: ICellRendererParams) {
   return (
     <div className="flex items-center gap-2">
       <span className="font-medium text-text-primary">{data.assetSymbol}</span>
-      <DataSourceBadge dataSource={data.dataSource} />
+      <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
     </div>
   );
 }

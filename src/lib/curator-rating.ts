@@ -59,7 +59,7 @@ export interface CuratorRiskRating {
 // CONSTANTS
 // ============================================================================
 
-const BLUE_CHIP_COLLATERAL = [
+export const BLUE_CHIP_COLLATERAL = [
   // Stablecoins
   "USDC", "USDT", "DAI", "FRAX", "LUSD", "crvUSD", "GHO", "PYUSD", "USDS",
   "EURC", "EURCV", "AUSD", "sDAI", "sUSDe", "USDe", "FDUSD", "TUSD", "USDD",

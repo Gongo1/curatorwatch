@@ -10,7 +10,7 @@ import {
   PercentageRenderer,
   ChangeCountRenderer,
 } from "./cellRenderers";
-import { DataSourceBadge } from "@/components/DataSourceBadge";
+import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { curatorSlug } from "@/lib/curator-aliases";
 import type { VaultData } from "@/lib/types/api";
 
@@ -24,7 +24,7 @@ function AssetCellRenderer(params: ICellRendererParams) {
   return (
     <div className="flex items-center gap-2">
       <span className="font-medium text-text-primary">{data.asset.symbol}</span>
-      <DataSourceBadge dataSource={data.dataSource} />
+      <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
     </div>
   );
 }

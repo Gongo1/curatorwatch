@@ -68,6 +68,9 @@ export interface VaultData {
   estTotalAPR?: number | null;
   netAPR?: number | null;
   aprBreakdown?: Array<{ source: string; apr: number; type: string }> | null;
+  riskScore?: number | null;
+  grade?: string | null;
+  gradeFailures?: string[];
   updatedAt: string;
 }
 
@@ -110,6 +113,8 @@ export interface CuratorOtherVault {
   name: string;
   symbol: string;
   dataSource: string;
+  grade: string | null;
+  gradeFailures?: string[];
   totalAssetsUsd: number;
   avgNetApy: number | null;
 }
@@ -235,6 +240,8 @@ export interface CuratorVaultSummary {
   performanceFee: number;
   protocol: string;
   dataSource: string;
+  grade: string | null;
+  gradeFailures?: string[];
   chainName: string | null;
   latestSnapshot: VaultSnapshot | null;
 }

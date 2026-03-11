@@ -36,6 +36,16 @@ model Vault {
   netAPR          Float?                       // estTotalAPR - performanceFee - managementFee
   aprBreakdown    Json?                        // Incentive sources from Turtle API
 
+  // Risk scoring (computed by update-vault-grades script)
+  riskScore          Float?    // 0-100 composite risk score
+  grade              String?   // "high-grade" | "other"
+  sizeScore          Float?    // 0-25
+  maturityScore      Float?    // 0-15
+  curatorScore       Float?    // 0-35
+  collateralScore    Float?    // 0-15
+  riskIndicatorScore Float?    // 0-10
+  gradeFailures     String[]  // Failure reasons from grade computation
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -58,6 +68,8 @@ model Vault {
   @@index([protocol])
   @@index([protocol, active])
   @@index([dataSource])
+  @@index([grade])
+  @@index([riskScore])
 }
 
 model VaultSnapshot {

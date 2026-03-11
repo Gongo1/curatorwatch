@@ -10,8 +10,10 @@ import {
   TrendingUp,
   Coins,
   Zap,
+  Calculator,
   Bell,
   BookOpen,
+  FileText,
   X,
 } from "lucide-react";
 
@@ -51,8 +53,10 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
     { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields", section: "Economics" },
     { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Economics" },
     { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Economics" },
+    { href: "/calculator", icon: <Calculator className="w-5 h-5" />, label: "LP Calculator", section: "Economics" },
     { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", section: "Monitoring" },
     { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog", section: "Info" },
+    { href: "/docs", icon: <FileText className="w-5 h-5" />, label: "Docs", section: "Info" },
   ];
 
   // Group by section

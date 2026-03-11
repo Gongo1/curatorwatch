@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 export async function GET() {
   try {
@@ -145,16 +144,30 @@ export async function GET() {
         }
       }
 
-      return NextResponse.json({
-        success: true,
-        data: mockData,
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          data: mockData,
+        },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+          },
+        }
+      );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: chartData,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: chartData,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching yield growth data:", error);
     return NextResponse.json(

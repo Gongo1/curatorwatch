@@ -13,6 +13,8 @@ import {
   Zap,
   Bell,
   BookOpen,
+  Calculator,
+  FileText,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -74,6 +76,11 @@ export function Sidebar({ collapsed }: SidebarProps) {
           icon: <Zap className="w-5 h-5" />,
           label: "Liquidations",
         },
+        {
+          href: "/calculator",
+          icon: <Calculator className="w-5 h-5" />,
+          label: "LP Calculator",
+        },
       ],
     },
     {
@@ -94,6 +101,11 @@ export function Sidebar({ collapsed }: SidebarProps) {
           href: "/changelog",
           icon: <BookOpen className="w-5 h-5" />,
           label: "Changelog",
+        },
+        {
+          href: "/docs",
+          icon: <FileText className="w-5 h-5" />,
+          label: "Docs",
         },
       ],
     },

@@ -41,10 +41,17 @@ export async function GET() {
       curatorCount: data.curators.size,
     }));
 
-    return NextResponse.json({
-      success: true,
-      data: result,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: result,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error fetching protocol coverage:", error);
     return NextResponse.json(

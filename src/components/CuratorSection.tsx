@@ -5,7 +5,7 @@ import type { VaultCurator } from "@/lib/types/api";
 import { formatCurrency, formatPercentage, formatTimeAgo } from "@/lib/utils/format";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
 import { curatorSlug } from "@/lib/curator-aliases";
-import { DataSourceBadge } from "@/components/DataSourceBadge";
+import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 
 interface CuratorSectionProps {
   curator: VaultCurator;
@@ -222,7 +222,7 @@ export function CuratorSection({ curator }: CuratorSectionProps) {
                   <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
                     {vault.name}
                   </span>
-                  <DataSourceBadge dataSource={vault.dataSource} />
+                  <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
                   <span className="text-xs text-text-muted ml-2">{vault.symbol}</span>
                 </div>
                 <div className="flex items-center gap-4 text-sm">

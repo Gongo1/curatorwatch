@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatCurrency } from "@/lib/utils/format";
 import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
-import { DataSourceBadge } from "./DataSourceBadge";
+import { VaultGradeBadge } from "./VaultGradeBadge";
 
 interface TopVault {
   address: string;
@@ -14,6 +14,8 @@ interface TopVault {
   curatorAddress: string | null;
   curatorName?: string | null;
   dataSource?: string | null;
+  grade?: string | null;
+  gradeFailures?: string[];
   turtleId?: string | null;
   latestSnapshot: {
     totalAssetsUsd: number;
@@ -148,7 +150,7 @@ export function TopVaults() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center text-sm font-medium text-text-primary truncate group-hover:text-accent-blue transition-colors">
                 {vault.name}
-                <DataSourceBadge dataSource={vault.dataSource} />
+                <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <span className="text-xs text-text-tertiary">{vault.symbol}</span>

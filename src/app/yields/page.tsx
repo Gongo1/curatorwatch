@@ -12,6 +12,8 @@ interface VaultYieldData {
   vaultAddress: string;
   vaultName: string;
   dataSource?: string;
+  grade?: string | null;
+  gradeFailures?: string[];
   assetSymbol: string;
   curatorId: string | null;
   curatorName: string | null;

@@ -1,18 +1,24 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 interface TooltipProps {
-  content: string;
+  content: React.ReactNode;
   children: React.ReactNode;
   position?: "top" | "bottom" | "left" | "right";
 }
 
 export function Tooltip({ content, children, position = "top" }: TooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [coords, setCoords] = useState({ x: 0, y: 0 });
+  const [coords, setCoords] = useState<{ x: number; y: number } | null>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (isVisible && triggerRef.current && tooltipRef.current) {
@@ -46,8 +52,24 @@ export function Tooltip({ content, children, position = "top" }: TooltipProps) {
       y = Math.max(8, Math.min(y, window.innerHeight - tooltip.height - 8));
 
       setCoords({ x, y });
+    } else if (!isVisible) {
+      setCoords(null);
     }
   }, [isVisible, position]);
+
+  const tooltipElement = isVisible ? (
+    <div
+      ref={tooltipRef}
+      className="fixed z-[9999] px-2.5 py-1.5 text-xs bg-background-elevated border border-border rounded-lg shadow-lg max-w-xs"
+      style={{
+        left: coords?.x ?? -9999,
+        top: coords?.y ?? -9999,
+        visibility: coords ? "visible" : "hidden",
+      }}
+    >
+      <div className="text-text-secondary whitespace-normal">{content}</div>
+    </div>
+  ) : null;
 
   return (
     <div
@@ -57,18 +79,7 @@ export function Tooltip({ content, children, position = "top" }: TooltipProps) {
       onMouseLeave={() => setIsVisible(false)}
     >
       {children}
-      {isVisible && (
-        <div
-          ref={tooltipRef}
-          className="fixed z-50 px-2.5 py-1.5 text-xs bg-background-elevated border border-border rounded-lg shadow-lg max-w-xs"
-          style={{
-            left: coords.x,
-            top: coords.y,
-          }}
-        >
-          <p className="text-text-secondary whitespace-normal">{content}</p>
-        </div>
-      )}
+      {mounted && tooltipElement && createPortal(tooltipElement, document.body)}
     </div>
   );
 }

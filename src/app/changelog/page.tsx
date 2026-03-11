@@ -20,6 +20,27 @@ const categoryStyles: Record<Category, string> = {
 
 const entries: ChangelogEntry[] = [
   {
+    date: "March 10, 2026",
+    items: [
+      {
+        category: "Feature",
+        text: "LP Return Calculator \u2014 new tool under Economics that lets you select vault grade, collateral type, deposit amount, and see matching vaults with projected earnings, payment schedules, and growth charts. Advanced filters for protocol, asset, curator, and APR range.",
+      },
+      {
+        category: "Improvement",
+        text: "Replaced 4-factor vault scoring model (curator 40, collateral 30, maturity 20, liquidation 10) with stricter 5-factor model: Size (0-25), Maturity (0-15), Curator (0-35), Collateral (0-15), Risk Indicators (0-10). Adds TVL thresholds, APR sanity checks, and curator AUM scoring.",
+      },
+      {
+        category: "Improvement",
+        text: "Three-tier vault grading replaces the old score \u2265 60 threshold. High Grade = pass all 9 hard requirements, Medium Grade = fail 1-3, Low Grade = fail 4+. Requirements include: $1M+ TVL, legal entity, 6+ months operating, $10M+ curator AUM, zero bad debt, \u226420% APR, and 80%+ institutional collateral.",
+      },
+      {
+        category: "Improvement",
+        text: "Vault sub-scores (size, maturity, curator, collateral, risk indicators) are now stored individually in the database for transparency and future breakdown displays.",
+      },
+    ],
+  },
+  {
     date: "March 3, 2026",
     items: [
       {

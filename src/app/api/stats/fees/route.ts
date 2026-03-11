@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 // Morpho protocol fee (15% of interest earned goes to Morpho protocol)
 // Only applies to Morpho vaults — other protocols have their own fee structures
@@ -77,22 +76,29 @@ export async function GET() {
 
     totalFeesAnnualized = totalCuratorFeesAnnualized + totalMorphoFeesAnnualized;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        estimated: {
-          curatorFees: totalCuratorFees,
-          morphoFees: totalMorphoFees,
-          totalFees: totalCuratorFees + totalMorphoFees,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          estimated: {
+            curatorFees: totalCuratorFees,
+            morphoFees: totalMorphoFees,
+            totalFees: totalCuratorFees + totalMorphoFees,
+          },
+          annualized: {
+            curatorFees: totalCuratorFeesAnnualized,
+            morphoFees: totalMorphoFeesAnnualized,
+            totalFees: totalFeesAnnualized,
+          },
+          vaultCount: vaults.length,
         },
-        annualized: {
-          curatorFees: totalCuratorFeesAnnualized,
-          morphoFees: totalMorphoFeesAnnualized,
-          totalFees: totalFeesAnnualized,
-        },
-        vaultCount: vaults.length,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error calculating total fees:", error);
     return NextResponse.json(

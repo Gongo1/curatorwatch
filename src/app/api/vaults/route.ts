@@ -15,13 +15,46 @@ export async function GET(request: NextRequest) {
       whereClause.dataSource = dataSourceFilter;
     }
 
-    // MINIMAL query - just vaults with latest snapshot
+    // MINIMAL query - only select fields needed for the response
     const vaults = await prisma.vault.findMany({
       where: whereClause,
-      include: {
+      select: {
+        id: true,
+        address: true,
+        name: true,
+        symbol: true,
+        chainId: true,
+        assetAddress: true,
+        assetSymbol: true,
+        assetDecimals: true,
+        curatorAddress: true,
+        performanceFee: true,
+        managementFee: true,
+        turtleId: true,
+        protocol: true,
+        dataSource: true,
+        chainName: true,
+        estTotalAPR: true,
+        netAPR: true,
+        aprBreakdown: true,
+        riskScore: true,
+        grade: true,
+        gradeFailures: true,
+        updatedAt: true,
         snapshots: {
           orderBy: { timestamp: "desc" },
           take: 1,
+          select: {
+            totalAssets: true,
+            totalAssetsUsd: true,
+            totalSupply: true,
+            sharePrice: true,
+            apy: true,
+            netApy: true,
+            avgApy: true,
+            avgNetApy: true,
+            timestamp: true,
+          },
         },
         curator: {
           select: { name: true, address: true },
@@ -78,15 +111,25 @@ export async function GET(request: NextRequest) {
         estTotalAPR: vault.estTotalAPR,
         netAPR: vault.netAPR,
         aprBreakdown: vault.aprBreakdown,
+        riskScore: vault.riskScore ?? null,
+        grade: vault.grade ?? null,
+        gradeFailures: vault.gradeFailures ?? [],
         updatedAt: vault.updatedAt.toISOString(),
       };
     });
 
-    return NextResponse.json({
-      success: true,
-      data: response,
-      count: response.length,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: response,
+        count: response.length,
+      },
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      }
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     console.error("Error fetching vaults:", errorMessage);

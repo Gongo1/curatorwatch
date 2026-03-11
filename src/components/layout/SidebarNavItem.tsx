@@ -22,6 +22,7 @@ export function SidebarNavItem({
   return (
     <Link
       href={href}
+      prefetch={true}
       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-200 relative group ${
         active
           ? "bg-accent-blue/10 text-accent-blue"

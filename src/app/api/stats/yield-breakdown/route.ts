@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 interface VaultYieldData {
   vaultId: string;
   vaultAddress: string;
   vaultName: string;
   dataSource: string;
+  grade: string | null;
+  gradeFailures: string[];
   assetSymbol: string;
   curatorId: string | null;
   curatorName: string | null;
@@ -55,6 +56,8 @@ export async function GET() {
         address: true,
         name: true,
         dataSource: true,
+        grade: true,
+        gradeFailures: true,
         assetSymbol: true,
         performanceFee: true,
         managementFee: true,
@@ -150,6 +153,8 @@ export async function GET() {
         vaultAddress: vault.address,
         vaultName: vault.name,
         dataSource: vault.dataSource,
+        grade: vault.grade,
+        gradeFailures: vault.gradeFailures ?? [],
         assetSymbol: vault.assetSymbol,
         curatorId: vault.curatorId,
         curatorName,
@@ -227,26 +232,33 @@ export async function GET() {
       ? vaultYields.reduce((sum, v) => sum + (v.netApy / 100) * v.tvl, 0) / totalAUM * 100
       : 0;
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        summary: {
-          totalVaults: vaultYields.length,
-          totalCurators: curatorYields.length,
-          totalAUM,
-          avgNetApy,
-          yield: {
-            daily: totalDailyYield,
-            weekly: totalWeeklyYield,
-            monthly: totalMonthlyYield,
-            annualized: totalAnnualizedYield,
-            estimatedTotal: totalEstimatedYield,
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          summary: {
+            totalVaults: vaultYields.length,
+            totalCurators: curatorYields.length,
+            totalAUM,
+            avgNetApy,
+            yield: {
+              daily: totalDailyYield,
+              weekly: totalWeeklyYield,
+              monthly: totalMonthlyYield,
+              annualized: totalAnnualizedYield,
+              estimatedTotal: totalEstimatedYield,
+            },
           },
+          byVault: vaultYields,
+          byCurator: curatorYields,
         },
-        byVault: vaultYields,
-        byCurator: curatorYields,
       },
-    });
+      {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      }
+    );
   } catch (error) {
     console.error("Error calculating yield breakdown:", error);
     return NextResponse.json(
