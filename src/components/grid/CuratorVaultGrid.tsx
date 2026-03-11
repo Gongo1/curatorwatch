@@ -66,18 +66,28 @@ export function CuratorVaultGrid({ vaults }: CuratorVaultGridProps) {
         sort: "desc",
       },
       {
-        headerName: "APY",
-        headerTooltip: "Time-weighted average annual yield before fees",
-        valueGetter: (params) => params.data?.latestSnapshot?.avgApy ?? 0,
+        headerName: "APY/APR",
+        headerTooltip: "Time-weighted average annual yield before fees (APY for Morpho, APR for Turtle)",
+        valueGetter: (params) => {
+          const d = params.data;
+          if (!d) return 0;
+          if (d.dataSource === "turtle") return (d.estTotalAPR ?? d.netAPR ?? 0) / 100;
+          return d.latestSnapshot?.avgApy ?? 0;
+        },
         cellRenderer: PercentageRenderer,
         flex: 0.7,
         minWidth: 80,
         type: "numericColumn",
       },
       {
-        headerName: "Net APY",
+        headerName: "Net APY/APR",
         headerTooltip: "Time-weighted average annual yield after fees — the actual return depositors earn",
-        valueGetter: (params) => params.data?.latestSnapshot?.avgNetApy ?? 0,
+        valueGetter: (params) => {
+          const d = params.data;
+          if (!d) return 0;
+          if (d.dataSource === "turtle") return (d.netAPR ?? 0) / 100;
+          return d.latestSnapshot?.avgNetApy ?? 0;
+        },
         cellRenderer: PercentageRenderer,
         flex: 0.7,
         minWidth: 80,

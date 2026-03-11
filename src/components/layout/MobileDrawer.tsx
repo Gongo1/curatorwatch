@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Box,
+  TrendingUp,
   Coins,
   Zap,
   Calculator,
@@ -49,6 +50,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   const navItems = [
     { href: "/", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard", section: "Analytics" },
     { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults", section: "Analytics" },
+    { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields", section: "Economics" },
     { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Economics" },
     { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Economics" },
     { href: "/calculator", icon: <Calculator className="w-5 h-5" />, label: "LP Calculator", section: "Economics" },

@@ -33,6 +33,7 @@ interface VaultYieldRow {
 interface VaultYieldsGridProps {
   vaults: VaultYieldRow[];
   timeFrame: "daily" | "weekly" | "monthly" | "annualized";
+  rateLabel?: string;
 }
 
 const timeFrameLabels: Record<string, string> = {
@@ -75,7 +76,7 @@ function CuratorCellRenderer(params: ICellRendererParams) {
   );
 }
 
-export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
+export function VaultYieldsGrid({ vaults, timeFrame, rateLabel = "APY" }: VaultYieldsGridProps) {
   const router = useRouter();
   const getYield = (vault: VaultYieldRow) => {
     switch (timeFrame) {
@@ -112,7 +113,7 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
         valueFormatter: (params) => formatCurrency(params.value),
       },
       {
-        headerName: "Gross APY",
+        headerName: `Gross ${rateLabel}`,
         headerTooltip: "Time-weighted average annual yield before fees",
         field: "grossApy",
         flex: 0.7,
@@ -122,7 +123,7 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
         valueFormatter: (params) => `${params.value?.toFixed(2)}%`,
       },
       {
-        headerName: "Net APY",
+        headerName: `Net ${rateLabel}`,
         headerTooltip: "Time-weighted average annual yield after fees — the actual return depositors earn",
         field: "netApy",
         flex: 0.7,
@@ -151,7 +152,7 @@ export function VaultYieldsGrid({ vaults, timeFrame }: VaultYieldsGridProps) {
         valueFormatter: (params) => formatCurrency(params.value),
       },
     ],
-    [timeFrame]
+    [timeFrame, rateLabel]
   );
 
   return (

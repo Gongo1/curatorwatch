@@ -64,17 +64,22 @@ interface CuratorWithVaults extends CuratorYieldData {
 }
 
 type ViewMode = "curators" | "vaults";
+type DataSource = "morpho" | "turtle";
 type TimeFrame = "daily" | "weekly" | "monthly" | "annualized";
 type SortDir = "asc" | "desc";
 type CuratorSortKey = "name" | "vaults" | "tvl" | "yieldRange" | "avgFee" | "yield";
 type VaultSortKey = "name" | "curator" | "tvl" | "grossApy" | "netApy" | "fee" | "yield";
 
 export default function YieldsPage() {
-  const [summary, setSummary] = useState<YieldSummary | null>(null);
-  const [curatorYields, setCuratorYields] = useState<CuratorYieldData[]>([]);
-  const [vaultYields, setVaultYields] = useState<VaultYieldData[]>([]);
+  const [morphoSummary, setMorphoSummary] = useState<YieldSummary | null>(null);
+  const [morphoCurators, setMorphoCurators] = useState<CuratorYieldData[]>([]);
+  const [morphoVaults, setMorphoVaults] = useState<VaultYieldData[]>([]);
+  const [turtleSummary, setTurtleSummary] = useState<YieldSummary | null>(null);
+  const [turtleCurators, setTurtleCurators] = useState<CuratorYieldData[]>([]);
+  const [turtleVaults, setTurtleVaults] = useState<VaultYieldData[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("curators");
+  const [source, setSource] = useState<DataSource>("morpho");
   const [timeFrame, setTimeFrame] = useState<TimeFrame>("annualized");
   const [expandedCurator, setExpandedCurator] = useState<string | null>(null);
   const [curatorSort, setCuratorSort] = useState<{ key: CuratorSortKey; dir: SortDir }>({ key: "yield", dir: "desc" });
@@ -83,12 +88,23 @@ export default function YieldsPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/stats/yield-breakdown?dataSource=morpho");
-        const data = await res.json();
-        if (data.success) {
-          setSummary(data.data.summary);
-          setCuratorYields(data.data.byCurator);
-          setVaultYields(data.data.byVault);
+        const [morphoRes, turtleRes] = await Promise.all([
+          fetch("/api/stats/yield-breakdown?dataSource=morpho"),
+          fetch("/api/stats/yield-breakdown?dataSource=turtle"),
+        ]);
+        const [morphoData, turtleData] = await Promise.all([
+          morphoRes.json(),
+          turtleRes.json(),
+        ]);
+        if (morphoData.success) {
+          setMorphoSummary(morphoData.data.summary);
+          setMorphoCurators(morphoData.data.byCurator);
+          setMorphoVaults(morphoData.data.byVault);
+        }
+        if (turtleData.success) {
+          setTurtleSummary(turtleData.data.summary);
+          setTurtleCurators(turtleData.data.byCurator);
+          setTurtleVaults(turtleData.data.byVault);
         }
       } catch (err) {
         console.error("Failed to fetch data:", err);
@@ -98,6 +114,11 @@ export default function YieldsPage() {
     }
     fetchData();
   }, []);
+
+  const summary = source === "morpho" ? morphoSummary : turtleSummary;
+  const curatorYields = source === "morpho" ? morphoCurators : turtleCurators;
+  const vaultYields = source === "morpho" ? morphoVaults : turtleVaults;
+  const rateLabel = source === "morpho" ? "APY" : "APR";
 
   // Build curator rows with vault breakdowns
   const curatorRows = useMemo(() => {
@@ -247,7 +268,33 @@ export default function YieldsPage() {
 
   return (
     <>
-      <PageHeader title="Yields" description="Yield generation across vaults and curators" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Yields" }]} />
+      <PageHeader title="Yield Analytics" description="Yield generation across vaults and curators" breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Yields" }]} />
+
+        {/* Source Toggle */}
+        <div className="flex items-center gap-2 mb-6">
+          <div className="flex rounded-lg border border-border overflow-hidden">
+            <button
+              onClick={() => setSource("morpho")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                source === "morpho"
+                  ? "bg-accent-blue text-white"
+                  : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
+              }`}
+            >
+              Morpho
+            </button>
+            <button
+              onClick={() => setSource("turtle")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                source === "turtle"
+                  ? "bg-cyan-600 text-white"
+                  : "bg-background-subtle text-text-secondary hover:bg-background-elevated"
+              }`}
+            >
+              Turtle
+            </button>
+          </div>
+        </div>
 
         {/* Summary Cards */}
         {summary && (
@@ -279,9 +326,9 @@ export default function YieldsPage() {
         {/* Explainer */}
         <div className="mb-6 p-4 bg-accent-blue/10 border border-accent-blue/20 rounded-xl">
           <p className="text-sm text-text-secondary">
-            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and net rate.
-            Morpho vaults use Net APY (compound interest). Turtle vaults use Net APR (simple interest) from the Turtle API.
-            These are projected yields based on current rates.
+            <span className="font-medium text-accent-blue">How it works:</span> Yield is calculated based on each vault&apos;s current TVL and net {rateLabel}.
+            {source === "morpho" ? "Morpho vaults use Net APY (compound interest)." : "Turtle vaults use Net APR (simple interest) from the Turtle API."}
+            {" "}These are projected yields based on current rates.
           </p>
         </div>
 
@@ -389,7 +436,7 @@ export default function YieldsPage() {
 
         {/* Vault Yields Grid */}
         {viewMode === "vaults" && (
-          <VaultYieldsGrid vaults={sortedVaults} timeFrame={timeFrame} />
+          <VaultYieldsGrid vaults={sortedVaults} timeFrame={timeFrame} rateLabel={rateLabel} />
         )}
     </>
   );
