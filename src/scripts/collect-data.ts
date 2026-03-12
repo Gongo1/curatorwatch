@@ -314,6 +314,16 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
     }
   }
 
+  // Sanity check: reject snapshots with absurd APY values (>200%)
+  // The Morpho API occasionally returns corrupted APY data
+  const MAX_APY = 2.0; // 200% in decimal form
+  const sanitizedAvgApy = vault.avgApy != null && Math.abs(vault.avgApy) > MAX_APY ? null : vault.avgApy;
+  const sanitizedAvgNetApy = vault.avgNetApy != null && Math.abs(vault.avgNetApy) > MAX_APY ? null : vault.avgNetApy;
+
+  if (sanitizedAvgApy !== vault.avgApy || sanitizedAvgNetApy !== vault.avgNetApy) {
+    log(`  ⚠ Rejected bad APY for ${vaultId}: avgApy=${vault.avgApy}, avgNetApy=${vault.avgNetApy}`);
+  }
+
   await prisma.vaultSnapshot.create({
     data: {
       vaultId,
@@ -325,8 +335,8 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
       liquidityUsd,
       apy: vault.apy,
       netApy: vault.netApy,
-      avgApy: vault.avgApy,
-      avgNetApy: vault.avgNetApy,
+      avgApy: sanitizedAvgApy,
+      avgNetApy: sanitizedAvgNetApy,
     },
   });
 }

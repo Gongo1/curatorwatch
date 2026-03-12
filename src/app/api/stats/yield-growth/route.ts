@@ -55,6 +55,9 @@ export async function GET() {
         const tvl = snap.totalAssetsUsd || 0;
         const netApy = snap.avgNetApy || 0; // Net APY is what depositors earn
 
+        // Sanity cap: ignore snapshots with absurd APY (>200% = 2.0 decimal)
+        if (netApy > 2.0) continue;
+
         // Daily yield = TVL * (Net APY / 365)
         const dailyYieldForVault = tvl * netApy / 365;
         dayYield += dailyYieldForVault;

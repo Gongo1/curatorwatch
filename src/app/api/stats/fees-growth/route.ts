@@ -51,6 +51,9 @@ export async function GET() {
         const tvl = snap.totalAssetsUsd || 0;
         const apy = snap.avgNetApy || 0;
 
+        // Sanity cap: skip snapshots with absurd APY (>200% = 2.0 decimal)
+        if (apy > 2.0) continue;
+
         // Estimated gross APY (before fees)
         const grossApy = performanceFee > 0 ? apy / (1 - performanceFee) : apy;
         const dailyGrossYield = grossApy / 365;
