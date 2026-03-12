@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ export async function GET() {
       where: {
         timestamp: {
           gte: thirtyDaysAgo,
+        },
+        vault: {
+          ...EXCLUDED_CURATOR_VAULT_FILTER,
         },
       },
       select: {
@@ -80,6 +84,9 @@ export async function GET() {
         where: {
           timestamp: {
             gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+          },
+          vault: {
+            ...EXCLUDED_CURATOR_VAULT_FILTER,
           },
         },
         select: {

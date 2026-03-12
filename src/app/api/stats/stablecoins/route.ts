@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -8,6 +9,9 @@ export async function GET() {
   try {
     // Get total assets by asset symbol from latest snapshots
     const vaults = await prisma.vault.findMany({
+      where: {
+        ...EXCLUDED_CURATOR_VAULT_FILTER,
+      },
       select: {
         assetSymbol: true,
         snapshots: {

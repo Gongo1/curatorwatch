@@ -257,11 +257,6 @@ const CURATOR_PROFILES: Record<
     entityType: "Corporation",
     isRegulated: false,
   },
-  maxshot: {
-    canonicalName: "Maxshot",
-    entityType: "Individual",
-    isRegulated: false,
-  },
   brrrstr: {
     canonicalName: "Brrrstr",
     entityType: "Individual",

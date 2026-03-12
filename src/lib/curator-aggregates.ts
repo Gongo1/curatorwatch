@@ -3,6 +3,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { EXCLUDED_CURATORS } from "@/lib/curator-aliases";
 
 export interface AssetDistribution {
   symbol: string;
@@ -81,6 +82,7 @@ export async function getPaginatedCuratorAggregates(
 
   const whereClause: Record<string, unknown> = {
     vaults: { some: Object.keys(vaultFilter).length > 0 ? vaultFilter : {} },
+    ...(EXCLUDED_CURATORS.length > 0 ? { name: { notIn: EXCLUDED_CURATORS } } : {}),
   };
 
   if (search && search.trim()) {
@@ -218,7 +220,10 @@ export async function getPaginatedCuratorAggregates(
  */
 export async function getCuratorSummaryStats(): Promise<CuratorSummaryStats> {
   const curators = await prisma.curator.findMany({
-    where: { vaults: { some: {} } },
+    where: {
+      vaults: { some: {} },
+      ...(EXCLUDED_CURATORS.length > 0 ? { name: { notIn: EXCLUDED_CURATORS } } : {}),
+    },
     include: {
       vaults: {
         include: {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -63,6 +64,7 @@ export async function GET(request: Request) {
       where: {
         active: true,
         ...(dataSource ? { dataSource } : {}),
+        ...EXCLUDED_CURATOR_VAULT_FILTER,
       },
       select: {
         id: true,

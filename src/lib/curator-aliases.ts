@@ -6,6 +6,20 @@
  * address so they are treated as one curator in the DB and UI.
  */
 
+/**
+ * Curators excluded from all aggregations, stats, and UI listings.
+ * Their vaults will still exist in the DB but won't appear in any totals.
+ */
+export const EXCLUDED_CURATORS: string[] = ["Maxshot"];
+
+/**
+ * Prisma where clause fragment to exclude vaults belonging to excluded curators.
+ * Use via: `where: { ...excludedCuratorFilter, ...otherFilters }`
+ */
+export const EXCLUDED_CURATOR_VAULT_FILTER = EXCLUDED_CURATORS.length > 0
+  ? { NOT: { curator: { name: { in: EXCLUDED_CURATORS } } } }
+  : {};
+
 export interface CuratorAliasGroup {
   curatorName: string;
   primaryAddress: string;

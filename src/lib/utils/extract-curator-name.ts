@@ -84,7 +84,6 @@ export const EXTRACTION_TEST_CASES: Record<string, string> = {
   'Steakhouse Prime EURC': 'Steakhouse',
   'Re7 WETH': 'Re7',
   'Yearn OG USDC V2': 'Yearn',
-  'Maxshot USDT0': 'Maxshot',
   'Brrrstr USDC': 'Brrrstr',
   'Clearstar Yield USDC': 'Clearstar',
   'Hyperithm USDC Midcurve': 'Hyperithm',

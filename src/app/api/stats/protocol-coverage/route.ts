@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
     const vaults = await prisma.vault.findMany({
-      where: { active: true },
+      where: { active: true, ...EXCLUDED_CURATOR_VAULT_FILTER },
       select: {
         dataSource: true,
         curatorId: true,

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,7 +8,9 @@ export async function GET(request: NextRequest) {
     const protocolFilter = request.nextUrl.searchParams.get("protocol");
     const dataSourceFilter = request.nextUrl.searchParams.get("dataSource");
 
-    const whereClause: Record<string, unknown> = {};
+    const whereClause: Record<string, unknown> = {
+      ...EXCLUDED_CURATOR_VAULT_FILTER,
+    };
     if (protocolFilter) {
       whereClause.protocol = protocolFilter;
     }
