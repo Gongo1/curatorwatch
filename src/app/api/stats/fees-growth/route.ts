@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -49,10 +50,7 @@ export async function GET() {
       for (const snap of vault.snapshots) {
         const day = snap.timestamp.toISOString().split("T")[0];
         const tvl = snap.totalAssetsUsd || 0;
-        const apy = snap.avgNetApy || 0;
-
-        // Sanity cap: skip snapshots with absurd APY (>200% = 2.0 decimal)
-        if (apy > 2.0) continue;
+        const apy = sanitizeApy(snap.avgNetApy);
 
         // Estimated gross APY (before fees)
         const grossApy = performanceFee > 0 ? apy / (1 - performanceFee) : apy;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +43,7 @@ export async function GET() {
       if (!latestSnapshot) continue;
 
       const tvl = latestSnapshot.totalAssetsUsd || 0;
-      const apy = latestSnapshot.avgNetApy || 0;
+      const apy = sanitizeApy(latestSnapshot.avgNetApy);
       const performanceFee = vault.performanceFee || 0;
       const managementFee = vault.managementFee || 0;
 

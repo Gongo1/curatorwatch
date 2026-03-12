@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 export const dynamic = "force-dynamic";
 
@@ -131,7 +132,7 @@ export async function GET(request: Request) {
         netApy = vault.netAPR / 100; // Convert percentage to decimal
         grossApy = vault.estTotalAPR != null ? vault.estTotalAPR / 100 : netApy;
       } else {
-        netApy = latestSnapshot.avgNetApy || 0;
+        netApy = sanitizeApy(latestSnapshot.avgNetApy);
         grossApy = performanceFee < 1
           ? (netApy + managementFee) / (1 - performanceFee)
           : netApy;

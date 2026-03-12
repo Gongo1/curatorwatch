@@ -4,6 +4,7 @@
 
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATORS } from "@/lib/curator-aliases";
+import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 export interface AssetDistribution {
   symbol: string;
@@ -139,8 +140,8 @@ export async function getPaginatedCuratorAggregates(
 
       const tvl = snap.totalAssetsUsd;
       totalAUM += tvl;
-      weightedApySum += (snap.avgApy ?? 0) * tvl;
-      weightedNetApySum += (snap.avgNetApy ?? 0) * tvl;
+      weightedApySum += sanitizeApy(snap.avgApy) * tvl;
+      weightedNetApySum += sanitizeApy(snap.avgNetApy) * tvl;
       assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
       protocolSet.add(vault.protocol ?? "morpho");
       networkSet.add((vault as Record<string, unknown>).chainName as string ?? "Ethereum");
@@ -247,7 +248,7 @@ export async function getCuratorSummaryStats(): Promise<CuratorSummaryStats> {
 
       const tvl = snap.totalAssetsUsd;
       totalAUM += tvl;
-      weightedApySum += (snap.avgNetApy ?? 0) * tvl;
+      weightedApySum += sanitizeApy(snap.avgNetApy) * tvl;
       totalVaults++;
     }
   }
@@ -296,8 +297,8 @@ export async function getCuratorAggregates(
 
     const tvl = snap.totalAssetsUsd;
     totalAUM += tvl;
-    weightedApySum += (snap.avgApy ?? 0) * tvl;
-    weightedNetApySum += (snap.avgNetApy ?? 0) * tvl;
+    weightedApySum += sanitizeApy(snap.avgApy) * tvl;
+    weightedNetApySum += sanitizeApy(snap.avgNetApy) * tvl;
     assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
     protocolSet.add((vault as Record<string, unknown>).protocol as string ?? "morpho");
     networkSet.add((vault as Record<string, unknown>).chainName as string ?? "Ethereum");

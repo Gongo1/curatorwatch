@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 export const dynamic = "force-dynamic";
 
@@ -172,7 +173,7 @@ export async function GET() {
 
       for (const snap of Object.values(vaultSnapshots)) {
         const aum = snap.totalAssetsUsd || 0;
-        const apy = snap.avgNetApy || 0;
+        const apy = sanitizeApy(snap.avgNetApy);
         const curatorAddress = snap.vault?.curatorAddress?.toLowerCase() || "__unassigned__";
         const protocol = snap.vault?.protocol || "morpho";
         const network = snap.vault?.chainName || "Ethereum";

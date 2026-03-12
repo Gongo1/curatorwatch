@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 export const dynamic = "force-dynamic";
 
@@ -53,10 +54,7 @@ export async function GET() {
 
       for (const snap of Object.values(vaultSnapshots)) {
         const tvl = snap.totalAssetsUsd || 0;
-        const netApy = snap.avgNetApy || 0; // Net APY is what depositors earn
-
-        // Sanity cap: ignore snapshots with absurd APY (>200% = 2.0 decimal)
-        if (netApy > 2.0) continue;
+        const netApy = sanitizeApy(snap.avgNetApy);
 
         // Daily yield = TVL * (Net APY / 365)
         const dailyYieldForVault = tvl * netApy / 365;
