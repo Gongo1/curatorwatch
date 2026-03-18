@@ -2,22 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { VaultGradeBadge } from "./VaultGradeBadge";
+import { formatCurrency } from "@/lib/utils/format";
 
-const BLUE_CHIP_ASSETS = ["USDC", "USDT", "USDA", "DAI", "wstETH", "WETH", "WBTC", "EURC", "PYUSD"];
-
-interface FavoriteVault {
+interface FeaturedVault {
   address: string;
   name: string;
   symbol: string;
   assetSymbol: string;
   curatorName: string | null;
   dataSource: string;
-  grade?: string | null;
-  gradeFailures?: string[];
+  riskScore: number;
   tvl: number;
   rate: number;
-  curatedReason: string;
 }
 
 const CURATOR_REASONS: Record<string, string> = {
@@ -36,91 +32,32 @@ function getCuratedReason(curatorName: string | null): string {
   return "Top-tier vault with strong fundamentals";
 }
 
-export function VaultFinder() {
-  const [favorites, setFavorites] = useState<FavoriteVault[]>([]);
+function formatTvl(tvl: number): string {
+  if (tvl >= 1_000_000_000) return `$${(tvl / 1_000_000_000).toFixed(1)}B`;
+  if (tvl >= 1_000_000) return `$${(tvl / 1_000_000).toFixed(0)}M`;
+  if (tvl >= 1_000) return `$${(tvl / 1_000).toFixed(0)}K`;
+  return `$${tvl.toFixed(0)}`;
+}
+
+export function VaultsOfTheWeek() {
+  const [featured, setFeatured] = useState<FeaturedVault[]>([]);
+  const [more, setMore] = useState<FeaturedVault[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/vaults");
+        const res = await fetch("/api/vaults/featured");
         const data = await res.json();
         if (!data.success) return;
-
-        // Process vaults
-        interface VaultEntry {
-          address: string;
-          name: string;
-          symbol: string;
-          assetSymbol: string;
-          curatorName: string | null;
-          dataSource: string;
-          tvl: number;
-          rate: number;
-          isBlueChip: boolean;
-          grade: string | null;
-          gradeFailures: string[];
-        }
-
-        const entries: VaultEntry[] = [];
-
-        for (const v of data.data) {
-          const isTurtle = v.dataSource === "turtle";
-          const netAPR = v.netAPR ?? null;
-          const avgNetApy = v.latestSnapshot?.avgNetApy ?? null;
-          const hasRate = isTurtle
-            ? (netAPR != null && netAPR > 0)
-            : (avgNetApy != null && avgNetApy > 0);
-          if (!hasRate) continue;
-
-          const tvl = v.latestSnapshot?.totalAssetsUsd ?? 0;
-          const rate = isTurtle ? (netAPR ?? 0) : ((avgNetApy ?? 0) * 100);
-          const isBlueChip = BLUE_CHIP_ASSETS.includes(v.asset?.symbol ?? "");
-
-          entries.push({
-            address: v.address,
-            name: v.name,
-            symbol: v.symbol,
-            assetSymbol: v.asset?.symbol ?? "",
-            curatorName: v.curatorName ?? null,
-            dataSource: v.dataSource,
-            tvl,
-            rate,
-            isBlueChip,
-            grade: v.grade ?? null,
-            gradeFailures: v.gradeFailures ?? [],
-          });
-        }
-
-        // Filter: high-grade (from DB) + blue-chip + has curator, then sort by rate
-        const curated = entries
-          .filter((v) => v.grade === "high-grade" && v.isBlueChip && v.curatorName)
-          .sort((a, b) => b.rate - a.rate)
-          .slice(0, 3)
-          .map((v) => ({
-            ...v,
-            curatedReason: getCuratedReason(v.curatorName),
-          }));
-
-        // Fallback: if fewer than 3 curated, fill with top high-grade by rate
-        if (curated.length < 3) {
-          const remaining = entries
-            .filter((v) => v.grade === "high-grade" && !curated.some((c) => c.address === v.address))
-            .sort((a, b) => b.rate - a.rate);
-          for (const v of remaining) {
-            if (curated.length >= 3) break;
-            curated.push({ ...v, curatedReason: getCuratedReason(v.curatorName) });
-          }
-        }
-
-        setFavorites(curated);
+        setFeatured(data.data.featured);
+        setMore(data.data.more);
       } catch {
         // Silently fail
       } finally {
         setLoading(false);
       }
     }
-
     fetchData();
   }, []);
 
@@ -142,12 +79,13 @@ export function VaultFinder() {
     );
   }
 
-  if (favorites.length === 0) return null;
+  if (featured.length === 0) return null;
 
   return (
     <div className="mb-5">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-semibold text-text-primary">Featured Vaults</h3>
+      {/* Header */}
+      <div className="flex items-center justify-between mb-1">
+        <h3 className="text-sm font-semibold text-text-primary">Vaults of the Week</h3>
         <Link
           href="/calculator"
           className="flex items-center gap-1.5 text-xs font-medium text-accent-blue hover:text-accent-blue-hover transition-colors"
@@ -161,27 +99,33 @@ export function VaultFinder() {
       <p className="text-xs text-text-tertiary mb-3">
         High-grade vaults with blue-chip collateral and established curators
       </p>
+
+      {/* Featured Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {favorites.map((vault) => (
+        {featured.map((vault) => (
           <Link
             key={vault.address}
             href={`/vault/${vault.address}`}
             className="bg-background-subtle border border-border rounded-xl p-5 hover:border-accent-blue transition-colors group"
           >
-            {/* Top row */}
+            {/* Badges */}
             <div className="flex items-center gap-1.5 mb-3">
               <span className="px-2 py-0.5 bg-accent-green/10 text-accent-green text-[10px] rounded font-medium border border-accent-green/20">
                 High Grade
               </span>
-              <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
+              <span className="px-2 py-0.5 bg-accent-blue/10 text-accent-blue text-[10px] rounded font-medium border border-accent-blue/20">
+                {formatTvl(vault.tvl)} TVL
+              </span>
             </div>
 
-            {/* Vault name + curator */}
+            {/* Vault name */}
             <div className="mb-0.5">
               <span className="text-sm font-bold text-text-primary group-hover:text-accent-blue transition-colors truncate">
                 {vault.name}
               </span>
             </div>
+
+            {/* Curator + asset */}
             <div className="flex items-center gap-1.5 mb-3">
               <span className="text-xs text-text-tertiary">{vault.curatorName}</span>
               <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-accent-blue/10 text-accent-blue border border-accent-blue/20">
@@ -200,23 +144,43 @@ export function VaultFinder() {
             {/* Footer */}
             <div className="border-t border-border pt-3">
               <p className="text-[11px] text-text-muted">
-                {vault.curatedReason}
+                {getCuratedReason(vault.curatorName)}
               </p>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* CTA to Calculator */}
-      <Link
-        href="/calculator"
-        className="mt-3 flex items-center justify-center gap-2 w-full py-3 rounded-xl border border-accent-blue/20 bg-accent-blue/5 text-sm font-medium text-accent-blue hover:bg-accent-blue/10 transition-colors"
-      >
-        Find More Vaults with LP Calculator
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </Link>
+      {/* More High Grade Vaults */}
+      {more.length > 0 && (
+        <div className="mt-4">
+          <h4 className="text-xs font-semibold text-text-secondary mb-2">More High Grade Vaults</h4>
+          <div className="flex gap-3 overflow-x-auto pb-2">
+            {more.map((vault) => (
+              <Link
+                key={vault.address}
+                href={`/vault/${vault.address}`}
+                className="w-56 flex-shrink-0 bg-background-subtle border border-border rounded-lg p-3 hover:border-accent-blue transition-colors group"
+              >
+                <div className="text-xs font-semibold text-text-primary group-hover:text-accent-blue transition-colors truncate mb-1">
+                  {vault.name}
+                </div>
+                <div className="text-[11px] text-text-tertiary truncate mb-2">
+                  {vault.curatorName}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-bold text-accent-green tabular-nums">
+                    {vault.rate.toFixed(2)}%
+                  </span>
+                  <span className="text-[10px] text-text-muted">
+                    {formatTvl(vault.tvl)}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

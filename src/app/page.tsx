@@ -7,9 +7,8 @@ import { CuratorGrid } from "@/components/grid/CuratorGrid";
 import { TabbedMetricChart } from "@/components/TabbedMetricChart";
 import { StablecoinBreakdown } from "@/components/StablecoinBreakdown";
 import { TopCurators } from "@/components/TopCurators";
-import { TopVaults } from "@/components/TopVaults";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { VaultFinder } from "@/components/VaultFinder";
+import { VaultsOfTheWeek } from "@/components/VaultsOfTheWeek";
 import { formatTimeAgo, formatCurrency, formatPercentage } from "@/lib/utils/format";
 import { InfoTooltip } from "@/components/Tooltip";
 import type { CuratorDashboardResponse, CuratorDashboardItem, CuratorDashboardStats, PaginationInfo } from "@/lib/types/api";
@@ -405,14 +404,13 @@ export default function Home() {
           <div className="lg:col-span-1">
             <StablecoinBreakdown />
           </div>
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="lg:col-span-2">
             <TopCurators />
-            <TopVaults />
           </div>
         </div>
 
-        {/* Vault Finder */}
-        <VaultFinder />
+        {/* Vaults of the Week */}
+        <VaultsOfTheWeek />
 
 
         {/* All Curators Section */}
