@@ -1,9 +1,20 @@
 import { Tooltip } from "./Tooltip";
 
-export function VaultGradeBadge({ grade, failures }: { grade?: string | null; failures?: string[] }) {
-  if (!grade) return null;
+export function VaultGradeBadge({ grade, failures, atRisk }: { grade?: string | null; failures?: string[]; atRisk?: boolean }) {
+  if (!grade && !atRisk) return null;
 
   const badge = (() => {
+    if (atRisk) {
+      return (
+        <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-red/15 text-accent-red border border-accent-red/30 animate-pulse">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          At Risk
+        </span>
+      );
+    }
+
     if (grade === "high-grade") {
       return (
         <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-accent-green/10 text-accent-green border border-accent-green/20">

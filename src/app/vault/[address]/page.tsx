@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { AllocationCalculator } from "@/components/AllocationCalculator";
+import { isResolvUsrExposed, RESOLV_USR_WARNING } from "@/lib/resolv-usr-warning";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -159,7 +160,7 @@ export default function VaultDetailPage({ params }: PageProps) {
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
-            <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
+            <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} atRisk={isResolvUsrExposed(vault.address)} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
             <a
               href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
@@ -178,6 +179,17 @@ export default function VaultDetailPage({ params }: PageProps) {
           </div>
         }
       />
+
+        {/* Resolv USR Warning Banner */}
+        {isResolvUsrExposed(vault.address) && (
+          <div className="mb-4 p-4 rounded-lg bg-accent-red/10 border-2 border-accent-red/40 flex items-start gap-3">
+            <span className="text-xl flex-shrink-0">&#x1F6A8;</span>
+            <div>
+              <p className="text-sm font-bold text-accent-red">WARNING</p>
+              <p className="text-sm text-accent-red/90 mt-0.5">{RESOLV_USR_WARNING}</p>
+            </div>
+          </div>
+        )}
 
         {/* Key Metrics */}
         <div className={`grid grid-cols-2 ${isTurtleVault ? "lg:grid-cols-4" : "lg:grid-cols-5"} gap-4 mb-4`}>

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { RESOLV_USR_VAULT_ADDRESSES } from "@/lib/resolv-usr-warning";
 import { getISOWeek, rotateArray } from "@/lib/utils/date";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
@@ -15,6 +16,7 @@ export async function GET() {
       where: {
         grade: "high-grade",
         active: true,
+        address: { notIn: RESOLV_USR_VAULT_ADDRESSES },
         ...EXCLUDED_CURATOR_VAULT_FILTER,
       },
       select: {
