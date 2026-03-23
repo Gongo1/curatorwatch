@@ -134,12 +134,15 @@ export async function GET() {
       }
     }
 
-    // Sort: attributed curators first by seized desc, then "Other Markets" at end
-    const byCurator = Object.values(curatorAgg).sort((a, b) => {
-      if (a.curatorId === UNATTRIBUTED_KEY) return 1;
-      if (b.curatorId === UNATTRIBUTED_KEY) return -1;
-      return b.totalSeizedUsd - a.totalSeizedUsd;
-    });
+    // Filter out curator rows under $100k seized, then sort
+    const MIN_SEIZED_USD = 100_000;
+    const byCurator = Object.values(curatorAgg)
+      .filter((c) => c.totalSeizedUsd >= MIN_SEIZED_USD)
+      .sort((a, b) => {
+        if (a.curatorId === UNATTRIBUTED_KEY) return 1;
+        if (b.curatorId === UNATTRIBUTED_KEY) return -1;
+        return b.totalSeizedUsd - a.totalSeizedUsd;
+      });
 
     return NextResponse.json({
       success: true,
