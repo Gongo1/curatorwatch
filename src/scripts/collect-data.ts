@@ -12,6 +12,13 @@ import { collectMarketAllocations } from "./collect-market-allocations";
 import type { VaultV2sResponse, MorphoVaultV2 } from "../lib/types/vault";
 import { calculateAllRiskMetrics } from "../lib/risk-calculator";
 import { detectChanges, storeChanges } from "../lib/change-detector";
+import {
+  createCuratorSnapshots,
+  detectCuratorAlerts,
+  detectEcosystemAlerts,
+  storePlatformAlerts,
+  cleanupOldCuratorSnapshots,
+} from "../lib/curator-alert-detector";
 import { resolveCuratorAddress, resolveVaultCuratorAddress } from "../lib/curator-aliases";
 import {
   extractCuratorFromVaultName,
@@ -36,6 +43,8 @@ export interface CollectionResult {
   reallocationsCollected: number;
   riskSnapshotsCreated: number;
   changesDetected: number;
+  platformAlertsDetected: number;
+  curatorSnapshotsCreated: number;
   errors: string[];
   duration: number;
 }
@@ -804,6 +813,39 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
     // Update curator statistics
     await updateCuratorStats();
 
+    // Curator & ecosystem-level alert detection
+    let platformAlertsDetected = 0;
+    let curatorSnapshotsCreated = 0;
+    try {
+      // 1. Create curator snapshots (for AUM history)
+      curatorSnapshotsCreated = await createCuratorSnapshots();
+      log(`  Curator snapshots created: ${curatorSnapshotsCreated}`);
+
+      // 2. Detect curator-level alerts
+      const curatorAlerts = await detectCuratorAlerts();
+      if (curatorAlerts.length > 0) {
+        const stored = await storePlatformAlerts(curatorAlerts);
+        platformAlertsDetected += stored;
+        log(`  Curator alerts: ${stored} stored (${curatorAlerts.length} detected)`);
+      }
+
+      // 3. Detect ecosystem-level alerts
+      const ecosystemAlerts = await detectEcosystemAlerts();
+      if (ecosystemAlerts.length > 0) {
+        const stored = await storePlatformAlerts(ecosystemAlerts);
+        platformAlertsDetected += stored;
+        log(`  Ecosystem alerts: ${stored} stored (${ecosystemAlerts.length} detected)`);
+      }
+
+      // 4. Cleanup old snapshots (cheap operation)
+      const cleaned = await cleanupOldCuratorSnapshots();
+      if (cleaned > 0) {
+        log(`  Cleaned up ${cleaned} old curator snapshots`);
+      }
+    } catch (error) {
+      logError("Failed to run curator/ecosystem alert detection (non-critical)", error);
+    }
+
     // Collect market allocations (needed for liquidation join)
     if (!options.skipMarketAllocations) {
       log("Collecting market allocations...");
@@ -835,6 +877,8 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
     const reallocCount = await prisma.vaultReallocation.count();
     const riskCount = await prisma.vaultRiskSnapshot.count();
     const changeCount = await prisma.vaultChange.count();
+    const platformAlertCount = await prisma.platformAlert.count();
+    const curatorSnapshotTotal = await prisma.curatorSnapshot.count();
 
     log("-".repeat(60));
     log("Data collection completed!");
@@ -844,6 +888,8 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
     log(`  Transactions collected: ${result.txCollected}`);
     log(`  Reallocations collected: ${result.reallocsCollected}`);
     log(`  Changes detected: ${result.changesDetected}`);
+    log(`  Platform alerts detected: ${platformAlertsDetected}`);
+    log(`  Curator snapshots created: ${curatorSnapshotsCreated}`);
     log("-".repeat(60));
     log("Database totals:");
     log(`  Vaults: ${vaultCount}`);
@@ -854,6 +900,8 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
     log(`  Reallocations: ${reallocCount}`);
     log(`  Risk Snapshots: ${riskCount}`);
     log(`  Changes: ${changeCount}`);
+    log(`  Platform Alerts: ${platformAlertCount}`);
+    log(`  Curator Snapshots: ${curatorSnapshotTotal}`);
 
     if (errors.length > 0) {
       log(`  Errors: ${errors.length}`);
@@ -877,6 +925,8 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       reallocationsCollected: result.reallocsCollected,
       riskSnapshotsCreated: result.processed,
       changesDetected: result.changesDetected,
+      platformAlertsDetected,
+      curatorSnapshotsCreated,
       errors,
       duration,
     };
@@ -895,6 +945,8 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       reallocationsCollected: 0,
       riskSnapshotsCreated: 0,
       changesDetected: 0,
+      platformAlertsDetected: 0,
+      curatorSnapshotsCreated: 0,
       errors,
       duration: Date.now() - startTime,
     };

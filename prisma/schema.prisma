@@ -250,6 +250,8 @@ model Curator {
   // Relations
   vaults          Vault[]
   news            CuratorNews[]
+  snapshots       CuratorSnapshot[]
+  platformAlerts  PlatformAlert[]
 
   @@index([address])
   @@index([name])
@@ -275,6 +277,40 @@ model CuratorNews {
 
   @@index([curatorId, publishedAt])
   @@index([publishedAt])
+}
+
+model CuratorSnapshot {
+  id             String   @id @default(cuid())
+  curatorId      String
+  curator        Curator  @relation(fields: [curatorId], references: [id], onDelete: Cascade)
+  totalAssetsUsd Float
+  vaultCount     Int
+  timestamp      DateTime @default(now())
+
+  @@index([curatorId, timestamp])
+  @@index([timestamp])
+}
+
+model PlatformAlert {
+  id          String   @id @default(cuid())
+  scope       String   // "curator" | "ecosystem"
+  curatorId   String?
+  curator     Curator? @relation(fields: [curatorId], references: [id], onDelete: Cascade)
+  changeType  String   // CURATOR_AUM_DROP, ECOSYSTEM_AUM_DROP, etc.
+  severity    String   // info, warning, critical
+  title       String
+  description String
+  oldValue    String?
+  newValue    String?
+  metadata    Json?
+  detectedAt  DateTime
+  viewed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@unique([scope, curatorId, changeType, detectedAt])
+  @@index([scope, detectedAt])
+  @@index([curatorId, detectedAt])
+  @@index([detectedAt])
 }
 
 model VaultPosition {

@@ -1,12 +1,13 @@
 /**
  * Alert type definitions and threshold constants
  *
- * Philosophy: Only 4 alert types that matter to institutional allocators
+ * Covers vault-level, curator-level, and ecosystem-level alerts.
  * Each alert represents a statistically significant event (<5% frequency)
  */
 
 // Alert types we track
 export const ALERT_TYPES = {
+  // Vault-level (stored in VaultChange)
   APY_CHANGE: "APY_CHANGE",               // Yield volatility
   LARGE_FLOW: "LARGE_FLOW",               // Capital movement (legacy)
   LARGE_DEPOSIT: "LARGE_DEPOSIT",         // Capital inflow (positive)
@@ -14,6 +15,15 @@ export const ALERT_TYPES = {
   VAULT_LAUNCH: "VAULT_LAUNCH",           // New vault
   VAULT_SHUTDOWN: "VAULT_SHUTDOWN",       // Vault closing
   CONCENTRATION_SPIKE: "CONCENTRATION_SPIKE", // Risk regime change
+  VAULT_TVL_DROP: "VAULT_TVL_DROP",       // Vault TVL fell >10% in 24h (snapshot comparison)
+  VAULT_TVL_SURGE: "VAULT_TVL_SURGE",     // Vault TVL grew >25% in 24h (info, positive)
+
+  // Curator-level (stored in PlatformAlert)
+  CURATOR_AUM_DROP: "CURATOR_AUM_DROP",   // Curator total AUM fell >5% in 24h or >15% in 72h
+  CURATOR_AUM_SURGE: "CURATOR_AUM_SURGE", // Curator total AUM grew >15% in 24h
+
+  // Ecosystem-level (stored in PlatformAlert)
+  ECOSYSTEM_AUM_DROP: "ECOSYSTEM_AUM_DROP", // Total platform AUM fell >3% in 24h
 } as const;
 
 export type AlertType = (typeof ALERT_TYPES)[keyof typeof ALERT_TYPES];
@@ -45,6 +55,31 @@ export const THRESHOLDS = {
     WARNING: 15,   // 15-25 percentage point increase
     CRITICAL: 25,  // >25 percentage point increase
   },
+
+  // Vault TVL snapshot-to-snapshot changes (% change in 24h)
+  VAULT_TVL: {
+    WARNING: 10,       // 10-20% drop = warning
+    CRITICAL: 20,      // >20% drop = critical
+    SURGE_INFO: 25,    // >25% growth = info (positive signal)
+  },
+
+  // Curator AUM changes
+  CURATOR_AUM: {
+    WARNING_24H: 5,    // >5% drop in 24h = warning
+    CRITICAL_24H: 10,  // >10% drop in 24h = critical
+    CRITICAL_72H: 15,  // >15% drop in 72h = critical (sustained outflow)
+    SURGE_INFO: 15,    // >15% growth in 24h = info
+  },
+
+  // Ecosystem AUM changes
+  ECOSYSTEM_AUM: {
+    WARNING_24H: 3,    // >3% drop in 24h = warning
+    CRITICAL_24H: 5,   // >5% drop in 24h = critical
+  },
+
+  // Minimum AUM to trigger alerts (skip tiny curators/empty ecosystem)
+  MIN_CURATOR_AUM: 10_000_000,    // $10M
+  MIN_ECOSYSTEM_AUM: 100_000_000, // $100M
 
   // Time windows
   TIME_WINDOWS: {
@@ -104,6 +139,36 @@ export const ALERT_METADATA: Record<
     color: "yellow",
     description:
       "Rapid increases in single-adapter allocation (>15 percentage points in 24h).",
+  },
+  VAULT_TVL_DROP: {
+    label: "TVL Drop",
+    color: "red",
+    description:
+      "Alerts when a vault's TVL drops >10% compared to 24h ago. Detects distributed outflows that individual transaction alerts miss.",
+  },
+  VAULT_TVL_SURGE: {
+    label: "TVL Surge",
+    color: "green",
+    description:
+      "Alerts when a vault's TVL grows >25% in 24h. Indicates strong capital inflows.",
+  },
+  CURATOR_AUM_DROP: {
+    label: "Curator AUM Drop",
+    color: "red",
+    description:
+      "Alerts when a curator's total AUM drops >5% in 24h or >15% over 3 days.",
+  },
+  CURATOR_AUM_SURGE: {
+    label: "Curator AUM Surge",
+    color: "green",
+    description:
+      "Alerts when a curator's total AUM grows >15% in 24h. Strong growth signal.",
+  },
+  ECOSYSTEM_AUM_DROP: {
+    label: "Ecosystem AUM Drop",
+    color: "red",
+    description:
+      "Alerts when total platform AUM drops >3% in 24h. Indicates broad-based outflows.",
   },
 };
 

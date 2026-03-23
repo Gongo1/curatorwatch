@@ -4,22 +4,12 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils/format";
 
-interface AlertItem {
-  id: string;
-  type: "apy_change" | "large_flow" | "concentration" | "lifecycle";
-  severity: "critical" | "warning" | "info";
-  title: string;
-  value?: string;
-  curatorName?: string;
-  vaultName?: string;
-  timestamp: string;
-}
-
 interface ChangesResponse {
   success: boolean;
   data: {
     changes: Array<{
       id: string;
+      scope: "vault" | "curator" | "ecosystem";
       changeType: string;
       severity: string;
       title: string;
@@ -27,27 +17,35 @@ interface ChangesResponse {
       newValue: string | null;
       metadata: Record<string, unknown> | null;
       detectedAt: string;
+      vaultId: string | null;
       vault: {
         name: string;
         symbol: string;
         address: string;
-        curator?: {
-          name: string | null;
-        } | null;
-      };
+      } | null;
+      curatorId: string | null;
+      curator: {
+        name: string | null;
+      } | null;
     }>;
   };
 }
 
-function isDepositChange(change: ChangesResponse["data"]["changes"][0]) {
+type AlertChange = ChangesResponse["data"]["changes"][0];
+
+function isDepositChange(change: AlertChange) {
   return (
     change.changeType === "LARGE_DEPOSIT" ||
     (change.changeType === "LARGE_FLOW" && change.metadata?.type?.toString().toLowerCase().includes("deposit"))
   );
 }
 
-function getSeverityColor(severity: string, change?: ChangesResponse["data"]["changes"][0]) {
-  if (change && isDepositChange(change)) return "text-green-400";
+function isSurgeChange(change: AlertChange) {
+  return change.changeType === "VAULT_TVL_SURGE" || change.changeType === "CURATOR_AUM_SURGE";
+}
+
+function getSeverityColor(severity: string, change?: AlertChange) {
+  if (change && (isDepositChange(change) || isSurgeChange(change))) return "text-green-400";
   switch (severity) {
     case "critical":
       return "text-red-400";
@@ -58,8 +56,8 @@ function getSeverityColor(severity: string, change?: ChangesResponse["data"]["ch
   }
 }
 
-function getSeverityDot(severity: string, change?: ChangesResponse["data"]["changes"][0]) {
-  if (change && isDepositChange(change)) return "bg-green-500";
+function getSeverityDot(severity: string, change?: AlertChange) {
+  if (change && (isDepositChange(change) || isSurgeChange(change))) return "bg-green-500";
   switch (severity) {
     case "critical":
       return "bg-red-500";
@@ -70,22 +68,7 @@ function getSeverityDot(severity: string, change?: ChangesResponse["data"]["chan
   }
 }
 
-function getAlertIcon(type: string) {
-  switch (type) {
-    case "apy_change":
-      return "↕";
-    case "large_flow":
-      return "◈";
-    case "concentration":
-      return "◉";
-    case "lifecycle":
-      return "★";
-    default:
-      return "•";
-  }
-}
-
-function formatAlertTitle(change: ChangesResponse["data"]["changes"][0]): string {
+function formatAlertTitle(change: AlertChange): string {
   switch (change.changeType) {
     case "APY_CHANGE":
       return "APY";
@@ -103,13 +86,46 @@ function formatAlertTitle(change: ChangesResponse["data"]["changes"][0]): string
       return "NEW";
     case "VAULT_SHUTDOWN":
       return "END";
+    case "VAULT_TVL_DROP":
+      return "TVL\u2193";
+    case "VAULT_TVL_SURGE":
+      return "TVL\u2191";
+    case "CURATOR_AUM_DROP":
+      return "CUR\u2193";
+    case "CURATOR_AUM_SURGE":
+      return "CUR\u2191";
+    case "ECOSYSTEM_AUM_DROP":
+      return "ECO\u2193";
     default:
       return change.changeType.slice(0, 4);
   }
 }
 
+function getAlertHref(change: AlertChange): string {
+  if (change.scope === "vault" && change.vault?.address) {
+    return `/vault/${change.vault.address}`;
+  }
+  if (change.scope === "curator" && change.curatorId) {
+    return `/curator/${change.curatorId}`;
+  }
+  return "/alerts";
+}
+
+function getAlertDisplayName(change: AlertChange): string {
+  if (change.scope === "vault" && change.vault) {
+    return change.vault.symbol || change.vault.name?.slice(0, 12) || "Vault";
+  }
+  if (change.scope === "curator" && change.curator?.name) {
+    return change.curator.name.slice(0, 12);
+  }
+  if (change.scope === "ecosystem") {
+    return "Ecosystem";
+  }
+  return "Alert";
+}
+
 export function AlertSidebar() {
-  const [alerts, setAlerts] = useState<ChangesResponse["data"]["changes"]>([]);
+  const [alerts, setAlerts] = useState<AlertChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
 
@@ -151,7 +167,7 @@ export function AlertSidebar() {
         title="Show alerts"
       >
         <div className="flex flex-col items-center gap-1">
-          <span className="text-[10px] text-yellow-400 font-mono">◀</span>
+          <span className="text-[10px] text-yellow-400 font-mono">&laquo;</span>
           <span className="text-[9px] text-gray-500 font-mono tracking-tighter" style={{ writingMode: "vertical-rl" }}>
             ALERTS
           </span>
@@ -173,7 +189,7 @@ export function AlertSidebar() {
           className="text-gray-600 hover:text-gray-400 transition-colors"
           title="Collapse"
         >
-          <span className="text-[10px] font-mono">▶</span>
+          <span className="text-[10px] font-mono">&raquo;</span>
         </button>
       </div>
 
@@ -197,7 +213,7 @@ export function AlertSidebar() {
             {alerts.map((alert) => (
               <Link
                 key={alert.id}
-                href={`/vault/${alert.vault?.address || ""}`}
+                href={getAlertHref(alert)}
                 className="block px-2 py-1.5 hover:bg-[#151515] transition-colors group"
               >
                 {/* Time + Type */}
@@ -215,7 +231,7 @@ export function AlertSidebar() {
                   <span className={`w-1 h-1 rounded-full mt-1 flex-shrink-0 ${getSeverityDot(alert.severity, alert)}`} />
                   <div className="min-w-0 flex-1">
                     <div className="text-[10px] text-gray-300 font-mono truncate leading-tight">
-                      {alert.vault?.symbol || alert.vault?.name?.slice(0, 12)}
+                      {getAlertDisplayName(alert)}
                     </div>
                     <div className="text-[9px] text-gray-500 font-mono truncate">
                       {alert.title?.slice(0, 20) || "Alert"}
@@ -238,7 +254,7 @@ export function AlertSidebar() {
           className="flex items-center justify-center gap-1 text-[9px] font-mono text-gray-500 hover:text-gray-300 transition-colors"
         >
           <span>VIEW ALL</span>
-          <span>→</span>
+          <span>&rarr;</span>
         </Link>
       </div>
 

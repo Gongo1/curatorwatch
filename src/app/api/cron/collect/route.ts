@@ -68,6 +68,8 @@ export async function GET(request: NextRequest) {
         snapshotsCreated: result.snapshotsCreated,
         transactionsCollected: result.transactionsCollected,
         changesDetected: result.changesDetected,
+        platformAlertsDetected: result.platformAlertsDetected,
+        curatorSnapshotsCreated: result.curatorSnapshotsCreated,
         duration: result.duration,
       },
     });

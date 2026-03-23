@@ -79,6 +79,10 @@ export async function detectAlerts(
     // 4. Concentration Spike Detection
     const concentrationAlerts = await detectConcentrationSpikes(vault, now);
     alerts.push(...concentrationAlerts);
+
+    // 5. Vault TVL Snapshot Comparison (catches distributed outflows)
+    const tvlAlerts = await detectVaultTvlChanges(vault, currentSnapshot);
+    alerts.push(...tvlAlerts);
   } catch (error) {
     console.error(`Error detecting alerts for vault ${vault.name}:`, error);
   }
@@ -478,6 +482,106 @@ async function detectConcentrationSpikes(
         currentPercent: currentRisk.topAdapterPercent,
       },
     });
+  }
+
+  return alerts;
+}
+
+/**
+ * Detect vault TVL changes via snapshot-to-snapshot comparison (24h lookback).
+ * This catches distributed outflows that individual transaction alerts miss.
+ */
+async function detectVaultTvlChanges(
+  vault: VaultData,
+  currentSnapshot: SnapshotData
+): Promise<AlertEvent[]> {
+  const alerts: AlertEvent[] = [];
+  const currentTVL = currentSnapshot.totalAssetsUsd;
+
+  if (currentTVL <= 0) {
+    return alerts;
+  }
+
+  // Get snapshot from ~24h ago (within 2h tolerance window)
+  const twentyTwoHoursAgo = new Date(currentSnapshot.timestamp.getTime() - 22 * 60 * 60 * 1000);
+  const twentySixHoursAgo = new Date(currentSnapshot.timestamp.getTime() - 26 * 60 * 60 * 1000);
+
+  const oldSnapshot = await prisma.vaultSnapshot.findFirst({
+    where: {
+      vaultId: vault.id,
+      timestamp: {
+        gte: twentySixHoursAgo,
+        lte: twentyTwoHoursAgo,
+      },
+    },
+    orderBy: { timestamp: "desc" },
+    select: { totalAssetsUsd: true, timestamp: true },
+  });
+
+  if (!oldSnapshot || oldSnapshot.totalAssetsUsd <= 0) {
+    return alerts;
+  }
+
+  const oldTVL = oldSnapshot.totalAssetsUsd;
+  const pctChange = ((currentTVL - oldTVL) / oldTVL) * 100;
+  const absPctChange = Math.abs(pctChange);
+
+  // TVL Drop detection
+  if (pctChange < 0) {
+    const isDuplicate = await checkDuplicateAlert(
+      vault.id,
+      ALERT_TYPES.VAULT_TVL_DROP,
+      currentSnapshot.timestamp
+    );
+    if (isDuplicate) return alerts;
+
+    if (absPctChange > THRESHOLDS.VAULT_TVL.CRITICAL) {
+      alerts.push({
+        vaultId: vault.id,
+        changeType: ALERT_TYPES.VAULT_TVL_DROP,
+        severity: "critical",
+        title: `Critical TVL Drop: ${vault.name}`,
+        description: `TVL fell ${absPctChange.toFixed(1)}% in 24h (${formatCurrency(oldTVL)} → ${formatCurrency(currentTVL)}). Significant capital outflow detected.`,
+        oldValue: formatCurrency(oldTVL),
+        newValue: formatCurrency(currentTVL),
+        detectedAt: currentSnapshot.timestamp,
+        metadata: { pctChange, oldTVL, currentTVL },
+      });
+    } else if (absPctChange > THRESHOLDS.VAULT_TVL.WARNING) {
+      alerts.push({
+        vaultId: vault.id,
+        changeType: ALERT_TYPES.VAULT_TVL_DROP,
+        severity: "warning",
+        title: `TVL Decline: ${vault.name}`,
+        description: `TVL fell ${absPctChange.toFixed(1)}% in 24h (${formatCurrency(oldTVL)} → ${formatCurrency(currentTVL)}). Monitor for continued outflows.`,
+        oldValue: formatCurrency(oldTVL),
+        newValue: formatCurrency(currentTVL),
+        detectedAt: currentSnapshot.timestamp,
+        metadata: { pctChange, oldTVL, currentTVL },
+      });
+    }
+  }
+
+  // TVL Surge detection (positive signal)
+  if (pctChange > 0 && absPctChange > THRESHOLDS.VAULT_TVL.SURGE_INFO) {
+    const isDuplicate = await checkDuplicateAlert(
+      vault.id,
+      ALERT_TYPES.VAULT_TVL_SURGE,
+      currentSnapshot.timestamp
+    );
+    if (!isDuplicate) {
+      alerts.push({
+        vaultId: vault.id,
+        changeType: ALERT_TYPES.VAULT_TVL_SURGE,
+        severity: "info",
+        title: `TVL Surge: ${vault.name}`,
+        description: `TVL grew ${absPctChange.toFixed(1)}% in 24h (${formatCurrency(oldTVL)} → ${formatCurrency(currentTVL)}). Strong capital inflow.`,
+        oldValue: formatCurrency(oldTVL),
+        newValue: formatCurrency(currentTVL),
+        detectedAt: currentSnapshot.timestamp,
+        metadata: { pctChange, oldTVL, currentTVL },
+      });
+    }
   }
 
   return alerts;

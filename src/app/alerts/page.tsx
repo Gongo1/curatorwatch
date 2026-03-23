@@ -11,10 +11,17 @@ interface VaultInfo {
   address: string;
 }
 
+interface CuratorInfo {
+  name: string | null;
+}
+
 interface Alert {
   id: string;
-  vaultId: string;
-  vault: VaultInfo;
+  scope: "vault" | "curator" | "ecosystem";
+  vaultId: string | null;
+  vault: VaultInfo | null;
+  curatorId: string | null;
+  curator: CuratorInfo | null;
   changeType: string;
   severity: "info" | "warning" | "critical";
   title: string;
@@ -60,6 +67,13 @@ const SEVERITY_FILTERS = [
   { value: "info", label: "Info" },
 ];
 
+const SCOPE_FILTERS = [
+  { value: "all", label: "All Alerts" },
+  { value: "vault", label: "Vault" },
+  { value: "curator", label: "Curator" },
+  { value: "ecosystem", label: "Ecosystem" },
+];
+
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [summary, setSummary] = useState<AlertSummary | null>(null);
@@ -67,12 +81,13 @@ export default function AlertsPage() {
   const [error, setError] = useState<string | null>(null);
   const [severityFilter, setSeverityFilter] = useState("");
   const [timeFilter, setTimeFilter] = useState("24");
+  const [scopeFilter, setScopeFilter] = useState("all");
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
     fetchAlerts(true);
-  }, [severityFilter, timeFilter]);
+  }, [severityFilter, timeFilter, scopeFilter]);
 
   async function fetchAlerts(reset = false) {
     try {
@@ -82,6 +97,7 @@ export default function AlertsPage() {
         hours: timeFilter,
         limit: "50",
         offset: newOffset.toString(),
+        scope: scopeFilter,
         ...(severityFilter && { severity: severityFilter }),
       });
 
@@ -114,9 +130,12 @@ export default function AlertsPage() {
     alert.changeType === "LARGE_DEPOSIT" ||
     (alert.changeType === "LARGE_FLOW" && alert.metadata?.type?.toString().toLowerCase().includes("deposit"));
 
+  const isSurgeAlert = (alert: Alert) =>
+    alert.changeType === "VAULT_TVL_SURGE" || alert.changeType === "CURATOR_AUM_SURGE";
+
   const getSeverityIcon = (alert: Alert) => {
-    // Deposits always get green icon
-    if (isDepositAlert(alert)) {
+    // Deposits and surges always get green icon
+    if (isDepositAlert(alert) || isSurgeAlert(alert)) {
       return (
         <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-green/15">
           <svg
@@ -130,6 +149,27 @@ export default function AlertsPage() {
               strokeLinejoin="round"
               strokeWidth={2}
               d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            />
+          </svg>
+        </span>
+      );
+    }
+
+    // Ecosystem alerts get globe icon
+    if (alert.scope === "ecosystem") {
+      return (
+        <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-red/15">
+          <svg
+            className="w-5 h-5 text-accent-red"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
         </span>
@@ -196,8 +236,8 @@ export default function AlertsPage() {
   };
 
   const getSeverityBadge = (alert: Alert) => {
-    // Deposits get a green "Activity" badge
-    if (isDepositAlert(alert)) {
+    // Deposits and surges get a green "Activity" badge
+    if (isDepositAlert(alert) || isSurgeAlert(alert)) {
       return (
         <span className="px-2 py-0.5 rounded text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/30">
           Activity
@@ -224,6 +264,54 @@ export default function AlertsPage() {
         {labels[alert.severity]}
       </span>
     );
+  };
+
+  const getScopeBadge = (alert: Alert) => {
+    if (alert.scope === "curator") {
+      return (
+        <span className="px-2 py-0.5 rounded text-xs font-medium bg-purple-500/15 text-purple-400 border border-purple-500/30">
+          Curator
+        </span>
+      );
+    }
+    if (alert.scope === "ecosystem") {
+      return (
+        <span className="px-2 py-0.5 rounded text-xs font-medium bg-orange-500/15 text-orange-400 border border-orange-500/30">
+          Ecosystem
+        </span>
+      );
+    }
+    return null;
+  };
+
+  const getAlertLink = (alert: Alert): string => {
+    if (alert.scope === "vault" && alert.vault?.address) {
+      return `/vault/${alert.vault.address}`;
+    }
+    if (alert.scope === "curator" && alert.curatorId) {
+      return `/curator/${alert.curatorId}`;
+    }
+    return "/alerts";
+  };
+
+  const getAlertName = (alert: Alert): string => {
+    if (alert.scope === "vault" && alert.vault) {
+      return alert.vault.name;
+    }
+    if (alert.scope === "curator" && alert.curator?.name) {
+      return alert.curator.name;
+    }
+    if (alert.scope === "ecosystem") {
+      return "Ecosystem";
+    }
+    return "Unknown";
+  };
+
+  const getAlertSubtext = (alert: Alert): string | null => {
+    if (alert.scope === "vault" && alert.vault?.address) {
+      return `${alert.vault.address.slice(0, 6)}...${alert.vault.address.slice(-4)}`;
+    }
+    return null;
   };
 
   return (
@@ -256,11 +344,11 @@ export default function AlertsPage() {
       <div className="bg-background-elevated border border-border rounded-lg p-6 mb-6">
         <h2 className="text-base font-semibold text-text-primary mb-3">How Alerts Work</h2>
         <p className="text-sm text-text-secondary mb-4">
-          CuratorWatch only alerts on statistically significant events—changes that happen
-          less than 5% of the time. This ensures you see signal, not noise.
+          CuratorWatch monitors vaults, curators, and the entire ecosystem for statistically
+          significant events—changes that happen less than 5% of the time.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
             <h3 className="font-medium text-accent-blue text-sm mb-1.5">APY Changes</h3>
             <p className="text-xs text-text-tertiary leading-relaxed">
@@ -278,9 +366,10 @@ export default function AlertsPage() {
           </div>
 
           <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
-            <h3 className="font-medium text-purple-400 text-sm mb-1.5">Vault Lifecycle</h3>
+            <h3 className="font-medium text-accent-red text-sm mb-1.5">TVL Drops</h3>
             <p className="text-xs text-text-tertiary leading-relaxed">
-              New vault launches (deposits $0→$1M+) or shutdowns (deposits drop to near-zero).
+              Alerts when a vault&apos;s TVL drops &gt;10% in 24h via snapshot comparison.
+              Catches distributed outflows that individual transaction alerts miss.
             </p>
           </div>
 
@@ -290,11 +379,45 @@ export default function AlertsPage() {
               Rapid increases in single-adapter allocation (&gt;15 percentage points in 24h).
             </p>
           </div>
+
+          <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
+            <h3 className="font-medium text-accent-red text-sm mb-1.5">Curator AUM</h3>
+            <p className="text-xs text-text-tertiary leading-relaxed">
+              Alerts when a curator&apos;s total AUM drops &gt;5% in 24h or &gt;15% over 3 days.
+            </p>
+          </div>
+
+          <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
+            <h3 className="font-medium text-accent-red text-sm mb-1.5">Ecosystem AUM</h3>
+            <p className="text-xs text-text-tertiary leading-relaxed">
+              Alerts when total platform AUM drops &gt;3% in 24h. Indicates broad-based outflows.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
+        {/* Scope filter */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-text-tertiary uppercase tracking-wider">Scope</span>
+          <div className="flex gap-1">
+            {SCOPE_FILTERS.map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setScopeFilter(filter.value)}
+                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                  scopeFilter === filter.value
+                    ? "bg-accent-blue text-white font-medium"
+                    : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Severity filter */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-tertiary uppercase tracking-wider">Severity</span>
@@ -388,15 +511,18 @@ export default function AlertsPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Link
-                    href={`/vault/${alert.vault.address}`}
+                    href={getAlertLink(alert)}
                     className="text-sm font-medium text-accent-blue hover:text-accent-blue-hover transition-colors"
                   >
-                    {alert.vault.name}
+                    {getAlertName(alert)}
                   </Link>
                   {getSeverityBadge(alert)}
-                  <span className="text-xs text-text-muted font-mono">
-                    {alert.vault.address.slice(0, 6)}...{alert.vault.address.slice(-4)}
-                  </span>
+                  {getScopeBadge(alert)}
+                  {getAlertSubtext(alert) && (
+                    <span className="text-xs text-text-muted font-mono">
+                      {getAlertSubtext(alert)}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm font-medium text-text-primary mt-1.5">
                   {alert.title}
@@ -422,7 +548,7 @@ export default function AlertsPage() {
                 </div>
               </div>
               <Link
-                href={`/vault/${alert.vault.address}`}
+                href={getAlertLink(alert)}
                 className="flex items-center gap-1 text-sm text-text-tertiary hover:text-accent-blue transition-colors flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-background-elevated"
               >
                 View
