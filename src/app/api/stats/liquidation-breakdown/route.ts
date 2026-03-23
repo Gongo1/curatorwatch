@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+const UNATTRIBUTED_KEY = "__unattributed__";
+
 export async function GET() {
   try {
     // Get all market allocations grouped by vault/curator
@@ -52,7 +54,7 @@ export async function GET() {
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-    // Aggregate totals
+    // Aggregate totals (ALL liquidations, not just mapped ones)
     let totalEvents = 0;
     let totalSeizedUsd = 0;
     let totalRepaidUsd = 0;
@@ -85,9 +87,7 @@ export async function GET() {
     > = {};
 
     for (const liq of liquidations) {
-      const curator = marketToCurator.get(liq.marketUniqueKey);
-      if (!curator) continue;
-
+      // Always count in totals
       totalEvents++;
       totalSeizedUsd += liq.seizedAssetsUsd;
       totalRepaidUsd += liq.repaidAssetsUsd;
@@ -95,9 +95,15 @@ export async function GET() {
       marketsAffected.add(liq.marketUniqueKey);
       if (liq.timestamp >= thirtyDaysAgo) recent30d++;
 
-      if (!curatorAgg[curator.curatorId]) {
-        curatorAgg[curator.curatorId] = {
-          ...curator,
+      // Attribute to curator if possible, otherwise bucket as "Unattributed"
+      const curator = marketToCurator.get(liq.marketUniqueKey);
+      const bucketId = curator?.curatorId ?? UNATTRIBUTED_KEY;
+
+      if (!curatorAgg[bucketId]) {
+        curatorAgg[bucketId] = {
+          curatorId: curator?.curatorId ?? UNATTRIBUTED_KEY,
+          curatorName: curator?.curatorName ?? "Other Markets",
+          curatorAddress: curator?.curatorAddress ?? "",
           totalEvents: 0,
           totalSeizedUsd: 0,
           totalRepaidUsd: 0,
@@ -107,7 +113,7 @@ export async function GET() {
         };
       }
 
-      const agg = curatorAgg[curator.curatorId];
+      const agg = curatorAgg[bucketId];
       agg.totalEvents++;
       agg.totalSeizedUsd += liq.seizedAssetsUsd;
       agg.totalRepaidUsd += liq.repaidAssetsUsd;
@@ -128,9 +134,12 @@ export async function GET() {
       }
     }
 
-    const byCurator = Object.values(curatorAgg).sort(
-      (a, b) => b.totalSeizedUsd - a.totalSeizedUsd
-    );
+    // Sort: attributed curators first by seized desc, then "Other Markets" at end
+    const byCurator = Object.values(curatorAgg).sort((a, b) => {
+      if (a.curatorId === UNATTRIBUTED_KEY) return 1;
+      if (b.curatorId === UNATTRIBUTED_KEY) return -1;
+      return b.totalSeizedUsd - a.totalSeizedUsd;
+    });
 
     return NextResponse.json({
       success: true,
