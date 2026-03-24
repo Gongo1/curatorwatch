@@ -87,7 +87,7 @@ export default function AlertsPage() {
   const [summary, setSummary] = useState<AlertSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [severityFilter, setSeverityFilter] = useState("");
+  const [severityFilter, setSeverityFilter] = useState("critical");
   const [timeFilter, setTimeFilter] = useState("24");
   const [scopeFilter, setScopeFilter] = useState("all");
   const [hasMore, setHasMore] = useState(false);
@@ -101,7 +101,7 @@ export default function AlertsPage() {
   const [curatorAlertCounts, setCuratorAlertCounts] = useState<CuratorAlertCount[]>([]);
   const [curatorDropdownOpen, setCuratorDropdownOpen] = useState(false);
   const [curatorSearch, setCuratorSearch] = useState("");
-  const [viewMode, setViewMode] = useState<"list" | "grouped">("list");
+  const [viewMode, setViewMode] = useState<"list" | "grouped">("grouped");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
 
