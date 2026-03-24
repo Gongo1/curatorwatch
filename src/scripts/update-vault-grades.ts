@@ -18,6 +18,7 @@ import {
   type VaultScoreInput,
   type VaultScores,
 } from "@/lib/utils/vault-risk-score";
+import { isResolvUsrExposed } from "@/lib/resolv-usr-warning";
 
 export async function updateVaultGrades(): Promise<{
   total: number;
@@ -229,16 +230,24 @@ export async function updateVaultGrades(): Promise<{
   }> = [];
 
   for (const v of scored) {
+    // Force low-grade for vaults with Resolv USR exposure
+    const vaultRecord = vaults.find((vault) => vault.id === v.id);
+    const usrExposed = vaultRecord ? isResolvUsrExposed(vaultRecord.address) : false;
+    const failures = usrExposed
+      ? [...v.failures, "Resolv USR exposure"]
+      : v.failures;
+    const grade = usrExposed ? "low-grade" : assignGrade(v.failures.length);
+
     updates.push({
       id: v.id,
       riskScore: v.scores.total,
-      grade: assignGrade(v.failures.length),
+      grade,
       sizeScore: v.scores.sizeScore,
       maturityScore: v.scores.maturityScore,
       curatorScore: v.scores.curatorScore,
       collateralScore: v.scores.collateralScore,
       riskIndicatorScore: v.scores.riskIndicatorScore,
-      gradeFailures: v.failures,
+      gradeFailures: failures,
     });
   }
 
