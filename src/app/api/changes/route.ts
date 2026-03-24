@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import type { Severity } from "@/lib/change-thresholds";
 import type { Prisma } from "@prisma/client";
+import { resolveCuratorSlug } from "@/lib/curator-aliases";
 
 export async function GET(request: Request) {
   try {
@@ -10,9 +11,27 @@ export async function GET(request: Request) {
     const severity = url.searchParams.get("severity") as Severity | null;
     const vaultId = url.searchParams.get("vaultId");
     const scope = url.searchParams.get("scope") || "all"; // "all" | "vault" | "curator" | "ecosystem"
-    const curatorId = url.searchParams.get("curatorId");
+    const curatorIdParam = url.searchParams.get("curatorId");
     const limit = parseInt(url.searchParams.get("limit") || "50");
     const offset = parseInt(url.searchParams.get("offset") || "0");
+
+    // Portfolio filtering params
+    const vaultAddressesParam = url.searchParams.get("vaultAddresses");
+    const curatorIdsParam = url.searchParams.get("curatorIds");
+    const vaultAddresses = vaultAddressesParam ? vaultAddressesParam.split(",").filter(Boolean) : [];
+    const curatorIds = curatorIdsParam ? curatorIdsParam.split(",").filter(Boolean) : [];
+
+    // Resolve curatorId from slug if provided
+    let curatorId = curatorIdParam;
+    if (curatorIdParam && !curatorIdParam.startsWith("cl")) {
+      // Looks like a slug, resolve to address then look up DB id
+      const resolvedAddress = await resolveCuratorSlug(curatorIdParam);
+      const curatorRow = await prisma.curator.findFirst({
+        where: { address: resolvedAddress },
+        select: { id: true },
+      });
+      curatorId = curatorRow?.id ?? curatorIdParam;
+    }
 
     const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
@@ -21,7 +40,7 @@ export async function GET(request: Request) {
       id: string;
       scope: "vault" | "curator" | "ecosystem";
       vaultId: string | null;
-      vault: { name: string; symbol: string; address: string } | null;
+      vault: { name: string; symbol: string; address: string; curator?: { name: string | null; id: string } | null } | null;
       curatorId: string | null;
       curator: { name: string | null } | null;
       changeType: string;
@@ -46,6 +65,15 @@ export async function GET(request: Request) {
       };
       if (severity) vaultWhere.severity = severity;
       if (vaultId) vaultWhere.vaultId = vaultId;
+      if (curatorId) vaultWhere.vault = { curatorId };
+
+      // Portfolio filtering: show alerts for tracked vaults OR tracked curators
+      if (vaultAddresses.length || curatorIds.length) {
+        vaultWhere.OR = [
+          ...(vaultAddresses.length ? [{ vault: { address: { in: vaultAddresses } } }] : []),
+          ...(curatorIds.length ? [{ vault: { curatorId: { in: curatorIds } } }] : []),
+        ];
+      }
 
       const [vaultChanges, vaultCount] = await Promise.all([
         prisma.vaultChange.findMany({
@@ -65,7 +93,7 @@ export async function GET(request: Request) {
             detectedAt: true,
             viewed: true,
             vault: {
-              select: { name: true, symbol: true, address: true },
+              select: { name: true, symbol: true, address: true, curator: { select: { name: true, id: true } } },
             },
           },
         }),
@@ -79,9 +107,9 @@ export async function GET(request: Request) {
           id: change.id,
           scope: "vault",
           vaultId: change.vaultId,
-          vault: change.vault,
-          curatorId: null,
-          curator: null,
+          vault: { name: change.vault.name, symbol: change.vault.symbol, address: change.vault.address, curator: change.vault.curator },
+          curatorId: change.vault.curator?.id ?? null,
+          curator: change.vault.curator ? { name: change.vault.curator.name } : null,
           changeType: change.changeType,
           severity: change.severity,
           title: change.title,
@@ -101,7 +129,15 @@ export async function GET(request: Request) {
         detectedAt: { gte: since },
       };
       if (severity) platformWhere.severity = severity;
-      if (curatorId) platformWhere.curatorId = curatorId;
+      if (curatorId && !curatorIds.length) platformWhere.curatorId = curatorId;
+
+      // Portfolio filtering: show alerts for tracked curators + always include ecosystem
+      if (curatorIds.length) {
+        platformWhere.OR = [
+          { curatorId: { in: curatorIds } },
+          { scope: "ecosystem" },
+        ];
+      }
 
       // Filter by scope if specific
       if (scope === "curator") {

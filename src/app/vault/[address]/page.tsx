@@ -28,6 +28,7 @@ import { InfoTooltip } from "@/components/Tooltip";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { AllocationCalculator } from "@/components/AllocationCalculator";
 import { isResolvUsrExposed, RESOLV_USR_WARNING } from "@/lib/resolv-usr-warning";
+import { usePortfolio } from "@/hooks/usePortfolio";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -135,6 +136,9 @@ export default function VaultDetailPage({ params }: PageProps) {
     );
   }
 
+  const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
+  const isTracked = isVaultTracked(address);
+
   const snapshot = vault.latestSnapshot;
   const curatorName = vault.curator?.name || null;
   const curatorAddress = vault.curatorAddress;
@@ -176,6 +180,16 @@ export default function VaultDetailPage({ params }: PageProps) {
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
             </a>
             <span className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-background-elevated border border-border text-text-primary">{vault.asset.symbol}</span>
+            <button
+              onClick={() => isTracked ? untrackVault(address) : trackVault(address, vault.name)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                isTracked
+                  ? "bg-accent-blue/10 border border-accent-blue/20 text-accent-blue"
+                  : "bg-background-elevated border border-border text-text-secondary hover:bg-background-hover"
+              }`}
+            >
+              {isTracked ? "Tracking \u2713" : "Track"}
+            </button>
           </div>
         }
       />

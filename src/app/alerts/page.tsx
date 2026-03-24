@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { usePortfolio } from "@/hooks/usePortfolio";
 
 interface VaultInfo {
   name: string;
   symbol: string;
   address: string;
+  curator?: { name: string | null; id: string } | null;
 }
 
 interface CuratorInfo {
@@ -74,6 +76,15 @@ const SCOPE_FILTERS = [
   { value: "ecosystem", label: "Ecosystem" },
 ];
 
+const QUICK_CURATORS = [
+  { label: "Gauntlet", slug: "gauntlet" },
+  { label: "Steakhouse", slug: "steakhouse-financial" },
+  { label: "Re7", slug: "re7-labs" },
+  { label: "MEV Capital", slug: "mev-capital" },
+  { label: "KPK", slug: "kpk" },
+  { label: "Sky", slug: "sky" },
+];
+
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [summary, setSummary] = useState<AlertSummary | null>(null);
@@ -85,11 +96,28 @@ export default function AlertsPage() {
   const [hasMore, setHasMore] = useState(false);
   const [offset, setOffset] = useState(0);
 
+  // New state
+  const [alertTab, setAlertTab] = useState<"all" | "my">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [curatorFilter, setCuratorFilter] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "grouped">("list");
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  const { portfolio, untrackVault, untrackCurator, hasTrackedItems } = usePortfolio();
+
+  // Debounce search
+  const searchTimer = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => {
+    searchTimer.current = setTimeout(() => setDebouncedSearch(searchQuery), 200);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [searchQuery]);
+
   useEffect(() => {
     fetchAlerts(true);
-  }, [severityFilter, timeFilter, scopeFilter]);
+  }, [severityFilter, timeFilter, scopeFilter, alertTab, curatorFilter]);
 
-  async function fetchAlerts(reset = false) {
+  const fetchAlerts = useCallback(async (reset = false) => {
     try {
       setLoading(true);
       const newOffset = reset ? 0 : offset;
@@ -100,6 +128,19 @@ export default function AlertsPage() {
         scope: scopeFilter,
         ...(severityFilter && { severity: severityFilter }),
       });
+
+      // Curator quick filter
+      if (curatorFilter) {
+        params.set("curatorId", curatorFilter);
+      }
+
+      // Portfolio filtering for "My Alerts"
+      if (alertTab === "my" && hasTrackedItems) {
+        const vaultAddresses = portfolio.trackedVaults.map((v) => v.address);
+        const curatorIds = portfolio.trackedCurators.map((c) => c.id);
+        if (vaultAddresses.length) params.set("vaultAddresses", vaultAddresses.join(","));
+        if (curatorIds.length) params.set("curatorIds", curatorIds.join(","));
+      }
 
       const response = await fetch(`/api/changes?${params}`);
       const data: AlertsResponse = await response.json();
@@ -124,7 +165,65 @@ export default function AlertsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [offset, timeFilter, scopeFilter, severityFilter, curatorFilter, alertTab, hasTrackedItems, portfolio]);
+
+  // Client-side search filtering
+  const filteredAlerts = useMemo(() => {
+    if (!debouncedSearch) return alerts;
+    const q = debouncedSearch.toLowerCase();
+    return alerts.filter((a) =>
+      a.vault?.name?.toLowerCase().includes(q) ||
+      a.curator?.name?.toLowerCase().includes(q) ||
+      a.title.toLowerCase().includes(q) ||
+      a.description.toLowerCase().includes(q)
+    );
+  }, [alerts, debouncedSearch]);
+
+  // Grouped alerts
+  const groupedAlerts = useMemo(() => {
+    if (viewMode !== "grouped") return null;
+
+    const groups: Record<string, { name: string; alerts: Alert[] }> = {};
+
+    for (const alert of filteredAlerts) {
+      let groupKey: string;
+      let groupName: string;
+
+      if (alert.scope === "ecosystem") {
+        groupKey = "__ecosystem__";
+        groupName = "Ecosystem";
+      } else if (alert.scope === "curator" && alert.curator?.name) {
+        groupKey = alert.curatorId || alert.curator.name;
+        groupName = alert.curator.name;
+      } else if (alert.scope === "vault" && alert.vault?.curator?.name) {
+        groupKey = alert.vault.curator.id || alert.vault.curator.name;
+        groupName = alert.vault.curator.name;
+      } else if (alert.curator?.name) {
+        groupKey = alert.curatorId || alert.curator.name;
+        groupName = alert.curator.name;
+      } else {
+        groupKey = "__uncategorized__";
+        groupName = "Other";
+      }
+
+      if (!groups[groupKey]) {
+        groups[groupKey] = { name: groupName, alerts: [] };
+      }
+      groups[groupKey].alerts.push(alert);
+    }
+
+    return Object.entries(groups)
+      .sort((a, b) => b[1].alerts.length - a[1].alerts.length);
+  }, [filteredAlerts, viewMode]);
+
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
 
   const isDepositAlert = (alert: Alert) =>
     alert.changeType === "LARGE_DEPOSIT" ||
@@ -134,43 +233,21 @@ export default function AlertsPage() {
     alert.changeType === "VAULT_TVL_SURGE" || alert.changeType === "CURATOR_AUM_SURGE";
 
   const getSeverityIcon = (alert: Alert) => {
-    // Deposits and surges always get green icon
     if (isDepositAlert(alert) || isSurgeAlert(alert)) {
       return (
         <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-green/15">
-          <svg
-            className="w-5 h-5 text-accent-green"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-            />
+          <svg className="w-5 h-5 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
           </svg>
         </span>
       );
     }
 
-    // Ecosystem alerts get globe icon
     if (alert.scope === "ecosystem") {
       return (
         <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-red/15">
-          <svg
-            className="w-5 h-5 text-accent-red"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
+          <svg className="w-5 h-5 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </span>
       );
@@ -180,36 +257,16 @@ export default function AlertsPage() {
       case "critical":
         return (
           <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-red/15">
-            <svg
-              className="w-5 h-5 text-accent-red"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
+            <svg className="w-5 h-5 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </span>
         );
       case "warning":
         return (
           <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-yellow/15">
-            <svg
-              className="w-5 h-5 text-accent-yellow"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
+            <svg className="w-5 h-5 text-accent-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </span>
         );
@@ -217,18 +274,8 @@ export default function AlertsPage() {
       default:
         return (
           <span className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent-blue/15">
-            <svg
-              className="w-5 h-5 text-accent-blue"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
+            <svg className="w-5 h-5 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </span>
         );
@@ -236,7 +283,6 @@ export default function AlertsPage() {
   };
 
   const getSeverityBadge = (alert: Alert) => {
-    // Deposits and surges get a green "Activity" badge
     if (isDepositAlert(alert) || isSurgeAlert(alert)) {
       return (
         <span className="px-2 py-0.5 rounded text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/30">
@@ -258,9 +304,7 @@ export default function AlertsPage() {
     };
 
     return (
-      <span
-        className={`px-2 py-0.5 rounded text-xs font-medium ${classes[alert.severity]}`}
-      >
+      <span className={`px-2 py-0.5 rounded text-xs font-medium ${classes[alert.severity]}`}>
         {labels[alert.severity]}
       </span>
     );
@@ -314,6 +358,63 @@ export default function AlertsPage() {
     return null;
   };
 
+  const renderAlertCard = (alert: Alert) => (
+    <div
+      key={alert.id}
+      className="flex items-start gap-4 p-4 hover:bg-background-hover transition-colors"
+    >
+      {getSeverityIcon(alert)}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Link
+            href={getAlertLink(alert)}
+            className="text-sm font-medium text-accent-blue hover:text-accent-blue-hover transition-colors"
+          >
+            {getAlertName(alert)}
+          </Link>
+          {getSeverityBadge(alert)}
+          {getScopeBadge(alert)}
+          {getAlertSubtext(alert) && (
+            <span className="text-xs text-text-muted font-mono">
+              {getAlertSubtext(alert)}
+            </span>
+          )}
+        </div>
+        <p className="text-sm font-medium text-text-primary mt-1.5">
+          {alert.title}
+        </p>
+        <p className="text-sm text-text-secondary mt-0.5">{alert.description}</p>
+        <div className="flex items-center gap-3 mt-2">
+          <p className="text-xs text-text-muted">
+            {formatTimeAgo(alert.detectedAt)}
+          </p>
+          {typeof alert.metadata?.txHash === "string" && (
+            <a
+              href={`https://etherscan.io/tx/${alert.metadata.txHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-xs text-accent-blue hover:text-accent-blue-hover transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Etherscan
+            </a>
+          )}
+        </div>
+      </div>
+      <Link
+        href={getAlertLink(alert)}
+        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-accent-blue transition-colors flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-background-elevated"
+      >
+        View
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+        </svg>
+      </Link>
+    </div>
+  );
+
   return (
     <>
       <PageHeader
@@ -321,6 +422,80 @@ export default function AlertsPage() {
         description={summary ? `${summary.critical} critical \u2022 ${summary.warning} warnings \u2022 ${summary.info} info` : undefined}
         breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Alerts" }]}
       />
+
+      {/* My Alerts / All Alerts Tabs */}
+      <div className="flex items-center gap-2 mb-6">
+        <button
+          onClick={() => { setAlertTab("my"); setCuratorFilter(null); }}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            alertTab === "my"
+              ? "bg-accent-blue text-white"
+              : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+          }`}
+        >
+          My Alerts
+        </button>
+        <button
+          onClick={() => { setAlertTab("all"); }}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            alertTab === "all"
+              ? "bg-accent-blue text-white"
+              : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+          }`}
+        >
+          All Alerts
+        </button>
+      </div>
+
+      {/* Portfolio Summary (My Alerts tab) */}
+      {alertTab === "my" && hasTrackedItems && (
+        <div className="bg-background-elevated border border-border rounded-lg p-4 mb-6">
+          <p className="text-sm text-text-secondary mb-3">
+            Your Portfolio: {portfolio.trackedVaults.length} vault{portfolio.trackedVaults.length !== 1 ? "s" : ""}, {portfolio.trackedCurators.length} curator{portfolio.trackedCurators.length !== 1 ? "s" : ""} tracked
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {portfolio.trackedVaults.map((v) => (
+              <span key={v.address} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-accent-blue/10 border border-accent-blue/20 text-accent-blue">
+                {v.name}
+                <button
+                  onClick={() => untrackVault(v.address)}
+                  className="hover:text-accent-red transition-colors"
+                  title="Untrack"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+            {portfolio.trackedCurators.map((c) => (
+              <span key={c.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-purple-500/10 border border-purple-500/20 text-purple-400">
+                {c.name}
+                <button
+                  onClick={() => untrackCurator(c.id)}
+                  className="hover:text-accent-red transition-colors"
+                  title="Untrack"
+                >
+                  &times;
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty portfolio state */}
+      {alertTab === "my" && !hasTrackedItems && (
+        <div className="bg-background-elevated border border-border rounded-lg p-8 text-center mb-6">
+          <div className="w-12 h-12 rounded-full bg-accent-blue/10 flex items-center justify-center mx-auto mb-3">
+            <svg className="w-6 h-6 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+          </div>
+          <p className="text-sm font-medium text-text-primary">No tracked items</p>
+          <p className="text-sm text-text-tertiary mt-1">
+            Track vaults and curators to see personalized alerts here
+          </p>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {summary && (
@@ -374,13 +549,6 @@ export default function AlertsPage() {
           </div>
 
           <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
-            <h3 className="font-medium text-accent-yellow text-sm mb-1.5">Concentration Spikes</h3>
-            <p className="text-xs text-text-tertiary leading-relaxed">
-              Rapid increases in single-adapter allocation (&gt;15 percentage points in 24h).
-            </p>
-          </div>
-
-          <div className="p-3 rounded-lg bg-background-subtle border border-border-subtle">
             <h3 className="font-medium text-accent-red text-sm mb-1.5">Curator AUM</h3>
             <p className="text-xs text-text-tertiary leading-relaxed">
               Alerts when a curator&apos;s total AUM drops &gt;5% in 24h or &gt;15% over 3 days.
@@ -395,6 +563,52 @@ export default function AlertsPage() {
           </div>
         </div>
       </div>
+
+      {/* Search Bar */}
+      <div className="mb-4">
+        <div className="relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            placeholder="Search alerts by vault, curator, or keyword..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 text-sm bg-background-elevated border border-border rounded-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 focus:ring-1 focus:ring-accent-blue/20 transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Curator Quick Filters */}
+      {alertTab === "all" && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-xs text-text-tertiary uppercase tracking-wider mr-1">Curator</span>
+          {QUICK_CURATORS.map((c) => (
+            <button
+              key={c.slug}
+              onClick={() => setCuratorFilter(curatorFilter === c.slug ? null : c.slug)}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                curatorFilter === c.slug
+                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/30 font-medium"
+                  : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
@@ -438,23 +652,49 @@ export default function AlertsPage() {
           </div>
         </div>
 
-        {/* Time filter */}
-        <div className="flex items-center gap-2 ml-auto">
-          <span className="text-xs text-text-tertiary uppercase tracking-wider">Period</span>
+        {/* Time filter + View mode toggle */}
+        <div className="flex items-center gap-4 ml-auto">
+          {/* View mode */}
           <div className="flex gap-1">
-            {TIME_FILTERS.map((filter) => (
-              <button
-                key={filter.value}
-                onClick={() => setTimeFilter(filter.value)}
-                className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                  timeFilter === filter.value
-                    ? "bg-text-primary text-background font-medium"
-                    : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
+            <button
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                viewMode === "list"
+                  ? "bg-text-primary text-background font-medium"
+                  : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+              }`}
+            >
+              List
+            </button>
+            <button
+              onClick={() => setViewMode("grouped")}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                viewMode === "grouped"
+                  ? "bg-text-primary text-background font-medium"
+                  : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+              }`}
+            >
+              Grouped
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-text-tertiary uppercase tracking-wider">Period</span>
+            <div className="flex gap-1">
+              {TIME_FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  onClick={() => setTimeFilter(filter.value)}
+                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                    timeFilter === filter.value
+                      ? "bg-text-primary text-background font-medium"
+                      : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -473,93 +713,70 @@ export default function AlertsPage() {
       )}
 
       {/* Alerts list */}
-      <div className="bg-background-subtle rounded-lg border border-border divide-y divide-border-subtle">
-        {loading && alerts.length === 0 ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent-blue border-t-transparent mx-auto" />
-            <p className="mt-4 text-sm text-text-tertiary">Loading alerts...</p>
-          </div>
-        ) : alerts.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-accent-green/10 flex items-center justify-center mx-auto">
-              <svg
-                className="h-8 w-8 text-accent-green"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
+      {viewMode === "grouped" && groupedAlerts ? (
+        <div className="space-y-4">
+          {groupedAlerts.map(([key, group]) => (
+            <div key={key} className="bg-background-subtle rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => toggleGroup(key)}
+                className="w-full flex items-center justify-between px-4 py-3 hover:bg-background-hover transition-colors"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <p className="mt-4 text-sm font-medium text-text-primary">No alerts</p>
-            <p className="text-sm text-text-tertiary mt-1">
-              All vaults are operating normally
-            </p>
-          </div>
-        ) : (
-          alerts.map((alert) => (
-            <div
-              key={alert.id}
-              className="flex items-start gap-4 p-4 hover:bg-background-hover transition-colors"
-            >
-              {getSeverityIcon(alert)}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Link
-                    href={getAlertLink(alert)}
-                    className="text-sm font-medium text-accent-blue hover:text-accent-blue-hover transition-colors"
+                <div className="flex items-center gap-2">
+                  <svg
+                    className={`w-4 h-4 text-text-muted transition-transform ${collapsedGroups.has(key) ? "" : "rotate-90"}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
                   >
-                    {getAlertName(alert)}
-                  </Link>
-                  {getSeverityBadge(alert)}
-                  {getScopeBadge(alert)}
-                  {getAlertSubtext(alert) && (
-                    <span className="text-xs text-text-muted font-mono">
-                      {getAlertSubtext(alert)}
-                    </span>
-                  )}
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm font-semibold text-text-primary">{group.name}</span>
+                  <span className="text-xs text-text-muted">({group.alerts.length} alert{group.alerts.length !== 1 ? "s" : ""})</span>
                 </div>
-                <p className="text-sm font-medium text-text-primary mt-1.5">
-                  {alert.title}
-                </p>
-                <p className="text-sm text-text-secondary mt-0.5">{alert.description}</p>
-                <div className="flex items-center gap-3 mt-2">
-                  <p className="text-xs text-text-muted">
-                    {formatTimeAgo(alert.detectedAt)}
-                  </p>
-                  {typeof alert.metadata?.txHash === "string" && (
-                    <a
-                      href={`https://etherscan.io/tx/${alert.metadata.txHash}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-xs text-accent-blue hover:text-accent-blue-hover transition-colors"
-                    >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      Etherscan
-                    </a>
-                  )}
+              </button>
+              {!collapsedGroups.has(key) && (
+                <div className="divide-y divide-border-subtle border-t border-border-subtle">
+                  {group.alerts.map(renderAlertCard)}
                 </div>
-              </div>
-              <Link
-                href={getAlertLink(alert)}
-                className="flex items-center gap-1 text-sm text-text-tertiary hover:text-accent-blue transition-colors flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-background-elevated"
-              >
-                View
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </Link>
+              )}
             </div>
-          ))
-        )}
-      </div>
+          ))}
+          {groupedAlerts.length === 0 && !loading && (
+            <div className="bg-background-subtle rounded-lg border border-border p-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-accent-green/10 flex items-center justify-center mx-auto">
+                <svg className="h-8 w-8 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="mt-4 text-sm font-medium text-text-primary">No alerts</p>
+              <p className="text-sm text-text-tertiary mt-1">All vaults are operating normally</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-background-subtle rounded-lg border border-border divide-y divide-border-subtle">
+          {loading && alerts.length === 0 ? (
+            <div className="p-8 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent-blue border-t-transparent mx-auto" />
+              <p className="mt-4 text-sm text-text-tertiary">Loading alerts...</p>
+            </div>
+          ) : filteredAlerts.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 rounded-full bg-accent-green/10 flex items-center justify-center mx-auto">
+                <svg className="h-8 w-8 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <p className="mt-4 text-sm font-medium text-text-primary">No alerts</p>
+              <p className="text-sm text-text-tertiary mt-1">
+                {debouncedSearch ? "No alerts match your search" : "All vaults are operating normally"}
+              </p>
+            </div>
+          ) : (
+            filteredAlerts.map(renderAlertCard)
+          )}
+        </div>
+      )}
 
       {/* Load more */}
       {hasMore && (

@@ -19,6 +19,7 @@ import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
 import { NetworkBadgeList } from "@/components/NetworkBadge";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
+import { usePortfolio } from "@/hooks/usePortfolio";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -90,6 +91,8 @@ export default function CuratorDetailPage({ params }: PageProps) {
   }
 
   const { curator, vaults, news } = data;
+  const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
+  const isTracked = isCuratorTracked(curator.id);
 
   // Calculate aggregate stats
   const totalTVL = vaults.reduce((sum, v) => sum + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
@@ -140,6 +143,16 @@ export default function CuratorDetailPage({ params }: PageProps) {
                 <svg className="w-4 h-4 text-text-tertiary" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
               </a>
             )}
+            <button
+              onClick={() => isTracked ? untrackCurator(curator.id) : trackCurator(curator.id, curator.name || "Unknown")}
+              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                isTracked
+                  ? "bg-accent-blue/10 border border-accent-blue/20 text-accent-blue"
+                  : "bg-background-elevated border border-border text-text-secondary hover:bg-background-hover"
+              }`}
+            >
+              {isTracked ? "Tracking \u2713" : "Track"}
+            </button>
           </div>
         }
       />
