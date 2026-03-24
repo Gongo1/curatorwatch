@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import Link from "next/link";
 import { formatTimeAgo } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -365,16 +364,6 @@ export default function AlertsPage() {
     return null;
   };
 
-  const getAlertLink = (alert: Alert): string => {
-    if (alert.scope === "vault" && alert.vault?.address) {
-      return `/vault/${alert.vault.address}`;
-    }
-    if (alert.scope === "curator" && alert.curatorId) {
-      return `/curator/${alert.curatorId}`;
-    }
-    return "/alerts";
-  };
-
   const getAlertName = (alert: Alert): string => {
     if (alert.scope === "vault" && alert.vault) {
       return alert.vault.name;
@@ -403,12 +392,9 @@ export default function AlertsPage() {
       {getSeverityIcon(alert)}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <Link
-            href={getAlertLink(alert)}
-            className="text-sm font-medium text-accent-blue hover:text-accent-blue-hover transition-colors"
-          >
+          <span className="text-sm font-medium text-accent-blue">
             {getAlertName(alert)}
-          </Link>
+          </span>
           {getSeverityBadge(alert)}
           {getScopeBadge(alert)}
           {getAlertSubtext(alert) && (
@@ -440,15 +426,6 @@ export default function AlertsPage() {
           )}
         </div>
       </div>
-      <Link
-        href={getAlertLink(alert)}
-        className="flex items-center gap-1 text-sm text-text-tertiary hover:text-accent-blue transition-colors flex-shrink-0 px-3 py-1.5 rounded-lg hover:bg-background-elevated"
-      >
-        View
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </Link>
     </div>
   );
 
