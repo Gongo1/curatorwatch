@@ -30,6 +30,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
   const [data, setData] = useState<CuratorDetailResponse["data"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
 
   useEffect(() => {
     async function fetchCurator() {
@@ -91,7 +92,6 @@ export default function CuratorDetailPage({ params }: PageProps) {
   }
 
   const { curator, vaults, news } = data;
-  const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
   const isTracked = isCuratorTracked(curator.id);
 
   // Calculate aggregate stats

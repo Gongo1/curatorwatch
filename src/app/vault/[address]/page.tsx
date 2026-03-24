@@ -55,6 +55,7 @@ export default function VaultDetailPage({ params }: PageProps) {
   const [vault, setVault] = useState<VaultDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
 
   useEffect(() => {
     async function fetchVault() {
@@ -136,7 +137,6 @@ export default function VaultDetailPage({ params }: PageProps) {
     );
   }
 
-  const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
   const isTracked = isVaultTracked(address);
 
   const snapshot = vault.latestSnapshot;
