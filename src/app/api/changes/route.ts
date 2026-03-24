@@ -228,12 +228,73 @@ export async function GET(request: Request) {
       }
     }
 
+    // Curator alert counts for dropdown filter
+    const curatorAlertCountMap = new Map<string, { id: string; name: string; count: number }>();
+
+    // Count vault alerts per curator
+    const vaultCuratorCounts = await prisma.vaultChange.groupBy({
+      by: ["vaultId"],
+      where: { detectedAt: { gte: since } },
+      _count: { id: true },
+    });
+    if (vaultCuratorCounts.length > 0) {
+      const vaultsWithCurator = await prisma.vault.findMany({
+        where: { id: { in: vaultCuratorCounts.map((v) => v.vaultId) } },
+        select: { id: true, curatorId: true, curator: { select: { id: true, name: true } } },
+      });
+      const vaultCuratorMap = new Map(vaultsWithCurator.map((v) => [v.id, v]));
+      for (const vc of vaultCuratorCounts) {
+        const vault = vaultCuratorMap.get(vc.vaultId);
+        if (vault?.curator) {
+          const existing = curatorAlertCountMap.get(vault.curator.id);
+          if (existing) {
+            existing.count += vc._count.id;
+          } else {
+            curatorAlertCountMap.set(vault.curator.id, {
+              id: vault.curator.id,
+              name: vault.curator.name ?? "Unknown",
+              count: vc._count.id,
+            });
+          }
+        }
+      }
+    }
+
+    // Count platform alerts per curator
+    const platformCuratorCounts = await prisma.platformAlert.groupBy({
+      by: ["curatorId"],
+      where: { detectedAt: { gte: since }, curatorId: { not: null } },
+      _count: { id: true },
+    });
+    for (const pc of platformCuratorCounts) {
+      if (!pc.curatorId) continue;
+      const existing = curatorAlertCountMap.get(pc.curatorId);
+      if (existing) {
+        existing.count += pc._count.id;
+      } else {
+        // Need to look up curator name
+        const curator = await prisma.curator.findUnique({
+          where: { id: pc.curatorId },
+          select: { name: true },
+        });
+        curatorAlertCountMap.set(pc.curatorId, {
+          id: pc.curatorId,
+          name: curator?.name ?? "Unknown",
+          count: pc._count.id,
+        });
+      }
+    }
+
+    const curatorAlertCounts = Array.from(curatorAlertCountMap.values())
+      .sort((a, b) => b.count - a.count);
+
     return NextResponse.json(
       {
         success: true,
         data: {
           changes: paginatedChanges,
           summary,
+          curatorAlertCounts,
           pagination: {
             total,
             limit,

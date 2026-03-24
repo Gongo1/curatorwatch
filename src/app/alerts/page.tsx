@@ -42,11 +42,18 @@ interface AlertSummary {
   total: number;
 }
 
+interface CuratorAlertCount {
+  id: string;
+  name: string;
+  count: number;
+}
+
 interface AlertsResponse {
   success: boolean;
   data: {
     changes: Alert[];
     summary: AlertSummary;
+    curatorAlertCounts: CuratorAlertCount[];
     pagination: {
       total: number;
       limit: number;
@@ -76,15 +83,6 @@ const SCOPE_FILTERS = [
   { value: "ecosystem", label: "Ecosystem" },
 ];
 
-const QUICK_CURATORS = [
-  { label: "Gauntlet", slug: "gauntlet" },
-  { label: "Steakhouse", slug: "steakhouse-financial" },
-  { label: "Re7", slug: "re7-labs" },
-  { label: "MEV Capital", slug: "mev-capital" },
-  { label: "KPK", slug: "kpk" },
-  { label: "Sky", slug: "sky" },
-];
-
 export default function AlertsPage() {
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [summary, setSummary] = useState<AlertSummary | null>(null);
@@ -100,9 +98,13 @@ export default function AlertsPage() {
   const [alertTab, setAlertTab] = useState<"all" | "my">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [curatorFilter, setCuratorFilter] = useState<string | null>(null);
+  const [selectedCurators, setSelectedCurators] = useState<string[]>([]);
+  const [curatorAlertCounts, setCuratorAlertCounts] = useState<CuratorAlertCount[]>([]);
+  const [curatorDropdownOpen, setCuratorDropdownOpen] = useState(false);
+  const [curatorSearch, setCuratorSearch] = useState("");
   const [viewMode, setViewMode] = useState<"list" | "grouped">("list");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { portfolio, untrackVault, untrackCurator, hasTrackedItems } = usePortfolio();
 
@@ -113,9 +115,20 @@ export default function AlertsPage() {
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
   }, [searchQuery]);
 
+  // Close dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setCuratorDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     fetchAlerts(true);
-  }, [severityFilter, timeFilter, scopeFilter, alertTab, curatorFilter]);
+  }, [severityFilter, timeFilter, scopeFilter, alertTab, selectedCurators]);
 
   const fetchAlerts = useCallback(async (reset = false) => {
     try {
@@ -129,9 +142,9 @@ export default function AlertsPage() {
         ...(severityFilter && { severity: severityFilter }),
       });
 
-      // Curator quick filter
-      if (curatorFilter) {
-        params.set("curatorId", curatorFilter);
+      // Multi-curator filter
+      if (selectedCurators.length > 0) {
+        params.set("curatorIds", selectedCurators.join(","));
       }
 
       // Portfolio filtering for "My Alerts"
@@ -139,7 +152,7 @@ export default function AlertsPage() {
         const vaultAddresses = portfolio.trackedVaults.map((v) => v.address);
         const curatorIds = portfolio.trackedCurators.map((c) => c.id);
         if (vaultAddresses.length) params.set("vaultAddresses", vaultAddresses.join(","));
-        if (curatorIds.length) params.set("curatorIds", curatorIds.join(","));
+        if (curatorIds.length && !selectedCurators.length) params.set("curatorIds", curatorIds.join(","));
       }
 
       const response = await fetch(`/api/changes?${params}`);
@@ -158,6 +171,7 @@ export default function AlertsPage() {
       }
 
       setSummary(data.data.summary);
+      setCuratorAlertCounts(data.data.curatorAlertCounts || []);
       setHasMore(data.data.pagination.hasMore);
       setError(null);
     } catch (err) {
@@ -165,7 +179,7 @@ export default function AlertsPage() {
     } finally {
       setLoading(false);
     }
-  }, [offset, timeFilter, scopeFilter, severityFilter, curatorFilter, alertTab, hasTrackedItems, portfolio]);
+  }, [offset, timeFilter, scopeFilter, severityFilter, selectedCurators, alertTab, hasTrackedItems, portfolio]);
 
   // Client-side search filtering
   const filteredAlerts = useMemo(() => {
@@ -224,6 +238,29 @@ export default function AlertsPage() {
       return next;
     });
   };
+
+  // Curator dropdown helpers
+  const filteredCuratorList = useMemo(() => {
+    if (!curatorSearch) return curatorAlertCounts;
+    const q = curatorSearch.toLowerCase();
+    return curatorAlertCounts.filter((c) => c.name.toLowerCase().includes(q));
+  }, [curatorAlertCounts, curatorSearch]);
+
+  const toggleCurator = (id: string) => {
+    setSelectedCurators((prev) =>
+      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
+    );
+  };
+
+  const curatorButtonLabel = useMemo(() => {
+    if (selectedCurators.length === 0) return "All Curators";
+    if (selectedCurators.length <= 2) {
+      return selectedCurators
+        .map((id) => curatorAlertCounts.find((c) => c.id === id)?.name ?? id)
+        .join(", ");
+    }
+    return `${selectedCurators.length} curators selected`;
+  }, [selectedCurators, curatorAlertCounts]);
 
   const isDepositAlert = (alert: Alert) =>
     alert.changeType === "LARGE_DEPOSIT" ||
@@ -426,7 +463,7 @@ export default function AlertsPage() {
       {/* My Alerts / All Alerts Tabs */}
       <div className="flex items-center gap-2 mb-6">
         <button
-          onClick={() => { setAlertTab("my"); setCuratorFilter(null); }}
+          onClick={() => { setAlertTab("my"); setSelectedCurators([]); }}
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
             alertTab === "my"
               ? "bg-accent-blue text-white"
@@ -590,28 +627,92 @@ export default function AlertsPage() {
         </div>
       </div>
 
-      {/* Curator Quick Filters */}
-      {alertTab === "all" && (
-        <div className="flex flex-wrap items-center gap-2 mb-4">
-          <span className="text-xs text-text-tertiary uppercase tracking-wider mr-1">Curator</span>
-          {QUICK_CURATORS.map((c) => (
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        {/* Curator dropdown */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-text-tertiary uppercase tracking-wider">Curator</span>
+          <div className="relative" ref={dropdownRef}>
             <button
-              key={c.slug}
-              onClick={() => setCuratorFilter(curatorFilter === c.slug ? null : c.slug)}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                curatorFilter === c.slug
-                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/30 font-medium"
+              onClick={() => setCuratorDropdownOpen((prev) => !prev)}
+              className={`px-3 py-1.5 text-sm rounded-lg transition-colors inline-flex items-center gap-1.5 ${
+                selectedCurators.length > 0
+                  ? "bg-accent-blue text-white font-medium"
                   : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
               }`}
             >
-              {c.label}
+              <span className="max-w-[200px] truncate">{curatorButtonLabel}</span>
+              <svg className={`w-3.5 h-3.5 transition-transform ${curatorDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </button>
-          ))}
-        </div>
-      )}
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
+            {curatorDropdownOpen && (
+              <div className="absolute top-full left-0 mt-1 w-72 bg-background-elevated border border-border rounded-lg shadow-lg z-50 overflow-hidden">
+                {/* Search within dropdown */}
+                <div className="p-2 border-b border-border">
+                  <input
+                    type="text"
+                    placeholder="Search curators..."
+                    value={curatorSearch}
+                    onChange={(e) => setCuratorSearch(e.target.value)}
+                    className="w-full px-3 py-1.5 text-sm bg-background-subtle border border-border rounded-md text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue/50 transition-colors"
+                    autoFocus
+                  />
+                </div>
+
+                {/* "All Curators" reset option */}
+                <button
+                  onClick={() => { setSelectedCurators([]); setCuratorDropdownOpen(false); setCuratorSearch(""); }}
+                  className={`w-full text-left px-4 py-2 text-sm transition-colors flex items-center justify-between ${
+                    selectedCurators.length === 0
+                      ? "bg-accent-blue/10 text-accent-blue font-medium"
+                      : "text-text-secondary hover:bg-background-hover"
+                  }`}
+                >
+                  All Curators
+                  {selectedCurators.length === 0 && (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
+
+                {/* Curator list with checkboxes */}
+                <div className="max-h-64 overflow-y-auto border-t border-border-subtle">
+                  {filteredCuratorList.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-text-muted text-center">
+                      {curatorAlertCounts.length === 0 ? "No curator alerts in this period" : "No curators match search"}
+                    </div>
+                  ) : (
+                    filteredCuratorList.map((curator) => (
+                      <button
+                        key={curator.id}
+                        onClick={() => toggleCurator(curator.id)}
+                        className="w-full text-left px-4 py-2 text-sm hover:bg-background-hover transition-colors flex items-center gap-3"
+                      >
+                        <span className={`flex-shrink-0 w-4 h-4 rounded border flex items-center justify-center ${
+                          selectedCurators.includes(curator.id)
+                            ? "bg-accent-blue border-accent-blue"
+                            : "border-border"
+                        }`}>
+                          {selectedCurators.includes(curator.id) && (
+                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </span>
+                        <span className="flex-1 text-text-primary truncate">{curator.name}</span>
+                        <span className="flex-shrink-0 text-xs text-text-muted tabular-nums">{curator.count}</span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Scope filter */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-text-tertiary uppercase tracking-wider">Scope</span>
