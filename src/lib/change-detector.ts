@@ -76,9 +76,9 @@ export async function detectAlerts(
     const lifecycleAlerts = await detectVaultLifecycle(vault, currentSnapshot);
     alerts.push(...lifecycleAlerts);
 
-    // 4. Concentration Spike Detection
-    const concentrationAlerts = await detectConcentrationSpikes(vault, now);
-    alerts.push(...concentrationAlerts);
+    // 4. Concentration Spike Detection — disabled
+    // const concentrationAlerts = await detectConcentrationSpikes(vault, now);
+    // alerts.push(...concentrationAlerts);
 
     // 5. Vault TVL Snapshot Comparison (catches distributed outflows)
     const tvlAlerts = await detectVaultTvlChanges(vault, currentSnapshot);
