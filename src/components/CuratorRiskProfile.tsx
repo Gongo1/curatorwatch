@@ -155,7 +155,7 @@ function RiskTrackRecord({
           <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Recent Events</p>
           <div className="bg-background-elevated/50 rounded-lg p-3 border border-border-subtle">
             <p className="text-sm font-medium text-accent-red mb-1.5">
-              &#x26A0;&#xFE0F; Resolv USR Exposure (Feb 2026)
+              &#x26A0;&#xFE0F; Resolv USR Exposure (Mar 2026)
             </p>
             <ul className="space-y-1 text-sm text-text-secondary">
               <li>Allocated {exposureStr} to unstable markets</li>
