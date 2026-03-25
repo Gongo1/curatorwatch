@@ -155,7 +155,7 @@ function RiskTrackRecord({
           <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Recent Events</p>
           <div className="bg-background-elevated/50 rounded-lg p-3 border border-border-subtle">
             <p className="text-sm font-medium text-accent-red mb-1.5">
-              &#x26A0;&#xFE0F; Resolv USR Exposure (Feb 2025)
+              &#x26A0;&#xFE0F; Resolv USR Exposure (Feb 2026)
             </p>
             <ul className="space-y-1 text-sm text-text-secondary">
               <li>Allocated {exposureStr} to unstable markets</li>
@@ -169,9 +169,9 @@ function RiskTrackRecord({
         <div className="mb-4">
           <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Historical Performance</p>
           <ul className="space-y-1 text-sm">
-            <li className="text-accent-green">&#x2713; Zero bad debt (2018&ndash;2024)</li>
+            <li className="text-accent-green">&#x2713; Zero bad debt (2018&ndash;2025)</li>
             <li className="text-accent-green">&#x2713; Clean liquidation history</li>
-            <li className="text-accent-red">&#x2717; USR incident (2025)</li>
+            <li className="text-accent-red">&#x2717; USR incident (2026)</li>
           </ul>
         </div>
 
