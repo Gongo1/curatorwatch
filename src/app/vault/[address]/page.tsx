@@ -26,6 +26,9 @@ import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
+import { VaultWarningBadge } from "@/components/VaultWarningBadge";
+import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
+import { PendingConfigBanner } from "@/components/PendingConfigBanner";
 import { AllocationCalculator } from "@/components/AllocationCalculator";
 import { isResolvUsrExposed, RESOLV_USR_WARNING } from "@/lib/resolv-usr-warning";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -165,6 +168,8 @@ export default function VaultDetailPage({ params }: PageProps) {
         actions={
           <div className="flex items-center gap-3">
             <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} atRisk={isResolvUsrExposed(vault.address)} />
+            <VaultWarningBadge warnings={vault.warnings} />
+            <MorphoVerifiedBadge listed={vault.listed} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
             <a
               href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
@@ -204,6 +209,9 @@ export default function VaultDetailPage({ params }: PageProps) {
             </div>
           </div>
         )}
+
+        {/* Pending Governance Changes Banner */}
+        {!isTurtleVault && <PendingConfigBanner configs={vault.pendingConfigs} />}
 
         {/* Key Metrics */}
         <div className={`grid grid-cols-2 ${isTurtleVault ? "lg:grid-cols-4" : "lg:grid-cols-5"} gap-4 mb-4`}>
@@ -297,7 +305,10 @@ export default function VaultDetailPage({ params }: PageProps) {
             </div>
             {vault.yield.vaultAgeDays > 0 && (
               <p className="mt-3 text-xs text-text-tertiary">
-                Vault age: {vault.yield.vaultAgeDays} days • Est. total yield since launch: {formatCurrency(vault.yield.estimatedTotalYield)}
+                {vault.creationTimestamp
+                  ? `Launched ${formatDate(new Date(vault.creationTimestamp * 1000).toISOString())} (${vault.yield.vaultAgeDays} days ago)`
+                  : `Vault age: ${vault.yield.vaultAgeDays} days`}
+                {" "}• Est. total yield since launch: {formatCurrency(vault.yield.estimatedTotalYield)}
               </p>
             )}
           </div>
@@ -314,6 +325,14 @@ export default function VaultDetailPage({ params }: PageProps) {
           </TabsList>
 
           <TabsContent value="overview" className="pt-6 space-y-6">
+            {/* Capital Efficiency Card — Morpho vaults only */}
+            {!isTurtleVault && snapshot && vault.idleAssetsUsd != null && (
+              <CapitalEfficiencyCard
+                totalAssetsUsd={snapshot.totalAssetsUsd}
+                idleAssetsUsd={vault.idleAssetsUsd}
+              />
+            )}
+
             {/* Turtle data notice */}
             {isTurtleVault && (
               <>
@@ -687,6 +706,65 @@ function MetricCard({
         {value}
       </p>
     </div>
+  );
+}
+
+function CapitalEfficiencyCard({
+  totalAssetsUsd,
+  idleAssetsUsd,
+}: {
+  totalAssetsUsd: number;
+  idleAssetsUsd: number;
+}) {
+  const deployed = totalAssetsUsd - idleAssetsUsd;
+  const efficiencyPct = totalAssetsUsd > 0 ? (deployed / totalAssetsUsd) * 100 : 0;
+
+  let statusLabel: string;
+  let statusColor: string;
+  if (efficiencyPct >= 90) {
+    statusLabel = "Excellent";
+    statusColor = "text-accent-green";
+  } else if (efficiencyPct >= 80) {
+    statusLabel = "Good";
+    statusColor = "text-accent-yellow";
+  } else {
+    statusLabel = "Poor";
+    statusColor = "text-accent-red";
+  }
+
+  return (
+    <section className="bg-background-subtle rounded-lg border border-border">
+      <div className="px-6 py-4 border-b border-border">
+        <h2 className="text-base font-semibold text-text-primary">Capital Efficiency</h2>
+        <p className="text-sm text-text-tertiary">How effectively vault capital is deployed</p>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-6 py-4">
+        <div>
+          <p className="text-xs text-text-secondary mb-0.5">Deployed Capital</p>
+          <p className="text-lg font-semibold text-accent-green tabular-nums">
+            {formatCurrency(deployed)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-text-secondary mb-0.5">Idle Capital</p>
+          <p className="text-lg font-semibold text-accent-yellow tabular-nums">
+            {formatCurrency(idleAssetsUsd)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-text-secondary mb-0.5">Efficiency</p>
+          <p className="text-lg font-semibold text-text-primary tabular-nums">
+            {efficiencyPct.toFixed(1)}%
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-text-secondary mb-0.5">Status</p>
+          <p className={`text-lg font-semibold ${statusColor}`}>
+            {statusLabel}
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 

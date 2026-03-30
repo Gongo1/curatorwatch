@@ -12,6 +12,8 @@ interface VaultYieldData {
   dataSource: string;
   grade: string | null;
   gradeFailures: string[];
+  warnings: Array<{ type: string; level: string }>;
+  listed: boolean;
   assetSymbol: string;
   curatorId: string | null;
   curatorName: string | null;
@@ -65,6 +67,9 @@ export async function GET(request: Request) {
         dataSource: true,
         grade: true,
         gradeFailures: true,
+        warnings: true,
+        listed: true,
+        creationTimestamp: true,
         assetSymbol: true,
         performanceFee: true,
         managementFee: true,
@@ -139,9 +144,12 @@ export async function GET(request: Request) {
       }
 
       // Calculate vault age in years
-      const vaultAgeMs = vault.createdAt
-        ? Date.now() - new Date(vault.createdAt).getTime()
-        : 365.25 * 24 * 60 * 60 * 1000;
+      const vaultOriginMs = vault.creationTimestamp
+        ? vault.creationTimestamp * 1000
+        : vault.createdAt
+          ? new Date(vault.createdAt).getTime()
+          : Date.now() - 365.25 * 24 * 60 * 60 * 1000;
+      const vaultAgeMs = Date.now() - vaultOriginMs;
       const vaultAgeYears = Math.min(vaultAgeMs / (365.25 * 24 * 60 * 60 * 1000), 1);
 
       // Yield calculations (simple interest for Turtle, compound for Morpho)
@@ -162,6 +170,8 @@ export async function GET(request: Request) {
         dataSource: vault.dataSource,
         grade: vault.grade,
         gradeFailures: vault.gradeFailures ?? [],
+        warnings: (vault.warnings as Array<{ type: string; level: string }>) ?? [],
+        listed: vault.listed ?? true,
         assetSymbol: vault.assetSymbol,
         curatorId: vault.curatorId,
         curatorName,

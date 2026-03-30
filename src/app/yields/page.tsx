@@ -14,6 +14,8 @@ interface VaultYieldData {
   dataSource?: string;
   grade?: string | null;
   gradeFailures?: string[];
+  warnings?: Array<{ type: string; level: string }>;
+  listed?: boolean;
   assetSymbol: string;
   curatorId: string | null;
   curatorName: string | null;

@@ -38,6 +38,19 @@ export const GET_VAULTS_V2_PAGINATED = gql`
             assetsUsd
           }
         }
+        warnings {
+          type
+          level
+        }
+        listed
+        creationTimestamp
+        pendingConfigs {
+          items {
+            validAt
+            functionName
+            txHash
+          }
+        }
         curator {
           address
         }
@@ -83,6 +96,19 @@ export const GET_TOP_VAULTS_V2 = gql`
             assetsUsd
           }
         }
+        warnings {
+          type
+          level
+        }
+        listed
+        creationTimestamp
+        pendingConfigs {
+          items {
+            validAt
+            functionName
+            txHash
+          }
+        }
         curator {
           address
         }
@@ -120,6 +146,19 @@ export const GET_VAULT_V2_BY_ADDRESS = gql`
           type
           assets
           assetsUsd
+        }
+      }
+      warnings {
+        type
+        level
+      }
+      listed
+      creationTimestamp
+      pendingConfigs {
+        items {
+          validAt
+          functionName
+          txHash
         }
       }
       curator {

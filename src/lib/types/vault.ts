@@ -17,6 +17,11 @@ export interface MorphoCurator {
   address: string;
 }
 
+export interface MorphoVaultWarning {
+  type: string;
+  level: string;
+}
+
 export interface MorphoVaultV2 {
   address: string;
   name: string;
@@ -36,6 +41,10 @@ export interface MorphoVaultV2 {
   adapters: {
     items: MorphoAdapter[];
   };
+  warnings?: MorphoVaultWarning[];
+  listed?: boolean;
+  creationTimestamp?: string;  // BigInt as string from API
+  pendingConfigs?: { items: Array<{ validAt: string; functionName: string; txHash: string }> };
   curator: MorphoCurator;
 }
 

@@ -10,6 +10,8 @@ import {
   ChangeCountRenderer,
 } from "./cellRenderers";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
+import { VaultWarningBadge } from "@/components/VaultWarningBadge";
+import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import type { CuratorVaultSummary } from "@/lib/types/api";
 
@@ -26,6 +28,8 @@ function VaultNameCellRenderer(params: ICellRendererParams) {
         <div className="flex items-center gap-1 text-sm font-medium text-text-primary truncate">
           {data.name}
           <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+          <VaultWarningBadge warnings={data.warnings} />
+          <MorphoVerifiedBadge listed={data.listed} />
         </div>
         <div className="text-xs text-text-tertiary">{data.asset.symbol}</div>
       </div>

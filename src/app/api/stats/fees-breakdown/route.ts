@@ -21,6 +21,8 @@ interface VaultFeeData {
   curatorAddress: string | null;
   grade: string | null;
   gradeFailures: string[];
+  warnings: Array<{ type: string; level: string }>;
+  listed: boolean;
   tvl: number;
   apy: number;
   grossApy: number;
@@ -75,6 +77,9 @@ export async function GET(request: Request) {
         dataSource: true,
         grade: true,
         gradeFailures: true,
+        warnings: true,
+        listed: true,
+        creationTimestamp: true,
         performanceFee: true,
         managementFee: true,
         netAPR: true,
@@ -135,9 +140,12 @@ export async function GET(request: Request) {
       const managementFee = vault.managementFee || 0;
 
       // Calculate vault age in years
-      const vaultAgeMs = vault.createdAt
-        ? Date.now() - new Date(vault.createdAt).getTime()
-        : 365.25 * 24 * 60 * 60 * 1000;
+      const vaultOriginMs = vault.creationTimestamp
+        ? vault.creationTimestamp * 1000
+        : vault.createdAt
+          ? new Date(vault.createdAt).getTime()
+          : Date.now() - 365.25 * 24 * 60 * 60 * 1000;
+      const vaultAgeMs = Date.now() - vaultOriginMs;
       const vaultAgeYears = Math.min(vaultAgeMs / (365.25 * 24 * 60 * 60 * 1000), 1);
 
       // For Turtle: use APR directly (percentage); for Morpho: use APY (decimal)
@@ -187,6 +195,8 @@ export async function GET(request: Request) {
         curatorAddress: vault.curatorAddress,
         grade: vault.grade,
         gradeFailures: vault.gradeFailures ?? [],
+        warnings: (vault.warnings as Array<{ type: string; level: string }>) ?? [],
+        listed: vault.listed ?? true,
         tvl,
         apy: netApy * 100, // Convert to percentage
         grossApy: grossApy * 100,

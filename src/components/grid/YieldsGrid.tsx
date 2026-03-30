@@ -7,6 +7,8 @@ import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { DataGrid } from "./DataGrid";
 import { formatCurrency } from "@/lib/utils/format";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
+import { VaultWarningBadge } from "@/components/VaultWarningBadge";
+import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { stripCuratorPrefix } from "./cellRenderers";
 
@@ -17,6 +19,8 @@ interface VaultYieldRow {
   dataSource?: string;
   grade?: string | null;
   gradeFailures?: string[];
+  warnings?: Array<{ type: string; level: string }>;
+  listed?: boolean;
   assetSymbol: string;
   curatorName: string | null;
   curatorAddress?: string | null;
@@ -52,6 +56,8 @@ function VaultNameCellRenderer(params: ICellRendererParams) {
         <div className="flex items-center gap-1 text-sm font-medium text-text-primary truncate">
           {stripCuratorPrefix(data.vaultName, data.curatorName)}
           <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+          <VaultWarningBadge warnings={data.warnings} />
+          <MorphoVerifiedBadge listed={data.listed} />
         </div>
         <div className="text-xs text-text-tertiary">{data.assetSymbol}</div>
       </div>

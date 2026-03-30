@@ -43,6 +43,9 @@ export async function GET(request: NextRequest) {
         riskScore: true,
         grade: true,
         gradeFailures: true,
+        warnings: true,
+        listed: true,
+        creationTimestamp: true,
         updatedAt: true,
         snapshots: {
           orderBy: { timestamp: "desc" },
@@ -117,6 +120,9 @@ export async function GET(request: NextRequest) {
         riskScore: vault.riskScore ?? null,
         grade: vault.grade ?? null,
         gradeFailures: vault.gradeFailures ?? [],
+        warnings: (vault.warnings as Array<{ type: string; level: string }>) ?? [],
+        listed: vault.listed ?? true,
+        creationTimestamp: vault.creationTimestamp ?? null,
         updatedAt: vault.updatedAt.toISOString(),
       };
     });

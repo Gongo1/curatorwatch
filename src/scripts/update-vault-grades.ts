@@ -4,10 +4,10 @@
  * Run standalone:  npx tsx src/scripts/update-vault-grades.ts
  * Called by cron:  import { updateVaultGrades } from "@/scripts/update-vault-grades"
  *
- * Grade assignment based on 9 hard requirements:
- *   "high-grade"   — pass all 9
- *   "medium-grade"  — fail 1-3 (pass 6-8)
- *   "low-grade"     — fail 4+ (pass ≤5)
+ * Grade assignment based on 10 hard requirements:
+ *   "high-grade"   — pass all 10
+ *   "medium-grade"  — fail 1-3 (pass 7-9)
+ *   "low-grade"     — fail 4+ (pass ≤6)
  */
 
 import { prisma } from "@/lib/db";
@@ -38,6 +38,8 @@ export async function updateVaultGrades(): Promise<{
       createdAt: true,
       curatorId: true,
       dataSource: true,
+      listed: true,
+      creationTimestamp: true,
       netAPR: true,
       estTotalAPR: true,
       curator: {
@@ -164,12 +166,15 @@ export async function updateVaultGrades(): Promise<{
 
     const input: VaultScoreInput = {
       tvl: tvl || 0,
-      createdAt: vault.createdAt,
+      createdAt: vault.creationTimestamp
+        ? new Date(vault.creationTimestamp * 1000)
+        : vault.createdAt,
       curator: curatorInput,
       collateralAssets,
       liquidationCount: liquidationCount || 0,
       hasBadDebt: hasBadDebt || false,
       netAPR: effectiveAPR || 0,
+      listed: vault.listed,
     };
 
     const scores = calculateVaultScores(input);

@@ -120,6 +120,8 @@ export async function GET(request: Request, { params }: RouteParams) {
               dataSource: v.dataSource,
               grade: v.grade ?? null,
               gradeFailures: v.gradeFailures ?? [],
+              warnings: (v.warnings as Array<{ type: string; level: string }>) ?? [],
+              listed: v.listed ?? true,
               totalAssetsUsd: v.snapshots[0]?.totalAssetsUsd ?? 0,
               avgNetApy: v.snapshots[0]?.avgNetApy ?? null,
             }))
@@ -244,9 +246,10 @@ export async function GET(request: Request, { params }: RouteParams) {
     // Calculate yield metrics
     const tvl = latestSnapshot?.totalAssetsUsd || 0;
     const isTurtle = vault.dataSource === "turtle";
-    const vaultAgeMs = vault.createdAt
-      ? Date.now() - new Date(vault.createdAt).getTime()
-      : 0;
+    const vaultOriginMs = vault.creationTimestamp
+      ? vault.creationTimestamp * 1000
+      : new Date(vault.createdAt).getTime();
+    const vaultAgeMs = Date.now() - vaultOriginMs;
     const vaultAgeDays = vaultAgeMs / (24 * 60 * 60 * 1000);
 
     // For Turtle vaults: use simple interest from Est. Total APR
@@ -291,6 +294,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       riskScore: vault.riskScore ?? null,
       grade: vault.grade ?? null,
       gradeFailures: vault.gradeFailures ?? [],
+      warnings: (vault.warnings as Array<{ type: string; level: string }>) ?? [],
+      listed: vault.listed ?? true,
+      creationTimestamp: vault.creationTimestamp ?? null,
       yield: {
         dailyYield,
         weeklyYield,
@@ -367,6 +373,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         },
         lastUpdated: riskAssessment.lastUpdated.toISOString(),
       },
+      pendingConfigs: (vault.pendingConfigs as Array<{ validAt: number; functionName: string; txHash: string }>) ?? [],
       liquidations,
       liquidationSummary,
       createdAt: vault.createdAt.toISOString(),

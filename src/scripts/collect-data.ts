@@ -270,6 +270,10 @@ async function upsertVault(vault: MorphoVaultV2): Promise<{ vaultId: string; cur
         curatorId,
         performanceFee: vault.performanceFee,
         managementFee: vault.managementFee,
+        warnings: JSON.parse(JSON.stringify(vault.warnings ?? [])),
+        listed: vault.listed ?? true,
+        creationTimestamp: vault.creationTimestamp ? parseInt(String(vault.creationTimestamp), 10) : undefined,
+        pendingConfigs: JSON.parse(JSON.stringify(vault.pendingConfigs?.items ?? [])),
         updatedAt: new Date(),
       },
     });
@@ -288,6 +292,10 @@ async function upsertVault(vault: MorphoVaultV2): Promise<{ vaultId: string; cur
         curatorId,
         performanceFee: vault.performanceFee,
         managementFee: vault.managementFee,
+        warnings: JSON.parse(JSON.stringify(vault.warnings ?? [])),
+        listed: vault.listed ?? true,
+        creationTimestamp: vault.creationTimestamp ? parseInt(String(vault.creationTimestamp), 10) : undefined,
+        pendingConfigs: JSON.parse(JSON.stringify(vault.pendingConfigs?.items ?? [])),
       },
     });
     return { vaultId: created.id, curatorCreated };

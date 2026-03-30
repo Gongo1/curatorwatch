@@ -12,6 +12,8 @@ import {
   stripCuratorPrefix,
 } from "./cellRenderers";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
+import { VaultWarningBadge } from "@/components/VaultWarningBadge";
+import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
 import { curatorSlug } from "@/lib/curator-aliases";
 import type { VaultData } from "@/lib/types/api";
 
@@ -28,6 +30,8 @@ function VaultNameCellRenderer(params: ICellRendererParams) {
         <div className="flex items-center gap-1 text-sm font-medium text-text-primary truncate">
           {stripCuratorPrefix(data.name, data.curatorName)}
           <VaultGradeBadge grade={data.grade} failures={data.gradeFailures} />
+          <VaultWarningBadge warnings={data.warnings} />
+          <MorphoVerifiedBadge listed={data.listed} />
         </div>
         <div className="text-xs text-text-tertiary">{data.asset.symbol}</div>
       </div>

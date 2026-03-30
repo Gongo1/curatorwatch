@@ -46,6 +46,12 @@ model Vault {
   riskIndicatorScore Float?    // 0-10
   gradeFailures     String[]  // Failure reasons from grade computation
 
+  // Morpho governance warnings
+  warnings           Json?                        // [{type, level}] from Morpho API
+  listed             Boolean  @default(true)       // Morpho whitelisted status
+  creationTimestamp  Int?                          // Unix timestamp from Morpho API
+  pendingConfigs     Json?                         // Pending governance configs [{validAt, functionName, txHash}]
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

@@ -11,10 +11,10 @@
  *   Risk indicators:  0-10 pts  (liquidation history + APR sanity)
  *
  * Grades:
- *   "high-grade"  — pass all 9 hard requirements
- *   "medium-grade" — fail 1-3 requirements (pass 6-8)
- *   "low-grade"    — fail 4+ requirements (pass ≤5)
- * 9 hard requirements must pass to qualify.
+ *   "high-grade"  — pass all 10 hard requirements
+ *   "medium-grade" — fail 1-3 requirements (pass 7-9)
+ *   "low-grade"    — fail 4+ requirements (pass ≤6)
+ * 10 hard requirements must pass to qualify.
  */
 
 import { BLUE_CHIP_COLLATERAL } from "@/lib/curator-rating";
@@ -46,6 +46,7 @@ export interface VaultScoreInput {
   liquidationCount: number;
   hasBadDebt: boolean; // vault-level bad debt from liquidations
   netAPR: number; // effective APR/APY percentage (e.g. 8.5 = 8.5%)
+  listed?: boolean; // Morpho governance listing status
 }
 
 export interface VaultScores {
@@ -219,7 +220,7 @@ export function calculateVaultScores(input: VaultScoreInput): VaultScores {
   return { sizeScore, maturityScore, curatorScore, collateralScore, riskIndicatorScore, total };
 }
 
-// ── Hard Requirements (9 checks) ──────────────────────────────────────
+// ── Hard Requirements (10 checks) ─────────────────────────────────────
 
 export function qualifiesForHighGrade(input: VaultScoreInput): {
   qualifies: boolean;
@@ -233,15 +234,11 @@ export function qualifiesForHighGrade(input: VaultScoreInput): {
   }
 
   // 2. Vault age >= 90 days
-  //    NOTE: DB createdAt is insertion date, not on-chain creation. Skip check
-  //    when all vaults are too recent to evaluate. Maturity *score* still
-  //    penalizes young vaults (0/15 pts) in the scoring component.
   const daysLive = Math.floor(
     (Date.now() - input.createdAt.getTime()) / (1000 * 60 * 60 * 24)
   );
   if (daysLive < 90) {
-    // Soft-skip: DB createdAt doesn't reflect actual vault age
-    // failures.push(`Vault age ${daysLive}d < 90d minimum`);
+    failures.push(`Vault age ${daysLive}d < 90d minimum`);
   }
 
   // 3. Curator has legal entity
@@ -293,12 +290,17 @@ export function qualifiesForHighGrade(input: VaultScoreInput): {
     const pct = blueChipCount / input.collateralAssets.length;
     if (pct < 0.8) {
       const unique = [...new Set(nonBlueChip)];
-      const listed = unique.slice(0, 3).join(", ");
+      const listedAssets = unique.slice(0, 3).join(", ");
       const extra = unique.length > 3 ? ` +${unique.length - 3} more` : "";
       failures.push(
-        `Collateral ${(pct * 100).toFixed(0)}% institutional < 80% minimum (unrecognized: ${listed}${extra})`
+        `Collateral ${(pct * 100).toFixed(0)}% institutional < 80% minimum (unrecognized: ${listedAssets}${extra})`
       );
     }
+  }
+
+  // 10. Vault listed by Morpho governance
+  if (input.listed === false) {
+    failures.push("Vault not listed by Morpho governance");
   }
 
   return { qualifies: failures.length === 0, failures };

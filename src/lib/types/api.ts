@@ -1,5 +1,10 @@
 // API Response types for the frontend
 
+export interface VaultWarning {
+  type: string;
+  level: string;
+}
+
 export interface VaultAsset {
   address: string;
   symbol: string;
@@ -71,6 +76,9 @@ export interface VaultData {
   riskScore?: number | null;
   grade?: string | null;
   gradeFailures?: string[];
+  warnings?: VaultWarning[];
+  listed?: boolean;
+  creationTimestamp?: number | null;
   updatedAt: string;
 }
 
@@ -115,6 +123,8 @@ export interface CuratorOtherVault {
   dataSource: string;
   grade: string | null;
   gradeFailures?: string[];
+  warnings?: VaultWarning[];
+  listed?: boolean;
   totalAssetsUsd: number;
   avgNetApy: number | null;
 }
@@ -173,6 +183,7 @@ export interface VaultDetail extends VaultData {
   idleAssetsUsd: number;
   curator: VaultCurator | null;
   createdAt: string;
+  pendingConfigs?: Array<{ validAt: number; functionName: string; txHash: string }>;
   riskAssessment: InstitutionalRiskAssessment;
   liquidations?: LiquidationEvent[];
   liquidationSummary?: {
@@ -242,6 +253,9 @@ export interface CuratorVaultSummary {
   dataSource: string;
   grade: string | null;
   gradeFailures?: string[];
+  warnings?: VaultWarning[];
+  listed?: boolean;
+  creationTimestamp?: number | null;
   chainName: string | null;
   latestSnapshot: VaultSnapshot | null;
   netAPR: number | null;

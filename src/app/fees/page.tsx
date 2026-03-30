@@ -12,6 +12,8 @@ interface VaultFeeData {
   dataSource?: string;
   grade?: string | null;
   gradeFailures?: string[];
+  warnings?: Array<{ type: string; level: string }>;
+  listed?: boolean;
   assetSymbol: string;
   curatorName: string | null;
   curatorAddress: string | null;
