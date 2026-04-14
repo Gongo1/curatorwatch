@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
-
-export const dynamic = "force-dynamic";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 export async function GET() {
   try {
+    const CACHE_KEY = "stats:protocol-coverage";
+    const cached = await cacheGet<object>(CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+      });
+    }
+
     const vaults = await prisma.vault.findMany({
       where: { active: true, ...EXCLUDED_CURATOR_VAULT_FILTER },
       select: {
@@ -42,17 +49,11 @@ export async function GET() {
       curatorCount: data.curators.size,
     }));
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: result,
-      },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        },
-      }
-    );
+    const body = { success: true, data: result };
+    await cacheSet(CACHE_KEY, body, 300);
+    return NextResponse.json(body, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+    });
   } catch (error) {
     console.error("Error fetching protocol coverage:", error);
     return NextResponse.json(

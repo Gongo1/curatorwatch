@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 const UNATTRIBUTED_KEY = "__unattributed__";
 
 export async function GET() {
   try {
+    const CACHE_KEY = "stats:liquidation-breakdown";
+    const cached = await cacheGet<object>(CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+      });
+    }
+
     // Get all market allocations grouped by vault/curator
     const allocations = await prisma.marketAllocation.findMany({
       select: {
@@ -144,7 +150,7 @@ export async function GET() {
         return b.totalSeizedUsd - a.totalSeizedUsd;
       });
 
-    return NextResponse.json({
+    const body = {
       success: true,
       data: {
         summary: {
@@ -157,6 +163,10 @@ export async function GET() {
         },
         byCurator,
       },
+    };
+    await cacheSet(CACHE_KEY, body, 300);
+    return NextResponse.json(body, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch (error) {
     console.error("Error calculating liquidation breakdown:", error);

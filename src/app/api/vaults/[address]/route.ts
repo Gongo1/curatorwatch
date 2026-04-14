@@ -383,6 +383,8 @@ export async function GET(request: Request, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       data: response,
+    }, {
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
     });
   } catch (error) {
     console.error("Error fetching vault:", error);

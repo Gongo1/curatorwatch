@@ -1,8 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { TurtleVaultGrid } from "@/components/grid/TurtleVaultGrid";
+import dynamic from "next/dynamic";
 import { PageHeader } from "@/components/layout/PageHeader";
+
+const TurtleVaultGrid = dynamic(() => import("@/components/grid/TurtleVaultGrid").then(mod => mod.TurtleVaultGrid), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
 import { formatTimeAgo, formatCurrency } from "@/lib/utils/format";
 import type { VaultData, VaultsApiResponse } from "@/lib/types/api";
 

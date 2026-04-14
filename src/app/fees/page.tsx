@@ -1,9 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { formatCurrency } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { CuratorFeesGrid, VaultFeesGrid } from "@/components/grid/FeesGrid";
+
+const CuratorFeesGrid = dynamic(() => import("@/components/grid/FeesGrid").then(mod => mod.CuratorFeesGrid), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
+const VaultFeesGrid = dynamic(() => import("@/components/grid/FeesGrid").then(mod => mod.VaultFeesGrid), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
 
 interface VaultFeeData {
   vaultId: string;

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
 // Morpho protocol fee (15% of interest earned goes to Morpho protocol)
 // Only applies to Morpho vaults — other protocols have their own fee structures
@@ -61,6 +59,16 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const dataSource = searchParams.get("dataSource");
+
+    const cacheKey = `stats:fees-breakdown:${dataSource || "all"}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
 
     // Get all vaults with their latest snapshots and curator info
     const vaults = await prisma.vault.findMany({
@@ -274,7 +282,7 @@ export async function GET(request: Request) {
     // Sort vaults by fees
     vaultFees.sort((a, b) => b.annualizedCuratorFees - a.annualizedCuratorFees);
 
-    return NextResponse.json({
+    const responseBody = {
       success: true,
       data: {
         summary: {
@@ -293,6 +301,14 @@ export async function GET(request: Request) {
         },
         byVault: vaultFees,
         byCurator: curatorFees,
+      },
+    };
+
+    await cacheSet(cacheKey, responseBody, 300);
+
+    return NextResponse.json(responseBody, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
       },
     });
   } catch (error) {

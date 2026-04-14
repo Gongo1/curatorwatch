@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
-
-export const dynamic = "force-dynamic";
 
 interface VaultYieldData {
   vaultId: string;
@@ -52,6 +51,16 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const dataSource = searchParams.get("dataSource");
+
+    const cacheKey = `stats:yield-breakdown:${dataSource || "all"}`;
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
 
     // Get all vaults with their latest snapshots and curator info
     const vaults = await prisma.vault.findMany({
@@ -249,33 +258,34 @@ export async function GET(request: Request) {
       ? vaultYields.reduce((sum, v) => sum + (v.netApy / 100) * v.tvl, 0) / totalAUM * 100
       : 0;
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          summary: {
-            totalVaults: vaultYields.length,
-            totalCurators: curatorYields.length,
-            totalAUM,
-            avgNetApy,
-            yield: {
-              daily: totalDailyYield,
-              weekly: totalWeeklyYield,
-              monthly: totalMonthlyYield,
-              annualized: totalAnnualizedYield,
-              estimatedTotal: totalEstimatedYield,
-            },
+    const responseBody = {
+      success: true,
+      data: {
+        summary: {
+          totalVaults: vaultYields.length,
+          totalCurators: curatorYields.length,
+          totalAUM,
+          avgNetApy,
+          yield: {
+            daily: totalDailyYield,
+            weekly: totalWeeklyYield,
+            monthly: totalMonthlyYield,
+            annualized: totalAnnualizedYield,
+            estimatedTotal: totalEstimatedYield,
           },
-          byVault: vaultYields,
-          byCurator: curatorYields,
         },
+        byVault: vaultYields,
+        byCurator: curatorYields,
       },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        },
-      }
-    );
+    };
+
+    await cacheSet(cacheKey, responseBody, 300);
+
+    return NextResponse.json(responseBody, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      },
+    });
   } catch (error) {
     console.error("Error calculating yield breakdown:", error);
     return NextResponse.json(

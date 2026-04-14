@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   formatCurrency,
   formatPercentage,
@@ -29,8 +30,12 @@ import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { VaultWarningBadge } from "@/components/VaultWarningBadge";
 import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
 import { PendingConfigBanner } from "@/components/PendingConfigBanner";
-import { AllocationCalculator } from "@/components/AllocationCalculator";
 import { isResolvUsrExposed, RESOLV_USR_WARNING } from "@/lib/resolv-usr-warning";
+
+const AllocationCalculator = dynamic(() => import("@/components/AllocationCalculator").then(mod => mod.AllocationCalculator), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
 

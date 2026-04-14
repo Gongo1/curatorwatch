@@ -148,6 +148,8 @@ export async function GET(
         totalDepositors: depositorMap.size,
         totalAUM,
       },
+    }, {
+      headers: { "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300" },
     });
   } catch (error) {
     console.error("Error fetching curator depositors:", error);

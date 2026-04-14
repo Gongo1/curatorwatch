@@ -1,17 +1,26 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { RESOLV_USR_VAULT_ADDRESSES } from "@/lib/resolv-usr-warning";
 import { getISOWeek, rotateArray } from "@/lib/utils/date";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
-
-export const dynamic = "force-dynamic";
 
 const MIN_TVL = 5_000_000;
 const FALLBACK_TVL = 1_000_000;
 
 export async function GET() {
   try {
+    const cacheKey = "vaults:featured";
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+        },
+      });
+    }
+
     const vaults = await prisma.vault.findMany({
       where: {
         grade: "high-grade",
@@ -82,14 +91,15 @@ export async function GET() {
     const featured = rotated.slice(0, 3);
     const more = rotated.slice(3);
 
-    return NextResponse.json(
-      { success: true, data: { featured, more } },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
-        },
-      }
-    );
+    const responseBody = { success: true, data: { featured, more } };
+
+    await cacheSet(cacheKey, responseBody, 600);
+
+    return NextResponse.json(responseBody, {
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+      },
+    });
   } catch (error) {
     console.error("Featured vaults error:", error);
     return NextResponse.json(

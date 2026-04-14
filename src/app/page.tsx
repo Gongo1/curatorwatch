@@ -2,13 +2,30 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
-import { CuratorGrid } from "@/components/grid/CuratorGrid";
-import { TabbedMetricChart } from "@/components/TabbedMetricChart";
-import { StablecoinBreakdown } from "@/components/StablecoinBreakdown";
-import { TopCurators } from "@/components/TopCurators";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { VaultsOfTheWeek } from "@/components/VaultsOfTheWeek";
+
+const CuratorGrid = dynamic(() => import("@/components/grid/CuratorGrid").then(mod => mod.CuratorGrid), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
+const TabbedMetricChart = dynamic(() => import("@/components/TabbedMetricChart").then(mod => mod.TabbedMetricChart), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
+const StablecoinBreakdown = dynamic(() => import("@/components/StablecoinBreakdown").then(mod => mod.StablecoinBreakdown), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
+const TopCurators = dynamic(() => import("@/components/TopCurators").then(mod => mod.TopCurators), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
+const VaultsOfTheWeek = dynamic(() => import("@/components/VaultsOfTheWeek").then(mod => mod.VaultsOfTheWeek), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
 import { formatTimeAgo, formatCurrency, formatPercentage } from "@/lib/utils/format";
 import { InfoTooltip } from "@/components/Tooltip";
 import type { CuratorDashboardResponse, CuratorDashboardItem, CuratorDashboardStats, PaginationInfo } from "@/lib/types/api";

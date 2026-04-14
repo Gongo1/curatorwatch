@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 interface RouteParams {
   params: Promise<{ address: string }>;
 }
@@ -99,6 +96,8 @@ export async function GET(request: Request, { params }: RouteParams) {
       totals,
       range,
       vaultName: vault.name,
+    }, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch (error) {
     console.error("Error fetching transaction volume:", error);

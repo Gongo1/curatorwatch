@@ -1,12 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
+    const cacheKey = "stats:yield-growth";
+    const cached = await cacheGet(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        },
+      });
+    }
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -152,30 +161,32 @@ export async function GET() {
         }
       }
 
-      return NextResponse.json(
-        {
-          success: true,
-          data: mockData,
-        },
-        {
-          headers: {
-            "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-          },
-        }
-      );
-    }
-
-    return NextResponse.json(
-      {
+      const mockResponseBody = {
         success: true,
-        data: chartData,
-      },
-      {
+        data: mockData,
+      };
+
+      await cacheSet(cacheKey, mockResponseBody, 300);
+
+      return NextResponse.json(mockResponseBody, {
         headers: {
           "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
         },
-      }
-    );
+      });
+    }
+
+    const responseBody = {
+      success: true,
+      data: chartData,
+    };
+
+    await cacheSet(cacheKey, responseBody, 300);
+
+    return NextResponse.json(responseBody, {
+      headers: {
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+      },
+    });
   } catch (error) {
     console.error("Error fetching yield growth data:", error);
     return NextResponse.json(

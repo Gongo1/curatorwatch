@@ -2,10 +2,15 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
-import { VaultYieldsGrid } from "@/components/grid/YieldsGrid";
+
+const VaultYieldsGrid = dynamic(() => import("@/components/grid/YieldsGrid").then(mod => mod.VaultYieldsGrid), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
 
 interface VaultYieldData {
   vaultId: string;

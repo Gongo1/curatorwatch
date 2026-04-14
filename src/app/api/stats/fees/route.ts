@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
-
-export const dynamic = "force-dynamic";
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 // Morpho protocol fee (15% of interest earned goes to Morpho protocol)
 // Only applies to Morpho vaults — other protocols have their own fee structures
@@ -11,6 +10,14 @@ const MORPHO_PROTOCOL_FEE_RATE = 0.15;
 
 export async function GET() {
   try {
+    const CACHE_KEY = "stats:fees";
+    const cached = await cacheGet<object>(CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+      });
+    }
+
     // Get all vaults with their latest snapshots
     const vaults = await prisma.vault.findMany({
       where: {
@@ -81,29 +88,26 @@ export async function GET() {
 
     totalFeesAnnualized = totalCuratorFeesAnnualized + totalMorphoFeesAnnualized;
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          estimated: {
-            curatorFees: totalCuratorFees,
-            morphoFees: totalMorphoFees,
-            totalFees: totalCuratorFees + totalMorphoFees,
-          },
-          annualized: {
-            curatorFees: totalCuratorFeesAnnualized,
-            morphoFees: totalMorphoFeesAnnualized,
-            totalFees: totalFeesAnnualized,
-          },
-          vaultCount: vaults.length,
+    const body = {
+      success: true,
+      data: {
+        estimated: {
+          curatorFees: totalCuratorFees,
+          morphoFees: totalMorphoFees,
+          totalFees: totalCuratorFees + totalMorphoFees,
         },
+        annualized: {
+          curatorFees: totalCuratorFeesAnnualized,
+          morphoFees: totalMorphoFeesAnnualized,
+          totalFees: totalFeesAnnualized,
+        },
+        vaultCount: vaults.length,
       },
-      {
-        headers: {
-          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
-        },
-      }
-    );
+    };
+    await cacheSet(CACHE_KEY, body, 300);
+    return NextResponse.json(body, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+    });
   } catch (error) {
     console.error("Error calculating total fees:", error);
     return NextResponse.json(

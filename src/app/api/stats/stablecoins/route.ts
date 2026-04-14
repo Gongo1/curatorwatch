@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+import { cacheGet, cacheSet } from "@/lib/cache";
 
 export async function GET() {
   try {
+    const CACHE_KEY = "stats:stablecoins";
+    const cached = await cacheGet<object>(CACHE_KEY);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
+      });
+    }
+
     // Get total assets by asset symbol from latest snapshots
     const vaults = await prisma.vault.findMany({
       where: {
@@ -68,12 +74,10 @@ export async function GET() {
       }
     }
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        breakdown: topAssets,
-        total,
-      },
+    const body = { success: true, data: { breakdown: topAssets, total } };
+    await cacheSet(CACHE_KEY, body, 300);
+    return NextResponse.json(body, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch (error) {
     console.error("Error fetching stablecoin breakdown:", error);

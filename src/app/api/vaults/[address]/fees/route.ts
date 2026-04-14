@@ -116,6 +116,8 @@ export async function GET(request: Request, { params }: RouteParams) {
           totalFees: annualizedCuratorFees + annualizedMorphoFees,
         },
       },
+    }, {
+      headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch (error) {
     console.error("Error calculating fees:", error);

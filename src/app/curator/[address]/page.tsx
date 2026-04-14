@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ExternalLink } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
@@ -15,7 +16,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { CuratorAvatar, CuratorAvatarFallback } from "@/components/CuratorAvatar";
 import type { CuratorDetailResponse } from "@/lib/types/api";
-import { CuratorVaultGrid } from "@/components/grid/CuratorVaultGrid";
+
+const CuratorVaultGrid = dynamic(() => import("@/components/grid/CuratorVaultGrid").then(mod => mod.CuratorVaultGrid), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
+});
 import { NetworkBadgeList } from "@/components/NetworkBadge";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
