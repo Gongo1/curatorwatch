@@ -2,10 +2,12 @@
 
 import { useState, useCallback } from "react";
 import { Menu } from "lucide-react";
+import { useUser, SignInButton } from "@clerk/nextjs";
 import { Sidebar } from "./Sidebar";
 import { MobileDrawer } from "./MobileDrawer";
 import { Footer } from "./Footer";
 import { PortfolioMigrator } from "../PortfolioMigrator";
+import { JoinBanner } from "../JoinBanner";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -14,6 +16,7 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user, isLoaded } = useUser();
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
@@ -33,17 +36,29 @@ export function AppShell({ children }: AppShellProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Mobile Top Bar */}
-        <div className="lg:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 border-b border-border bg-background-subtle">
-          <button
-            onClick={() => setDrawerOpen(true)}
-            className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <span className="text-sm font-bold text-text-primary">
-            CuratorWatch
-          </span>
+        <div className="lg:hidden sticky top-0 z-30 flex items-center justify-between px-4 py-3 border-b border-border bg-background-subtle">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setDrawerOpen(true)}
+              className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <span className="text-sm font-bold text-text-primary">
+              CuratorWatch
+            </span>
+          </div>
+          {isLoaded && !user && (
+            <SignInButton mode="modal">
+              <button className="rounded-md bg-accent-blue px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-accent-blue-hover">
+                Sign In
+              </button>
+            </SignInButton>
+          )}
         </div>
+
+        {/* Join Banner */}
+        <JoinBanner />
 
         {/* Page Content */}
         <main className="flex-1 px-4 sm:px-6 py-4 sm:py-5 max-w-[1400px] w-full mx-auto">

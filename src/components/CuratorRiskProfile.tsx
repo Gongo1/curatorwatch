@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
+import { AuthGate } from "@/components/AuthGate";
 import type { CuratorRiskProfile as CuratorRiskProfileType, RiskFactor } from "@/lib/curator-risk-profile";
 
 // USR exposure data by curator address (lowercase)
@@ -34,6 +36,7 @@ interface CuratorRiskProfileProps {
 }
 
 export function CuratorRiskProfile({ curatorAddress }: CuratorRiskProfileProps) {
+  const { user } = useUser();
   const [profile, setProfile] = useState<CuratorRiskProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,19 +99,32 @@ export function CuratorRiskProfile({ curatorAddress }: CuratorRiskProfileProps) 
         </p>
       </div>
 
-      {/* Factor Cards */}
+      {/* Factor Cards — first 2 always visible */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {profile.factors.map((factor) => (
+        {profile.factors.slice(0, 2).map((factor) => (
           <FactorCard key={factor.id} factor={factor} />
         ))}
       </div>
 
+      {/* Remaining cards + Track Record — gated when signed out */}
+      {profile.factors.length > 2 && (
+        <AuthGate message="Sign in for full analysis">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {profile.factors.slice(2).map((factor) => (
+              <FactorCard key={factor.id} factor={factor} />
+            ))}
+          </div>
+        </AuthGate>
+      )}
+
       {/* Risk Management Track Record */}
-      <RiskTrackRecord
-        usrExposure={usrExposure}
-        foundedYear={foundedYear}
-        peerCount={profile.peerCount}
-      />
+      <AuthGate message="Sign in for full analysis">
+        <RiskTrackRecord
+          usrExposure={usrExposure}
+          foundedYear={foundedYear}
+          peerCount={profile.peerCount}
+        />
+      </AuthGate>
     </div>
   );
 }

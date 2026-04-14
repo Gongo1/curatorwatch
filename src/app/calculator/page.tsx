@@ -16,7 +16,9 @@ import { calculateVaultEarnings, calculateAnnualEarnings } from "@/lib/utils/cal
 import { formatCurrency } from "@/lib/utils/format";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { AuthGate } from "@/components/AuthGate";
 import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
+import { useUser } from "@clerk/nextjs";
 import type { VaultData } from "@/lib/types/api";
 
 const BLUE_CHIP_ASSETS = ["USDC", "USDT", "USDA", "DAI", "wstETH", "WETH", "WBTC", "EURC", "PYUSD"];
@@ -86,6 +88,7 @@ function parseAmount(str: string): number {
 }
 
 export default function CalculatorPage() {
+  const { user } = useUser();
   const [depositAmount, setDepositAmount] = useState(1_000_000);
   const [displayAmount, setDisplayAmount] = useState("1,000,000");
   const [isFocused, setIsFocused] = useState(false);
@@ -223,11 +226,13 @@ export default function CalculatorPage() {
 
       {/* If viewing vault results, show that */}
       {selectedVault ? (
-        <ResultsView
-          vault={selectedVault}
-          depositAmount={depositAmount}
-          onBack={() => setSelectedVault(null)}
-        />
+        <AuthGate message="Sign in to see your results">
+          <ResultsView
+            vault={selectedVault}
+            depositAmount={depositAmount}
+            onBack={() => setSelectedVault(null)}
+          />
+        </AuthGate>
       ) : (
         <>
           {/* ── Filter Row ── */}
@@ -404,6 +409,7 @@ export default function CalculatorPage() {
             </button>
             {advancedOpen && (
               <div className="px-5 pb-4 pt-1 border-t border-border">
+                <AuthGate message="Sign in to use advanced filters">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {/* Protocol */}
                   <div>
@@ -476,6 +482,7 @@ export default function CalculatorPage() {
                     ))}
                   </select>
                 </div>
+                </AuthGate>
               </div>
             )}
           </div>

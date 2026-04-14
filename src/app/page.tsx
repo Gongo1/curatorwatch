@@ -14,6 +14,7 @@ import { InfoTooltip } from "@/components/Tooltip";
 import type { CuratorDashboardResponse, CuratorDashboardItem, CuratorDashboardStats, PaginationInfo } from "@/lib/types/api";
 import { curatorSlug } from "@/lib/curator-aliases";
 
+
 interface ChangeSummary {
   critical: number;
   warning: number;

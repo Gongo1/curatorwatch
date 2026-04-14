@@ -23,7 +23,11 @@ const EMPTY_PORTFOLIO: Portfolio = {
   trackedCurators: [],
 };
 
-export function usePortfolio() {
+interface UsePortfolioOptions {
+  onUnauthenticated?: () => void;
+}
+
+export function usePortfolio(options?: UsePortfolioOptions) {
   const { user, isLoaded } = useUser();
   const clerk = useClerk();
   const [portfolio, setPortfolio] = useState<Portfolio>(EMPTY_PORTFOLIO);
@@ -76,7 +80,11 @@ export function usePortfolio() {
   const trackVault = useCallback(
     (address: string, name: string) => {
       if (!user) {
-        clerk.openSignIn();
+        if (options?.onUnauthenticated) {
+          options.onUnauthenticated();
+        } else {
+          clerk.openSignIn();
+        }
         return;
       }
 
@@ -99,7 +107,7 @@ export function usePortfolio() {
         }));
       });
     },
-    [user, clerk]
+    [user, clerk, options?.onUnauthenticated]
   );
 
   const untrackVault = useCallback(
@@ -139,7 +147,11 @@ export function usePortfolio() {
   const trackCurator = useCallback(
     (id: string, name: string) => {
       if (!user) {
-        clerk.openSignIn();
+        if (options?.onUnauthenticated) {
+          options.onUnauthenticated();
+        } else {
+          clerk.openSignIn();
+        }
         return;
       }
 
@@ -162,7 +174,7 @@ export function usePortfolio() {
         }));
       });
     },
-    [user, clerk]
+    [user, clerk, options?.onUnauthenticated]
   );
 
   const untrackCurator = useCallback(

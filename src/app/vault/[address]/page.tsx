@@ -32,6 +32,7 @@ import { PendingConfigBanner } from "@/components/PendingConfigBanner";
 import { AllocationCalculator } from "@/components/AllocationCalculator";
 import { isResolvUsrExposed, RESOLV_USR_WARNING } from "@/lib/resolv-usr-warning";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -58,7 +59,10 @@ export default function VaultDetailPage({ params }: PageProps) {
   const [vault, setVault] = useState<VaultDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
+  const [showTrackPrompt, setShowTrackPrompt] = useState(false);
+  const { isVaultTracked, trackVault, untrackVault } = usePortfolio({
+    onUnauthenticated: () => setShowTrackPrompt(true),
+  });
 
   useEffect(() => {
     async function fetchVault() {
@@ -669,6 +673,13 @@ export default function VaultDetailPage({ params }: PageProps) {
             </section>
           </TabsContent>
         </Tabs>
+
+      <TrackVaultPrompt
+        name={vault.name}
+        type="vault"
+        open={showTrackPrompt}
+        onClose={() => setShowTrackPrompt(false)}
+      />
     </>
   );
 }

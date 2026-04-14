@@ -20,6 +20,7 @@ import { NetworkBadgeList } from "@/components/NetworkBadge";
 import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
 
 interface PageProps {
   params: Promise<{ address: string }>;
@@ -30,7 +31,10 @@ export default function CuratorDetailPage({ params }: PageProps) {
   const [data, setData] = useState<CuratorDetailResponse["data"] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
+  const [showTrackPrompt, setShowTrackPrompt] = useState(false);
+  const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio({
+    onUnauthenticated: () => setShowTrackPrompt(true),
+  });
 
   useEffect(() => {
     async function fetchCurator() {
@@ -655,6 +659,13 @@ export default function CuratorDetailPage({ params }: PageProps) {
           </TabsContent>
 
         </Tabs>
+
+      <TrackVaultPrompt
+        name={curator.name || "Unknown Curator"}
+        type="curator"
+        open={showTrackPrompt}
+        onClose={() => setShowTrackPrompt(false)}
+      />
     </>
   );
 }
