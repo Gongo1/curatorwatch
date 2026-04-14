@@ -24,7 +24,7 @@ export function JoinBanner() {
   return (
     <div className="flex items-center justify-center gap-3 bg-accent-blue/10 border-b border-accent-blue/20 px-4 py-2">
       <p className="text-sm text-text-secondary">
-        Get instant alerts when vault TVL drops or APY changes
+        Get instant risk alerts, LP calculations, and in-depth curator analysis
       </p>
       <SignInButton mode="modal">
         <button className="shrink-0 rounded-md bg-accent-blue px-3 py-1 text-xs font-semibold text-white transition-colors hover:bg-accent-blue-hover">
