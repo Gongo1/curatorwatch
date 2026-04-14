@@ -80,7 +80,7 @@ export default function SharePage() {
                   </div>
                   <div>
                     <h1 className="text-3xl font-bold text-white">CuratorWatch</h1>
-                    <p className="text-neutral-400 text-lg">Morpho [TBA] Vault Analytics</p>
+                    <p className="text-neutral-400 text-lg">Morpho Midnight Vault Analytics</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -134,7 +134,7 @@ export default function SharePage() {
               <div className="flex items-center justify-between mb-8">
                 <div>
                   <h1 className="text-3xl font-bold text-white mb-1">Top Curators by AUM</h1>
-                  <p className="text-neutral-400">Morpho [TBA] Ethereum Mainnet</p>
+                  <p className="text-neutral-400">Morpho Midnight Ethereum Mainnet</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
@@ -199,7 +199,7 @@ export default function SharePage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold text-white">CuratorWatch</h1>
-                  <p className="text-neutral-400">Morpho [TBA] Analytics</p>
+                  <p className="text-neutral-400">Morpho Midnight Analytics</p>
                 </div>
               </div>
 
@@ -239,7 +239,7 @@ export default function SharePage() {
                   <span className="text-blue-400 font-medium">Weekly Morpho Alpha</span>
                 </div>
                 <h1 className="text-5xl font-bold text-white leading-tight mb-4">
-                  This Week in<br />Morpho [TBA] Vaults
+                  This Week in<br />Morpho Midnight Vaults
                 </h1>
                 <p className="text-neutral-400 text-xl max-w-xl">
                   Curator movements, yield changes, and risk alerts you need to know.

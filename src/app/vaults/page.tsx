@@ -78,7 +78,7 @@ export default function VaultsPage() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-text-primary group-hover:text-accent-blue transition-colors">
-                  Morpho [TBA] Vaults
+                  Morpho Midnight Vaults
                 </h2>
                 <p className="text-sm text-text-tertiary">ERC4626 vaults with full allocation data</p>
               </div>

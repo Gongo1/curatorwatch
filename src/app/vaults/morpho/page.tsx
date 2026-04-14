@@ -67,12 +67,12 @@ export default function MorphoVaultsPage() {
   return (
     <>
       <PageHeader
-        title="Morpho [TBA] Vaults"
+        title="Morpho Midnight Vaults"
         description="ERC4626 vaults with full allocation and risk data"
         breadcrumbs={[
           { label: "Dashboard", href: "/" },
           { label: "Vaults", href: "/vaults" },
-          { label: "Morpho [TBA]" },
+          { label: "Morpho Midnight" },
         ]}
       />
 
