@@ -5,6 +5,7 @@ import { Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { MobileDrawer } from "./MobileDrawer";
 import { Footer } from "./Footer";
+import { PortfolioMigrator } from "../PortfolioMigrator";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -51,6 +52,8 @@ export function AppShell({ children }: AppShellProps) {
 
         <Footer />
       </div>
+
+      <PortfolioMigrator />
     </div>
   );
 }

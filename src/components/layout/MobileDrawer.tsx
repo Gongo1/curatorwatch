@@ -16,6 +16,7 @@ import {
   FileText,
   X,
 } from "lucide-react";
+import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 
 interface MobileDrawerProps {
   open: boolean;
@@ -24,6 +25,7 @@ interface MobileDrawerProps {
 
 export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   const pathname = usePathname();
+  const { user } = useUser();
 
   // Close on route change
   useEffect(() => {
@@ -134,10 +136,25 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
 
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border">
-          <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-            <span className="text-xs text-text-tertiary">Live</span>
-          </div>
+          {user ? (
+            <div className="flex items-center gap-2">
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-7 h-7",
+                  },
+                }}
+              />
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+              <span className="text-xs text-text-tertiary">Live</span>
+            </div>
+          ) : (
+            <SignInButton mode="modal">
+              <button className="w-full px-3 py-1.5 text-sm font-medium rounded-lg bg-accent-blue text-white hover:bg-accent-blue-hover transition-colors">
+                Sign In
+              </button>
+            </SignInButton>
+          )}
         </div>
       </div>
     </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useUser, useClerk } from "@clerk/nextjs";
 
 interface TrackedVault {
   address: string;
@@ -17,84 +18,186 @@ interface Portfolio {
   trackedCurators: TrackedCurator[];
 }
 
-const STORAGE_KEY = "cw-portfolio";
-
 const EMPTY_PORTFOLIO: Portfolio = {
   trackedVaults: [],
   trackedCurators: [],
 };
 
-function readPortfolio(): Portfolio {
-  if (typeof window === "undefined") return EMPTY_PORTFOLIO;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return EMPTY_PORTFOLIO;
-    const parsed = JSON.parse(raw);
-    return {
-      trackedVaults: Array.isArray(parsed.trackedVaults) ? parsed.trackedVaults : [],
-      trackedCurators: Array.isArray(parsed.trackedCurators) ? parsed.trackedCurators : [],
-    };
-  } catch {
-    return EMPTY_PORTFOLIO;
-  }
-}
-
-function writePortfolio(portfolio: Portfolio) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(portfolio));
-}
-
 export function usePortfolio() {
+  const { user, isLoaded } = useUser();
+  const clerk = useClerk();
   const [portfolio, setPortfolio] = useState<Portfolio>(EMPTY_PORTFOLIO);
+  const [loaded, setLoaded] = useState(false);
 
-  // Hydrate from localStorage on mount
+  // Fetch tracked items from DB when signed in
   useEffect(() => {
-    setPortfolio(readPortfolio());
-  }, []);
+    if (!isLoaded) return;
+    if (!user) {
+      setPortfolio(EMPTY_PORTFOLIO);
+      setLoaded(true);
+      return;
+    }
 
-  // Sync across tabs
-  useEffect(() => {
-    function handleStorage(e: StorageEvent) {
-      if (e.key === STORAGE_KEY) {
-        setPortfolio(readPortfolio());
+    let cancelled = false;
+
+    async function fetchTracked() {
+      try {
+        const [vaultRes, curatorRes] = await Promise.all([
+          fetch("/api/track-vault"),
+          fetch("/api/track-curator"),
+        ]);
+
+        if (cancelled) return;
+
+        const vaultData = await vaultRes.json();
+        const curatorData = await curatorRes.json();
+
+        setPortfolio({
+          trackedVaults: (vaultData.addresses ?? []).map((addr: string) => ({
+            address: addr,
+            name: addr, // Name resolved by consuming component
+          })),
+          trackedCurators: (curatorData.addresses ?? []).map((addr: string) => ({
+            id: addr,
+            name: addr, // Name resolved by consuming component
+          })),
+        });
+      } catch {
+        // Silent fail — keep empty portfolio
+      } finally {
+        if (!cancelled) setLoaded(true);
       }
     }
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
 
-  const trackVault = useCallback((address: string, name: string) => {
-    setPortfolio((prev) => {
-      if (prev.trackedVaults.some((v) => v.address === address)) return prev;
-      const next = { ...prev, trackedVaults: [...prev.trackedVaults, { address, name }] };
-      writePortfolio(next);
-      return next;
-    });
-  }, []);
+    fetchTracked();
+    return () => { cancelled = true; };
+  }, [user, isLoaded]);
 
-  const untrackVault = useCallback((address: string) => {
-    setPortfolio((prev) => {
-      const next = { ...prev, trackedVaults: prev.trackedVaults.filter((v) => v.address !== address) };
-      writePortfolio(next);
-      return next;
-    });
-  }, []);
+  const trackVault = useCallback(
+    (address: string, name: string) => {
+      if (!user) {
+        clerk.openSignIn();
+        return;
+      }
 
-  const trackCurator = useCallback((id: string, name: string) => {
-    setPortfolio((prev) => {
-      if (prev.trackedCurators.some((c) => c.id === id)) return prev;
-      const next = { ...prev, trackedCurators: [...prev.trackedCurators, { id, name }] };
-      writePortfolio(next);
-      return next;
-    });
-  }, []);
+      // Optimistic update
+      setPortfolio((prev) => {
+        if (prev.trackedVaults.some((v) => v.address === address)) return prev;
+        return { ...prev, trackedVaults: [...prev.trackedVaults, { address, name }] };
+      });
 
-  const untrackCurator = useCallback((id: string) => {
-    setPortfolio((prev) => {
-      const next = { ...prev, trackedCurators: prev.trackedCurators.filter((c) => c.id !== id) };
-      writePortfolio(next);
-      return next;
-    });
-  }, []);
+      // Sync to DB
+      fetch("/api/track-vault", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vaultAddress: address }),
+      }).catch(() => {
+        // Rollback on failure
+        setPortfolio((prev) => ({
+          ...prev,
+          trackedVaults: prev.trackedVaults.filter((v) => v.address !== address),
+        }));
+      });
+    },
+    [user, clerk]
+  );
+
+  const untrackVault = useCallback(
+    (address: string) => {
+      if (!user) return;
+
+      // Optimistic update
+      setPortfolio((prev) => ({
+        ...prev,
+        trackedVaults: prev.trackedVaults.filter((v) => v.address !== address),
+      }));
+
+      // Sync to DB
+      fetch("/api/track-vault", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vaultAddress: address }),
+      }).catch(() => {
+        // Refetch on failure to restore state
+        fetch("/api/track-vault")
+          .then((r) => r.json())
+          .then((data) => {
+            setPortfolio((prev) => ({
+              ...prev,
+              trackedVaults: (data.addresses ?? []).map((addr: string) => ({
+                address: addr,
+                name: addr,
+              })),
+            }));
+          })
+          .catch(() => {});
+      });
+    },
+    [user]
+  );
+
+  const trackCurator = useCallback(
+    (id: string, name: string) => {
+      if (!user) {
+        clerk.openSignIn();
+        return;
+      }
+
+      // Optimistic update
+      setPortfolio((prev) => {
+        if (prev.trackedCurators.some((c) => c.id === id)) return prev;
+        return { ...prev, trackedCurators: [...prev.trackedCurators, { id, name }] };
+      });
+
+      // Sync to DB
+      fetch("/api/track-curator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ curatorAddress: id }),
+      }).catch(() => {
+        // Rollback on failure
+        setPortfolio((prev) => ({
+          ...prev,
+          trackedCurators: prev.trackedCurators.filter((c) => c.id !== id),
+        }));
+      });
+    },
+    [user, clerk]
+  );
+
+  const untrackCurator = useCallback(
+    (id: string) => {
+      if (!user) return;
+
+      // Optimistic update
+      setPortfolio((prev) => ({
+        ...prev,
+        trackedCurators: prev.trackedCurators.filter((c) => c.id !== id),
+      }));
+
+      // Sync to DB
+      fetch("/api/track-curator", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ curatorAddress: id }),
+      }).catch(() => {
+        // Refetch on failure to restore state
+        fetch("/api/track-curator")
+          .then((r) => r.json())
+          .then((data) => {
+            setPortfolio((prev) => ({
+              ...prev,
+              trackedCurators: (data.addresses ?? []).map((addr: string) => ({
+                id: addr,
+                name: addr,
+              })),
+            }));
+          })
+          .catch(() => {});
+      });
+    },
+    [user]
+  );
 
   const isVaultTracked = useCallback(
     (address: string) => portfolio.trackedVaults.some((v) => v.address === address),
@@ -118,5 +221,6 @@ export function usePortfolio() {
     isVaultTracked,
     isCuratorTracked,
     hasTrackedItems,
+    loaded,
   };
 }

@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { formatTimeAgo } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { usePortfolio } from "@/hooks/usePortfolio";
+import { useUser } from "@clerk/nextjs";
+import { SignInButton } from "@clerk/nextjs";
 
 interface VaultInfo {
   name: string;
@@ -106,6 +108,7 @@ export default function AlertsPage() {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { portfolio, untrackVault, untrackCurator, hasTrackedItems } = usePortfolio();
+  const { user } = useUser();
 
   // Debounce search
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(null);
@@ -504,10 +507,26 @@ export default function AlertsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
           </div>
-          <p className="text-sm font-medium text-text-primary">No tracked items</p>
-          <p className="text-sm text-text-tertiary mt-1">
-            Track vaults and curators to see personalized alerts here
-          </p>
+          {user ? (
+            <>
+              <p className="text-sm font-medium text-text-primary">No tracked items</p>
+              <p className="text-sm text-text-tertiary mt-1">
+                Track vaults and curators to see personalized alerts here
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-medium text-text-primary">Sign in to track vaults and curators</p>
+              <p className="text-sm text-text-tertiary mt-1 mb-4">
+                Create an account to save your tracked items and see personalized alerts
+              </p>
+              <SignInButton mode="modal">
+                <button className="px-4 py-2 text-sm font-medium rounded-lg bg-accent-blue text-white hover:bg-accent-blue-hover transition-colors">
+                  Sign In
+                </button>
+              </SignInButton>
+            </>
+          )}
         </div>
       )}
 

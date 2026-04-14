@@ -388,3 +388,35 @@ model Liquidation {
   @@index([marketUniqueKey])
   @@index([timestamp])
 }
+
+model User {
+  id              String           @id @default(cuid())
+  clerkId         String           @unique
+  email           String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  trackedVaults   TrackedVault[]
+  trackedCurators TrackedCurator[]
+}
+
+model TrackedVault {
+  id           String   @id @default(cuid())
+  userId       String
+  vaultAddress String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@unique([userId, vaultAddress])
+  @@index([userId])
+}
+
+model TrackedCurator {
+  id             String   @id @default(cuid())
+  userId         String
+  curatorAddress String
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [clerkId], onDelete: Cascade)
+
+  @@unique([userId, curatorAddress])
+  @@index([userId])
+}
