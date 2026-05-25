@@ -15,9 +15,7 @@ import {
   BookOpen,
   Calculator,
   FileText,
-  UserCircle,
 } from "lucide-react";
-import { SignInButton, UserButton, useUser } from "@clerk/nextjs";
 
 interface SidebarProps {
   collapsed: boolean;
@@ -25,7 +23,6 @@ interface SidebarProps {
 
 export function Sidebar({ collapsed }: SidebarProps) {
   const pathname = usePathname();
-  const { user } = useUser();
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
@@ -173,39 +170,18 @@ export function Sidebar({ collapsed }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Auth & Live Status */}
+      {/* Live Status */}
       <div className="px-3 py-3 border-t border-border">
-        {user ? (
-          <div className="flex items-center gap-2">
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "w-7 h-7",
-                },
-              }}
-            />
-            <span
-              className={`flex items-center gap-1.5 transition-opacity duration-200 ${
-                collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-accent-green flex-shrink-0" />
-              <span className="text-xs text-text-tertiary">Live</span>
-            </span>
-          </div>
-        ) : (
-          <SignInButton mode="modal">
-            {collapsed ? (
-              <button className="flex items-center justify-center w-8 h-8 rounded-lg text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors">
-                <UserCircle className="w-5 h-5" />
-              </button>
-            ) : (
-              <button className="w-full px-3 py-1.5 text-sm font-medium rounded-lg bg-accent-blue text-white hover:bg-accent-blue-hover transition-colors">
-                Sign In
-              </button>
-            )}
-          </SignInButton>
-        )}
+        <div className="flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent-green flex-shrink-0" />
+          <span
+            className={`text-xs text-text-tertiary transition-opacity duration-200 ${
+              collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+            }`}
+          >
+            Live
+          </span>
+        </div>
       </div>
     </aside>
   );

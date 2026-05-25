@@ -3,6 +3,7 @@ import {
   getPaginatedCuratorAggregates,
   getCuratorSummaryStats,
 } from "@/lib/curator-aggregates";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import type {
   CuratorDashboardResponse,
   CuratorDashboardItem,
@@ -20,17 +21,50 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
     const sortOrder = (searchParams.get("sortOrder") as "asc" | "desc") || "desc";
     const dataSource = searchParams.get("dataSource") || undefined;
 
-    const [paginatedResult, stats] = await Promise.all([
-      getPaginatedCuratorAggregates({
-        page,
-        pageSize,
+    // Check cache (keyed by query params)
+    const cacheKey = `curators:${page}:${pageSize}:${search || ""}:${sortBy}:${sortOrder}:${dataSource || ""}`;
+    const cached = await cacheGet<{ paginatedResult: Awaited<ReturnType<typeof getPaginatedCuratorAggregates>>; stats: Awaited<ReturnType<typeof getCuratorSummaryStats>> }>(cacheKey);
+
+    const { paginatedResult, stats } = cached ?? await (async () => {
+      // Fetch all curators once, then compute stats from same data (avoids duplicate DB query)
+      const allResult = await getPaginatedCuratorAggregates({
+        page: 1,
+        pageSize: 500,
         search,
         sortBy,
         sortOrder,
         dataSource,
-      }),
-      getCuratorSummaryStats(),
-    ]);
+      });
+
+      // Compute stats from the full result set
+      let totalAUM = 0;
+      let totalVaults = 0;
+      let weightedApySum = 0;
+      for (const c of allResult.curators) {
+        totalAUM += c.totalAUM;
+        totalVaults += c.vaultCount;
+        weightedApySum += c.avgNetApy * c.totalAUM;
+      }
+      const stats = {
+        totalCurators: allResult.total,
+        totalAUM,
+        totalVaults,
+        avgApy: totalAUM > 0 ? weightedApySum / totalAUM : 0,
+      };
+
+      // Now paginate from the full set
+      const start = (page - 1) * pageSize;
+      const paginatedResult = {
+        curators: allResult.curators.slice(start, start + pageSize),
+        total: allResult.total,
+        page,
+        pageSize,
+        totalPages: Math.ceil(allResult.total / pageSize),
+      };
+
+      await cacheSet(cacheKey, { paginatedResult, stats }, 120);
+      return { paginatedResult, stats };
+    })();
 
     const curators: CuratorDashboardItem[] = paginatedResult.curators.map((c) => ({
       curatorId: c.curatorId,

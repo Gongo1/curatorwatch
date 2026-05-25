@@ -24,15 +24,40 @@ if (redis && !globalForRedis.redis) {
   globalForRedis.redis = redis;
 }
 
-export async function cacheGet<T>(key: string): Promise<T | null> {
-  if (!redis) return null;
-  try {
-    const data = await redis.get(key);
-    if (!data) return null;
-    return JSON.parse(data) as T;
-  } catch {
+// ── In-memory fallback cache ──
+// Used when Redis is unavailable (local dev, Redis down, etc.)
+const memCache = new Map<string, { data: string; expiresAt: number }>();
+
+function memGet<T>(key: string): T | null {
+  const entry = memCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    memCache.delete(key);
     return null;
   }
+  return JSON.parse(entry.data) as T;
+}
+
+function memSet(key: string, data: unknown, ttlSeconds: number): void {
+  memCache.set(key, {
+    data: JSON.stringify(data),
+    expiresAt: Date.now() + ttlSeconds * 1000,
+  });
+}
+
+export async function cacheGet<T>(key: string): Promise<T | null> {
+  // Try Redis first
+  if (redis) {
+    try {
+      const data = await redis.get(key);
+      if (data) return JSON.parse(data) as T;
+    } catch {
+      // Fall through to memory cache
+    }
+  }
+
+  // Fallback to in-memory
+  return memGet<T>(key);
 }
 
 export async function cacheSet(
@@ -40,10 +65,15 @@ export async function cacheSet(
   data: unknown,
   ttlSeconds: number
 ): Promise<void> {
-  if (!redis) return;
-  try {
-    await redis.set(key, JSON.stringify(data), "EX", ttlSeconds);
-  } catch {
-    // Graceful degradation — skip cache write
+  // Always write to memory cache
+  memSet(key, data, ttlSeconds);
+
+  // Also write to Redis if available
+  if (redis) {
+    try {
+      await redis.set(key, JSON.stringify(data), "EX", ttlSeconds);
+    } catch {
+      // Graceful degradation — memory cache is still set
+    }
   }
 }

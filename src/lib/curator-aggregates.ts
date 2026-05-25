@@ -100,23 +100,21 @@ export async function getPaginatedCuratorAggregates(
     delete whereClause.vaults;
   }
 
-  // Single query - minimal includes
-  const [totalCurators, curators] = await Promise.all([
-    prisma.curator.count({ where: whereClause }),
-    prisma.curator.findMany({
-      where: whereClause,
-      include: {
-        vaults: {
-          include: {
-            snapshots: {
-              orderBy: { timestamp: "desc" },
-              take: 1, // Only latest snapshot
-            },
+  // Sequential queries to minimize connection pressure
+  const curators = await prisma.curator.findMany({
+    where: whereClause,
+    include: {
+      vaults: {
+        include: {
+          snapshots: {
+            orderBy: { timestamp: "desc" },
+            take: 1, // Only latest snapshot
           },
         },
       },
-    }),
-  ]);
+    },
+  });
+  const totalCurators = curators.length;
 
   // Calculate aggregates
   const aggregates: CuratorAggregates[] = [];
@@ -217,44 +215,24 @@ export async function getPaginatedCuratorAggregates(
 }
 
 /**
- * Get summary stats - SIMPLIFIED
+ * Get summary stats - computed from aggregates to avoid duplicate DB query
  */
 export async function getCuratorSummaryStats(): Promise<CuratorSummaryStats> {
-  const curators = await prisma.curator.findMany({
-    where: {
-      vaults: { some: {} },
-      ...(EXCLUDED_CURATORS.length > 0 ? { name: { notIn: EXCLUDED_CURATORS } } : {}),
-    },
-    include: {
-      vaults: {
-        include: {
-          snapshots: {
-            orderBy: { timestamp: "desc" },
-            take: 1,
-          },
-        },
-      },
-    },
-  });
+  // Reuse the paginated query with a large page size to get all curators
+  const result = await getPaginatedCuratorAggregates({ page: 1, pageSize: 500 });
 
   let totalAUM = 0;
   let totalVaults = 0;
   let weightedApySum = 0;
 
-  for (const curator of curators) {
-    for (const vault of curator.vaults) {
-      const snap = vault.snapshots[0];
-      if (!snap) continue;
-
-      const tvl = snap.totalAssetsUsd;
-      totalAUM += tvl;
-      weightedApySum += sanitizeApy(snap.avgNetApy) * tvl;
-      totalVaults++;
-    }
+  for (const curator of result.curators) {
+    totalAUM += curator.totalAUM;
+    totalVaults += curator.vaultCount;
+    weightedApySum += curator.avgNetApy * curator.totalAUM;
   }
 
   return {
-    totalCurators: curators.length,
+    totalCurators: result.total,
     totalAUM,
     totalVaults,
     avgApy: totalAUM > 0 ? weightedApySum / totalAUM : 0,

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { cacheGet, cacheSet } from "@/lib/cache";
 import type { Severity } from "@/lib/change-thresholds";
 import type { Prisma } from "@prisma/client";
 import { resolveCuratorSlug } from "@/lib/curator-aliases";
@@ -20,6 +21,17 @@ export async function GET(request: Request) {
     const curatorIdsParam = url.searchParams.get("curatorIds");
     const vaultAddresses = vaultAddressesParam ? vaultAddressesParam.split(",").filter(Boolean) : [];
     const curatorIds = curatorIdsParam ? curatorIdsParam.split(",").filter(Boolean) : [];
+
+    // Check cache
+    const cacheKey = `changes:${hours}:${severity || ""}:${vaultId || ""}:${scope}:${curatorIdParam || ""}:${limit}:${offset}:${vaultAddressesParam || ""}:${curatorIdsParam || ""}`;
+    const cached = await cacheGet<object>(cacheKey);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        },
+      });
+    }
 
     // Resolve curatorId from slug if provided
     let curatorId = curatorIdParam;
@@ -75,30 +87,28 @@ export async function GET(request: Request) {
         ];
       }
 
-      const [vaultChanges, vaultCount] = await Promise.all([
-        prisma.vaultChange.findMany({
-          where: vaultWhere,
-          orderBy: { detectedAt: "desc" },
-          take: limit + offset, // Fetch enough for merged pagination
-          select: {
-            id: true,
-            vaultId: true,
-            changeType: true,
-            severity: true,
-            title: true,
-            description: true,
-            oldValue: true,
-            newValue: true,
-            metadata: true,
-            detectedAt: true,
-            viewed: true,
-            vault: {
-              select: { name: true, symbol: true, address: true, curator: { select: { name: true, id: true } } },
-            },
+      const vaultChanges = await prisma.vaultChange.findMany({
+        where: vaultWhere,
+        orderBy: { detectedAt: "desc" },
+        take: limit + offset, // Fetch enough for merged pagination
+        select: {
+          id: true,
+          vaultId: true,
+          changeType: true,
+          severity: true,
+          title: true,
+          description: true,
+          oldValue: true,
+          newValue: true,
+          metadata: true,
+          detectedAt: true,
+          viewed: true,
+          vault: {
+            select: { name: true, symbol: true, address: true, curator: { select: { name: true, id: true } } },
           },
-        }),
-        prisma.vaultChange.count({ where: vaultWhere }),
-      ]);
+        },
+      });
+      const vaultCount = vaultChanges.length;
 
       vaultTotal = vaultCount;
 
@@ -146,31 +156,29 @@ export async function GET(request: Request) {
         platformWhere.scope = "ecosystem";
       }
 
-      const [platformAlerts, platformCount] = await Promise.all([
-        prisma.platformAlert.findMany({
-          where: platformWhere,
-          orderBy: { detectedAt: "desc" },
-          take: limit + offset,
-          select: {
-            id: true,
-            scope: true,
-            curatorId: true,
-            changeType: true,
-            severity: true,
-            title: true,
-            description: true,
-            oldValue: true,
-            newValue: true,
-            metadata: true,
-            detectedAt: true,
-            viewed: true,
-            curator: {
-              select: { name: true },
-            },
+      const platformAlerts = await prisma.platformAlert.findMany({
+        where: platformWhere,
+        orderBy: { detectedAt: "desc" },
+        take: limit + offset,
+        select: {
+          id: true,
+          scope: true,
+          curatorId: true,
+          changeType: true,
+          severity: true,
+          title: true,
+          description: true,
+          oldValue: true,
+          newValue: true,
+          metadata: true,
+          detectedAt: true,
+          viewed: true,
+          curator: {
+            select: { name: true },
           },
-        }),
-        prisma.platformAlert.count({ where: platformWhere }),
-      ]);
+        },
+      });
+      const platformCount = platformAlerts.length;
 
       platformTotal = platformCount;
 
@@ -200,109 +208,53 @@ export async function GET(request: Request) {
     const paginatedChanges = allChanges.slice(offset, offset + limit);
     const total = vaultTotal + platformTotal;
 
-    // Build summary counts from both tables
+    // Build summary counts from already-fetched data (no extra DB queries)
     const summary = { critical: 0, warning: 0, info: 0, total };
 
-    if (scope === "all" || scope === "vault") {
-      const vaultCounts = await prisma.vaultChange.groupBy({
-        by: ["severity"],
-        where: { detectedAt: { gte: since } },
-        _count: { severity: true },
-      });
-      for (const count of vaultCounts) {
-        if (count.severity === "critical") summary.critical += count._count.severity;
-        if (count.severity === "warning") summary.warning += count._count.severity;
-        if (count.severity === "info") summary.info += count._count.severity;
-      }
-    }
-    if (scope === "all" || scope === "curator" || scope === "ecosystem") {
-      const platformCounts = await prisma.platformAlert.groupBy({
-        by: ["severity"],
-        where: { detectedAt: { gte: since } },
-        _count: { severity: true },
-      });
-      for (const count of platformCounts) {
-        if (count.severity === "critical") summary.critical += count._count.severity;
-        if (count.severity === "warning") summary.warning += count._count.severity;
-        if (count.severity === "info") summary.info += count._count.severity;
-      }
+    for (const change of allChanges) {
+      if (change.severity === "critical") summary.critical++;
+      else if (change.severity === "warning") summary.warning++;
+      else if (change.severity === "info") summary.info++;
     }
 
-    // Curator alert counts for dropdown filter
+    // Compute curator alert counts from already-fetched data (no extra DB queries)
     const curatorAlertCountMap = new Map<string, { id: string; name: string; count: number }>();
 
-    // Count vault alerts per curator
-    const vaultCuratorCounts = await prisma.vaultChange.groupBy({
-      by: ["vaultId"],
-      where: { detectedAt: { gte: since } },
-      _count: { id: true },
-    });
-    if (vaultCuratorCounts.length > 0) {
-      const vaultsWithCurator = await prisma.vault.findMany({
-        where: { id: { in: vaultCuratorCounts.map((v) => v.vaultId) } },
-        select: { id: true, curatorId: true, curator: { select: { id: true, name: true } } },
-      });
-      const vaultCuratorMap = new Map(vaultsWithCurator.map((v) => [v.id, v]));
-      for (const vc of vaultCuratorCounts) {
-        const vault = vaultCuratorMap.get(vc.vaultId);
-        if (vault?.curator) {
-          const existing = curatorAlertCountMap.get(vault.curator.id);
-          if (existing) {
-            existing.count += vc._count.id;
-          } else {
-            curatorAlertCountMap.set(vault.curator.id, {
-              id: vault.curator.id,
-              name: vault.curator.name ?? "Unknown",
-              count: vc._count.id,
-            });
-          }
-        }
-      }
-    }
+    for (const change of allChanges) {
+      const cId = change.curatorId;
+      const cName = change.curator?.name ?? "Unknown";
+      if (!cId) continue;
 
-    // Count platform alerts per curator
-    const platformCuratorCounts = await prisma.platformAlert.groupBy({
-      by: ["curatorId"],
-      where: { detectedAt: { gte: since }, curatorId: { not: null } },
-      _count: { id: true },
-    });
-    for (const pc of platformCuratorCounts) {
-      if (!pc.curatorId) continue;
-      const existing = curatorAlertCountMap.get(pc.curatorId);
+      const existing = curatorAlertCountMap.get(cId);
       if (existing) {
-        existing.count += pc._count.id;
+        existing.count++;
       } else {
-        // Need to look up curator name
-        const curator = await prisma.curator.findUnique({
-          where: { id: pc.curatorId },
-          select: { name: true },
-        });
-        curatorAlertCountMap.set(pc.curatorId, {
-          id: pc.curatorId,
-          name: curator?.name ?? "Unknown",
-          count: pc._count.id,
-        });
+        curatorAlertCountMap.set(cId, { id: cId, name: cName, count: 1 });
       }
     }
 
     const curatorAlertCounts = Array.from(curatorAlertCountMap.values())
       .sort((a, b) => b.count - a.count);
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: {
-          changes: paginatedChanges,
-          summary,
-          curatorAlertCounts,
-          pagination: {
-            total,
-            limit,
-            offset,
-            hasMore: offset + paginatedChanges.length < total,
-          },
+    const responseData = {
+      success: true,
+      data: {
+        changes: paginatedChanges,
+        summary,
+        curatorAlertCounts,
+        pagination: {
+          total,
+          limit,
+          offset,
+          hasMore: offset + paginatedChanges.length < total,
         },
       },
+    };
+
+    await cacheSet(cacheKey, responseData, 120);
+
+    return NextResponse.json(
+      responseData,
       {
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",

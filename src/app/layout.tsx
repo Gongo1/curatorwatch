@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
-import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from "@clerk/themes";
 import { AppShell } from "@/components/layout/AppShell";
 import "./globals.css";
 
@@ -61,9 +59,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
-        <ClerkProvider appearance={{ baseTheme: dark }}>
-          <AppShell>{children}</AppShell>
-        </ClerkProvider>
+        <AppShell>{children}</AppShell>
         <Analytics />
       </body>
     </html>

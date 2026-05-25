@@ -1,6 +1,5 @@
 "use client";
 
-import { SignInButton } from "@clerk/nextjs";
 import { X } from "lucide-react";
 
 interface TrackVaultPromptProps {
@@ -32,42 +31,15 @@ export function TrackVaultPrompt({ name, type, open, onClose }: TrackVaultPrompt
           Track {name}
         </h2>
         <p className="text-sm text-text-secondary mb-5">
-          Sign in to start tracking this {type} and get notified of changes.
+          Tracking for this {type} is not yet available without an account.
         </p>
 
-        {/* Benefits */}
-        <ul className="space-y-2.5 mb-6">
-          <li className="flex items-start gap-2.5 text-sm text-text-secondary">
-            <svg className="mt-0.5 h-4 w-4 shrink-0 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            Get alerts when TVL drops &gt;10%
-          </li>
-          <li className="flex items-start gap-2.5 text-sm text-text-secondary">
-            <svg className="mt-0.5 h-4 w-4 shrink-0 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            Notified when APY changes &gt;20%
-          </li>
-          <li className="flex items-start gap-2.5 text-sm text-text-secondary">
-            <svg className="mt-0.5 h-4 w-4 shrink-0 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            Track governance and config changes
-          </li>
-        </ul>
-
-        {/* Social proof */}
-        <p className="text-xs text-text-muted mb-5 text-center">
-          1,200+ users tracking $2.5B in vaults
-        </p>
-
-        {/* CTA */}
-        <SignInButton mode="modal">
-          <button className="w-full rounded-lg bg-accent-blue py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-blue-hover">
-            Continue with Email
-          </button>
-        </SignInButton>
+        <button
+          onClick={onClose}
+          className="w-full rounded-lg bg-accent-blue py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent-blue-hover"
+        >
+          Close
+        </button>
       </div>
     </div>
   );

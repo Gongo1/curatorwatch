@@ -19,8 +19,6 @@
     "update:curators": "tsx src/scripts/merge-and-update-curators.ts"
   },
   "dependencies": {
-    "@clerk/nextjs": "^7.1.0",
-    "@clerk/themes": "^2.4.57",
     "@prisma/client": "^6.19.2",
     "@vercel/analytics": "^1.6.1",
     "ag-grid-community": "^35.1.0",

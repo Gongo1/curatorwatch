@@ -2,12 +2,9 @@
 
 import { useState, useCallback } from "react";
 import { Menu } from "lucide-react";
-import { useUser, SignInButton } from "@clerk/nextjs";
 import { Sidebar } from "./Sidebar";
 import { MobileDrawer } from "./MobileDrawer";
 import { Footer } from "./Footer";
-import { PortfolioMigrator } from "../PortfolioMigrator";
-import { JoinBanner } from "../JoinBanner";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -16,7 +13,6 @@ interface AppShellProps {
 export function AppShell({ children }: AppShellProps) {
   const [sidebarHovered, setSidebarHovered] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { user, isLoaded } = useUser();
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
@@ -48,17 +44,7 @@ export function AppShell({ children }: AppShellProps) {
               CuratorWatch
             </span>
           </div>
-          {isLoaded && !user && (
-            <SignInButton mode="modal">
-              <button className="rounded-md bg-accent-blue px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-accent-blue-hover">
-                Sign In
-              </button>
-            </SignInButton>
-          )}
         </div>
-
-        {/* Join Banner */}
-        <JoinBanner />
 
         {/* Page Content */}
         <main className="flex-1 px-4 sm:px-6 py-4 sm:py-5 max-w-[1400px] w-full mx-auto">
@@ -67,8 +53,6 @@ export function AppShell({ children }: AppShellProps) {
 
         <Footer />
       </div>
-
-      <PortfolioMigrator />
     </div>
   );
 }
