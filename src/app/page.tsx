@@ -103,21 +103,16 @@ export default function Home() {
         params.set("search", search.trim());
       }
 
-      const [curatorsResponse, changesResponse, feesResponse, yieldResponse, aumGrowthResponse, coverageResponse] = await Promise.all([
-        fetch(`/api/curators?${params.toString()}`),
-        fetch("/api/changes?hours=24&limit=0"),
-        fetch("/api/stats/fees-breakdown?dataSource=morpho"),
-        fetch("/api/stats/yield-growth"),
-        fetch("/api/stats/aum-growth"),
-        fetch("/api/stats/protocol-coverage"),
-      ]);
+      // Single combined fetch to avoid 6 concurrent serverless DB connections
+      const dashboardResponse = await fetch(`/api/dashboard?${params.toString()}`);
+      const dashboardData = await dashboardResponse.json();
 
-      const curatorsData: CuratorDashboardResponse = await curatorsResponse.json();
-      const changesData = await changesResponse.json();
-      const feesData = await feesResponse.json();
-      const yieldData = await yieldResponse.json();
-      const aumGrowthData = await aumGrowthResponse.json();
-      const coverageData = await coverageResponse.json();
+      const curatorsData: CuratorDashboardResponse = dashboardData.curators;
+      const changesData = dashboardData.changes;
+      const feesData = dashboardData.fees;
+      const yieldData = dashboardData.yields;
+      const aumGrowthData = dashboardData.aumGrowth;
+      const coverageData = dashboardData.coverage;
 
       if (!curatorsData.success) {
         throw new Error(curatorsData.error || "Failed to fetch curators");
