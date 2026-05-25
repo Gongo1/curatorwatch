@@ -37,9 +37,7 @@ export default function CuratorDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTrackPrompt, setShowTrackPrompt] = useState(false);
-  const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio({
-    onUnauthenticated: () => setShowTrackPrompt(true),
-  });
+  const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
 
   useEffect(() => {
     async function fetchCurator() {

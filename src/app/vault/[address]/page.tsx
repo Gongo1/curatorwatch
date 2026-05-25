@@ -65,9 +65,7 @@ export default function VaultDetailPage({ params }: PageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showTrackPrompt, setShowTrackPrompt] = useState(false);
-  const { isVaultTracked, trackVault, untrackVault } = usePortfolio({
-    onUnauthenticated: () => setShowTrackPrompt(true),
-  });
+  const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
 
   useEffect(() => {
     async function fetchVault() {
