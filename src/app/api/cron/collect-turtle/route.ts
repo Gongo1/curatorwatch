@@ -43,7 +43,8 @@ export async function GET(request: NextRequest) {
         filtered: result.filtered,
         vaultsUpserted: result.vaultsUpserted,
         snapshotsCreated: result.snapshotsCreated,
-        curatorsCreated: result.curatorsCreated,
+        vaultsAttributed: result.vaultsAttributed,
+        unmatchedHidden: result.unmatchedHidden,
         duration: result.duration,
       },
     });

@@ -16,7 +16,9 @@
     "seed:curators": "tsx src/scripts/seed-curators.ts",
     "fix:curator-names": "tsx src/scripts/fix-curator-names.ts",
     "backfill:tx-usd": "tsx src/scripts/backfill-transaction-usd.ts",
-    "update:curators": "tsx src/scripts/merge-and-update-curators.ts"
+    "update:curators": "tsx src/scripts/merge-and-update-curators.ts",
+    "cleanup:synthetic-curators": "tsx src/scripts/remove-synthetic-turtle-curators.ts",
+    "report:unmatched-turtle": "tsx src/scripts/report-unmatched-turtle.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",

@@ -81,23 +81,32 @@ export async function getPaginatedCuratorAggregates(
     vaultFilter.dataSource = dataSource;
   }
 
-  const whereClause: Record<string, unknown> = {
-    vaults: { some: Object.keys(vaultFilter).length > 0 ? vaultFilter : {} },
-    ...(EXCLUDED_CURATORS.length > 0 ? { name: { notIn: EXCLUDED_CURATORS } } : {}),
-  };
+  const vaultSome = Object.keys(vaultFilter).length > 0 ? vaultFilter : {};
+
+  // Always-applied filters:
+  // - Exclude synthetic distributor-derived curators (legacy `turtle-<slug>` rows).
+  //   Turtle is a data source, not a curator; these must never appear in the directory
+  //   or contribute to curator TVL. (Belt-and-suspenders behind the cleanup migration.)
+  // - Exclude explicitly excluded curators by name.
+  // - Require at least one vault matching the dataSource filter.
+  const baseFilters: Record<string, unknown>[] = [
+    { address: { not: { startsWith: "turtle-" } } },
+    { vaults: { some: vaultSome } },
+  ];
+  if (EXCLUDED_CURATORS.length > 0) {
+    baseFilters.push({ name: { notIn: EXCLUDED_CURATORS } });
+  }
+
+  const whereClause: Record<string, unknown> = { AND: [...baseFilters] };
 
   if (search && search.trim()) {
     const trimmed = search.trim();
-    whereClause.AND = [
-      { vaults: { some: Object.keys(vaultFilter).length > 0 ? vaultFilter : {} } },
-      {
-        OR: [
-          { name: { contains: trimmed, mode: "insensitive" } },
-          { address: { contains: trimmed, mode: "insensitive" } },
-        ],
-      },
-    ];
-    delete whereClause.vaults;
+    (whereClause.AND as Record<string, unknown>[]).push({
+      OR: [
+        { name: { contains: trimmed, mode: "insensitive" } },
+        { address: { contains: trimmed, mode: "insensitive" } },
+      ],
+    });
   }
 
   // Sequential queries to minimize connection pressure

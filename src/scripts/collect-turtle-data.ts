@@ -9,7 +9,7 @@
 import { prisma } from "../lib/db";
 import { fetchTurtleOpportunities } from "../lib/turtle/client";
 import { extractProtocol } from "../lib/turtle/protocol-extractor";
-import { findOrCreateCurator } from "../lib/turtle/curator-matcher";
+import { matchCurator } from "../lib/turtle/curator-matcher";
 import { getChainId, getChainName } from "../lib/turtle/chain-mapper";
 import type { TurtleOpportunity } from "../lib/turtle/types";
 
@@ -21,7 +21,10 @@ export interface TurtleCollectionResult {
   filtered: number;
   vaultsUpserted: number;
   snapshotsCreated: number;
-  curatorsCreated: number;
+  curatorsCreated: number; // deprecated: synthetic curators are no longer created (always 0)
+  vaultsAttributed: number; // vaults matched to a real curator
+  unmatchedHidden: number; // vaults ingested but left unattributed (hidden from the directory)
+  hiddenVaults: { name: string; tvl: number }[];
   errors: string[];
   duration: number;
 }
@@ -62,7 +65,7 @@ function filterOpportunities(
  */
 async function upsertTurtleVault(
   opp: TurtleOpportunity
-): Promise<{ upserted: boolean; curatorCreated: boolean; error?: string }> {
+): Promise<{ upserted: boolean; matched: boolean; curatorName: string; error?: string }> {
   try {
     const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
 
@@ -80,16 +83,21 @@ async function upsertTurtleVault(
     const assetSymbol = depositToken?.symbol ?? "UNKNOWN";
     const assetDecimals = depositToken?.decimals ?? 18;
 
-    // Find or create curator using API curator field
-    const curatorId = await findOrCreateCurator(opp.name, opp.curator);
+    // Best-effort match to an existing curator (name-based; Turtle gives no address).
+    // null = unattributed: we still ingest the vault but leave it hidden from the
+    // curator directory and report it, rather than minting a synthetic curator.
+    const curatorName = opp.curator?.name ?? opp.name;
+    const curatorId = await matchCurator(opp.name, opp.curator);
 
     // Check if existing by turtleId
     const existingByTurtle = await prisma.vault.findUnique({
       where: { turtleId: opp.id },
     });
 
-    // Check for potential duplicate by curator + asset + chain + protocol
-    const existingByCombo = !existingByTurtle
+    // Check for potential duplicate by curator + asset + chain + protocol.
+    // Only when attributed — a null curatorId would wrongly collapse distinct
+    // unattributed vaults together.
+    const existingByCombo = !existingByTurtle && curatorId
       ? await prisma.vault.findFirst({
           where: {
             curatorId,
@@ -161,7 +169,7 @@ async function upsertTurtleVault(
         },
       });
 
-      return { upserted: true, curatorCreated: false };
+      return { upserted: true, matched: curatorId !== null, curatorName };
     }
 
     // Create new vault
@@ -192,10 +200,15 @@ async function upsertTurtleVault(
       },
     });
 
-    return { upserted: true, curatorCreated: true };
+    return { upserted: true, matched: curatorId !== null, curatorName };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    return { upserted: false, curatorCreated: false, error: msg };
+    return {
+      upserted: false,
+      matched: false,
+      curatorName: opp.curator?.name ?? opp.name,
+      error: msg,
+    };
   }
 }
 
@@ -261,19 +274,26 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     // 3. Upsert each vault
     let vaultsUpserted = 0;
     let snapshotsCreated = 0;
-    let curatorsCreated = 0;
+    let vaultsAttributed = 0;
+    const hiddenVaults: { name: string; tvl: number }[] = [];
 
     for (const opp of filtered) {
       const result = await upsertTurtleVault(opp);
       if (result.upserted) {
         vaultsUpserted++;
         snapshotsCreated++;
-        if (result.curatorCreated) curatorsCreated++;
+        if (result.matched) {
+          vaultsAttributed++;
+        } else {
+          // Ingested but unattributed: hidden from the curator directory, reported here.
+          hiddenVaults.push({ name: result.curatorName, tvl: opp.tvl ?? 0 });
+        }
       } else if (result.error) {
         errors.push(`${opp.name}: ${result.error}`);
         logError(`Failed to upsert ${opp.name}: ${result.error}`);
       }
     }
+    const unmatchedHidden = hiddenVaults.length;
 
     // 4. Update curator stats
     await updateTurtleCuratorStats();
@@ -286,7 +306,14 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     log(`  Filtered: ${filtered.length}`);
     log(`  Vaults upserted: ${vaultsUpserted}`);
     log(`  Snapshots created: ${snapshotsCreated}`);
-    log(`  Curators created: ${curatorsCreated}`);
+    log(`  Attributed to a curator: ${vaultsAttributed}`);
+    log(`  Unmatched (hidden, unattributed): ${unmatchedHidden}`);
+    if (hiddenVaults.length > 0) {
+      log(`  Hidden vaults (need curator mapping in curator-matcher.ts):`);
+      for (const hv of hiddenVaults) {
+        log(`    - ${hv.name} ($${(hv.tvl / 1_000_000).toFixed(2)}M)`);
+      }
+    }
     log(`  Errors: ${errors.length}`);
     log(`  Duration: ${(duration / 1000).toFixed(1)}s`);
     log("=".repeat(60));
@@ -297,7 +324,10 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       filtered: filtered.length,
       vaultsUpserted,
       snapshotsCreated,
-      curatorsCreated,
+      curatorsCreated: 0,
+      vaultsAttributed,
+      unmatchedHidden,
+      hiddenVaults,
       errors,
       duration,
     };
@@ -313,6 +343,9 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       vaultsUpserted: 0,
       snapshotsCreated: 0,
       curatorsCreated: 0,
+      vaultsAttributed: 0,
+      unmatchedHidden: 0,
+      hiddenVaults: [],
       errors,
       duration: Date.now() - startTime,
     };
