@@ -1,0 +1,78 @@
+{
+  "generatedAt": "2026-05-29T19-52-45Z",
+  "method": "Supabase MCP (session pooler saturated; bypassed Supavisor via management API)",
+  "note": "Reversible pre-cleanup snapshot of all 30 synthetic turtle-* Curator rows and their attributed vaults. Matcher fixed (removed reverse-substring rule) so 'Earn' drops instead of merging into TelosC. PROMOTE 7 -> tc:<slug>, DROP 22 -> vaults unattributed (curatorId NULL) + rows deleted.",
+  "promote": {
+    "telosc": {
+      "name": "TelosC",
+      "website": "https://telosc.com/",
+      "sourceRows": ["turtle-telos", "turtle-telosc-earn"],
+      "vaultIds": [
+        "cmp323rpj002ajv04f1xbxu4f",
+        "cmm9ea9fj0032voj6cpubr45r",
+        "cmm9eae49003bvoj63uigb4u6",
+        "cmm9easpn0042voj6f8fsy5g9"
+      ]
+    },
+    "k3-capital": {
+      "name": "K3 Capital",
+      "website": "https://k3-capital.net/",
+      "sourceRows": ["turtle-k3-capital"],
+      "vaultIds": ["cmm9e91440012voj61ukvyuwg", "cmm9e9av2001gvoj60dd31xgd"]
+    },
+    "axil": {
+      "name": "Axil",
+      "website": "https://www.axil.pro/",
+      "sourceRows": ["turtle-axil"],
+      "vaultIds": ["cmpqvecln0008l504jm4inull"]
+    },
+    "perseus-digital": {
+      "name": "Perseus Digital",
+      "website": null,
+      "sourceRows": ["turtle-perseus-digital"],
+      "vaultIds": ["cmmodejc2003xla04v6phuxe3"]
+    },
+    "clearstar": {
+      "name": "Clearstar Labs",
+      "website": null,
+      "sourceRows": ["turtle-clearstar-earn"],
+      "vaultIds": ["cmpqveihd0019l5043sefj1sq", "cmpl5mx07000ajy04776xkjfo"]
+    },
+    "9summits": {
+      "name": "9Summits",
+      "website": "https://9summits.io/",
+      "sourceRows": ["turtle-9summits"],
+      "vaultIds": ["cmm9e9dk9001lvoj60vle61d1"]
+    },
+    "farm-capital": {
+      "name": "Farm Capital",
+      "website": "https://www.farmcapital.xyz/",
+      "sourceRows": ["turtle-farm-capital"],
+      "vaultIds": ["cmm9ea4ue002vvoj6iqfvwk87"]
+    }
+  },
+  "drop": [
+    {"address": "turtle-susdf", "name": "Falcon Finance", "totalAssetsManaged": 151238278.483936, "vaultIds": ["cmm8nibov0002jr04q1m0tzp1"]},
+    {"address": "turtle-midas", "name": "Midas", "totalAssetsManaged": 106900587.607361, "vaultIds": ["cmm9e9js2001vvoj69sk3zmkn","cmm9e9pm90025voj6wddysmoy","cmm9udr5k000zjv04ih5t5j1l","cmm9e9fg6001pvoj6vu0cdns7","cmpl5n28x0012jy04jjfbb1tg","cmpl5mztm000kjy04mosflray","cmm9e9rja0029voj6b39mkqc1","cmm9e8gz20007voj6bqe2h6k9","cmpl5na5n002qjy04044w59vk","cmm9e8iui000bvoj6ht4fjqdp"]},
+    {"address": "turtle-mellow", "name": "Mellow", "totalAssetsManaged": 99979420.2655022, "vaultIds": ["cmmxnpa4v000bl804nd40gwxp","cmmpk8bvo000eld04mex3plm3"]},
+    {"address": "turtle-sierra", "name": "Sierra", "totalAssetsManaged": 63833143.2871305, "vaultIds": ["cmm9e8twf000qvoj6k3w622k5","cmm9e9ych002kvoj6ovp2xcbo"]},
+    {"address": "turtle-yo", "name": "YO", "totalAssetsManaged": 39901295.4836523, "vaultIds": ["cmmode3pm002rla048ck0w1ew","cmmoddqs2001ula043uzhwg86","cmmode81r0031la04xrp53rbx","cmmode0sf002jla04xzk662rq","cmmoddpnm001qla04yz709gww","cmmoddoit001mla04psbjci98","cmmodedok003gla04es4r09ex","cmmoddry9001yla04fae6vbq9"]},
+    {"address": "turtle-altura", "name": "Altura", "totalAssetsManaged": 25802350.0644433, "vaultIds": ["cmmode9mb0036la0472l2dneg"]},
+    {"address": "turtle-turtle", "name": "Turtle", "totalAssetsManaged": 10312003, "vaultIds": ["cmpqvedfn000fl5047d4tidic"]},
+    {"address": "turtle-euler-earn", "name": "Euler Earn", "totalAssetsManaged": 10302849.7245044, "vaultIds": ["cmm9eaumk0046voj6a0cb0b14","cmm9eaow7003uvoj6zg842t2u","cmm9eawk8004avoj6tsqqylb6","cmn9btsq2001rlb0407xxitea"]},
+    {"address": "turtle-termmax", "name": "TermMax", "totalAssetsManaged": 7996324.90792101, "vaultIds": ["cmm9ebaud0050voj6vwg2w3bs","cmm9eb8h3004wvoj6hktstzhx"]},
+    {"address": "turtle-pmusd-curve-pool", "name": "PmUSD/ Curve Pool", "totalAssetsManaged": 5655654.20109953, "vaultIds": ["cmmodeoc1004bla04byvua6lm"]},
+    {"address": "turtle-pmusd-curve-gauge", "name": "PmUSD/ Curve Gauge", "totalAssetsManaged": 5630999.55337829, "vaultIds": ["cmmodehrh003sla04co4xgxcq"]},
+    {"address": "turtle-pmusd-frxusd-curve-pool", "name": "PmUSD/frxUSD Curve Pool", "totalAssetsManaged": 5391126.3576562, "vaultIds": ["cmmodelux0044la04jv3fzypo"]},
+    {"address": "turtle-pmusd-frxusd-curve-gauge", "name": "PmUSD/frxUSD Curve Gauge", "totalAssetsManaged": 5384270.43815666, "vaultIds": ["cmmodef95003lla04qe3ogxyw"]},
+    {"address": "turtle-earn", "name": "Earn", "totalAssetsManaged": 3149541.84020366, "vaultIds": ["cmm9e8yfc000xvoj6hzesrzm9"]},
+    {"address": "turtle-trevee-plusd", "name": "Trevee PlUSD", "totalAssetsManaged": 2897711.21310841, "vaultIds": ["cmm9e8ech0002voj68dsgeqkp"]},
+    {"address": "turtle-zircuit", "name": "Zircuit", "totalAssetsManaged": 2628326.87035963, "vaultIds": ["cmmswa6bq002ajz04etyuq6hu","cmmsw9r51001cjz04wihspfc0"]},
+    {"address": "turtle-qualia", "name": "Qualia", "totalAssetsManaged": 2473042.21560898, "vaultIds": ["cmmoddmxm001hla04mvhfiydq"]},
+    {"address": "turtle-defx", "name": "Defx", "totalAssetsManaged": 1651904.62341214, "vaultIds": ["cmm9eb38w004nvoj6jtv7o3ii"]},
+    {"address": "turtle-cassa", "name": "Cassa", "totalAssetsManaged": 1436817.39298533, "vaultIds": []},
+    {"address": "turtle-theoriq", "name": "Theoriq", "totalAssetsManaged": 1325209.87270664, "vaultIds": ["cmmodd322000cla04hjbc4z41"]},
+    {"address": "turtle-veda", "name": "Veda", "totalAssetsManaged": 1243936.55420927, "vaultIds": ["cmm9e9u77002evoj6gzu7s3sw"]},
+    {"address": "turtle-nunchi", "name": "Nunchi", "totalAssetsManaged": 1172529.16952016, "vaultIds": ["cmmoddufa0025la04by1s01o8"]}
+  ]
+}

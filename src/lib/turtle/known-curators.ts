@@ -80,9 +80,11 @@ function normalize(s: string): string {
 
 /**
  * Resolve a Turtle-provided name to an allowlisted curator, or null.
- * Matches on normalized equality or substring (either direction) against aliases,
- * which is safe because the aliases are specific enough not to collide with the
- * (verified) non-curator names.
+ * Matches on normalized equality or forward substring (the Turtle name contains an
+ * alias), which is safe because the aliases are specific enough not to collide with
+ * the (verified) non-curator names. Reverse substring (alias contains the name) is
+ * intentionally NOT matched: it caused generic names like "Earn" to resolve via the
+ * "telosc earn" alias and mis-merge into TelosC.
  */
 export function resolveKnownCurator(name: string | null | undefined): KnownTurtleCurator | null {
   if (!name) return null;
@@ -90,7 +92,7 @@ export function resolveKnownCurator(name: string | null | undefined): KnownTurtl
   if (!n) return null;
   for (const c of KNOWN_TURTLE_CURATORS) {
     for (const alias of c.aliases) {
-      if (n === alias || n.includes(alias) || alias.includes(n)) return c;
+      if (n === alias || n.includes(alias)) return c;
     }
   }
   return null;
