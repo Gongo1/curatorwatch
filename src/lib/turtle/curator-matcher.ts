@@ -12,6 +12,7 @@
 
 import { prisma } from "@/lib/db";
 import { extractCuratorFromVaultName } from "@/lib/utils/extract-curator-name";
+import { resolveKnownCurator } from "./known-curators";
 import type { TurtleCurator } from "./types";
 
 /**
@@ -135,6 +136,26 @@ export async function matchCurator(
     const match =
       (aliased && findMatch(curators, aliased)) || findMatch(curators, raw);
     if (match) return match;
+  }
+
+  // 2. Allowlisted Turtle-only curators (verified, human-reviewed). These don't
+  // exist in the Morpho-sourced set, so attribute them to a clean `tc:<slug>`
+  // curator row, upserting it on first sight. Gated entirely by the allowlist —
+  // this is the only path that creates a curator, and only for reviewed entities.
+  for (const raw of rawCandidates) {
+    const known = resolveKnownCurator(raw);
+    if (known) {
+      const c = await prisma.curator.upsert({
+        where: { address: `tc:${known.slug}` },
+        update: {},
+        create: {
+          address: `tc:${known.slug}`,
+          name: known.name,
+          website: known.website || undefined,
+        },
+      });
+      return c.id;
+    }
   }
 
   return null;

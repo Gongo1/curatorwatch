@@ -1,39 +1,65 @@
 /**
- * One-off cleanup: remove synthetic "turtle-<slug>" curator rows.
+ * One-off cleanup + promotion of synthetic "turtle-<slug>" curator rows.
  *
- * Background: the old Turtle collector minted fake Curator rows (address
- * "turtle-<slug>") whenever it couldn't match an opportunity to a real curator.
- * Those synthetic rows polluted the curator directory and inflated curator TVL.
- * The collector no longer creates them (see curator-matcher.ts); this script
- * cleans up the ones already in the database.
+ * Background: the old Turtle collector minted a fake Curator row (address
+ * "turtle-<slug>") for every Turtle opportunity it couldn't match — protocols,
+ * stablecoin issuers, chains, Curve pools, and the Turtle distributor itself —
+ * inflating the curator directory and curator TVL by ~$556M.
+ *
+ * This script reconciles them against the reviewed allowlist
+ * (src/lib/turtle/known-curators.ts):
+ *   - PROMOTE: synthetic rows whose name resolves to an allowlisted real curator are
+ *     folded into a clean `tc:<slug>` curator row (de-duplicated/merged), keeping
+ *     their vaults attributed.
+ *   - DROP: every other synthetic row is removed; its vaults are set to unattributed
+ *     (curatorId = NULL) so they stay in the DB but hidden from the directory
+ *     (see `npm run report:unmatched-turtle`).
  *
  * Behaviour:
- *   - DRY RUN by default: reports exactly what would change, writes nothing.
- *   - With `--apply`: archives the affected rows to ./archive/<timestamp>.json
- *     (reversible record), sets the affected vaults' curatorId to NULL (they
- *     remain in the DB as unattributed/hidden Turtle vaults — see
- *     `npm run report:unmatched-turtle`), then deletes the synthetic curators.
- *     CuratorNews / CuratorSnapshot / PlatformAlert rows cascade-delete.
+ *   - DRY RUN by default: prints the full promote/drop plan, writes nothing.
+ *   - With `--apply`: archives all affected rows to ./archive/<timestamp>.json
+ *     (reversible record), then performs the promotion + cleanup in a transaction.
+ *
+ * Uses a dedicated DIRECT (non-pooled) connection to avoid the pgbouncer session pool.
  *
  * Usage:
- *   npm run cleanup:synthetic-curators           # dry run
+ *   npm run cleanup:synthetic-curators            # dry run
  *   npm run cleanup:synthetic-curators -- --apply
  */
 
 import { mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { PrismaClient } from "@prisma/client";
+import { resolveKnownCurator, KNOWN_TURTLE_CURATORS } from "../lib/turtle/known-curators";
 
-// Maintenance scripts use a dedicated DIRECT (non-pooled) connection so they don't
-// contend for the pgbouncer session pool the serverless app shares.
 const prisma = new PrismaClient({
   datasourceUrl: process.env.DIRECT_URL || process.env.DATABASE_URL,
   log: ["error"],
 });
 
 const APPLY = process.argv.includes("--apply");
+const M = (n: number) => `$${(n / 1e6).toFixed(2)}M`;
+
+/** Tolerate Supabase pooler saturation (pool_size 15) — retry the connection with backoff. */
+async function connectWithRetry(attempts = 6): Promise<void> {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      return;
+    } catch (e) {
+      const msg = String(e);
+      const transient = /max clients|EMAXCONNSESSION|Can't reach|Timed out|ECONNREFUSED/i.test(msg);
+      if (!transient || i === attempts - 1) throw e;
+      const wait = Math.min(2000 * 2 ** i, 30000);
+      console.log(`[cleanup] DB busy (pool full), retrying in ${wait / 1000}s… (${i + 1}/${attempts})`);
+      await new Promise((r) => setTimeout(r, wait));
+    }
+  }
+}
 
 async function main() {
+  await connectWithRetry();
+
   console.log(
     `\n[cleanup] Synthetic Turtle curators — ${APPLY ? "APPLY (destructive)" : "DRY RUN (no changes)"}\n`
   );
@@ -45,7 +71,7 @@ async function main() {
       address: true,
       name: true,
       totalAssetsManaged: true,
-      vaults: { select: { id: true, name: true, address: true, turtleId: true } },
+      vaults: { select: { id: true, name: true, turtleId: true } },
     },
   });
 
@@ -54,19 +80,42 @@ async function main() {
     return;
   }
 
-  const totalVaults = synthetic.reduce((s, c) => s + c.vaults.length, 0);
-  const totalFakeAum = synthetic.reduce((s, c) => s + (c.totalAssetsManaged ?? 0), 0);
+  // Partition into promote-groups (by allowlist slug) and drops.
+  const promoteGroups = new Map<string, { rows: typeof synthetic; vaultIds: string[]; tvl: number }>();
+  const drops: typeof synthetic = [];
 
-  console.log(`[cleanup] Found ${synthetic.length} synthetic curators across ${totalVaults} vaults.`);
-  console.log(`[cleanup] Inflated curator AUM attributed to them: $${(totalFakeAum / 1e6).toFixed(2)}M`);
-  console.log("");
-  for (const c of synthetic) {
-    console.log(`  - ${c.name ?? "(no name)"} [${c.address}] — ${c.vaults.length} vault(s), $${((c.totalAssetsManaged ?? 0) / 1e6).toFixed(2)}M`);
+  for (const row of synthetic) {
+    const known = resolveKnownCurator(row.name);
+    if (known) {
+      const g = promoteGroups.get(known.slug) ?? { rows: [], vaultIds: [], tvl: 0 };
+      g.rows.push(row);
+      g.vaultIds.push(...row.vaults.map((v) => v.id));
+      g.tvl += row.totalAssetsManaged ?? 0;
+      promoteGroups.set(known.slug, g);
+    } else {
+      drops.push(row);
+    }
+  }
+
+  console.log(`[cleanup] PROMOTE — ${promoteGroups.size} real curators:`);
+  for (const [slug, g] of promoteGroups) {
+    const known = KNOWN_TURTLE_CURATORS.find((k) => k.slug === slug)!;
+    console.log(
+      `  + ${known.name} [tc:${slug}] — ${g.vaultIds.length} vault(s), ${M(g.tvl)}  ` +
+        `(from: ${g.rows.map((r) => r.name).join(", ")})`
+    );
+  }
+
+  const dropVaults = drops.reduce((s, r) => s + r.vaults.length, 0);
+  const dropTvl = drops.reduce((s, r) => s + (r.totalAssetsManaged ?? 0), 0);
+  console.log(`\n[cleanup] DROP — ${drops.length} non-curators, ${dropVaults} vault(s) hidden, ${M(dropTvl)}:`);
+  for (const r of drops.sort((a, b) => (b.totalAssetsManaged ?? 0) - (a.totalAssetsManaged ?? 0))) {
+    console.log(`  - ${r.name} [${r.address}] — ${r.vaults.length} vault(s), ${M(r.totalAssetsManaged ?? 0)}`);
   }
   console.log("");
 
   if (!APPLY) {
-    console.log("[cleanup] DRY RUN — re-run with `-- --apply` to archive + remove.\n");
+    console.log("[cleanup] DRY RUN — re-run with `-- --apply` to archive + apply.\n");
     return;
   }
 
@@ -75,20 +124,65 @@ async function main() {
   const archiveDir = join(process.cwd(), "archive");
   mkdirSync(archiveDir, { recursive: true });
   const archivePath = join(archiveDir, `synthetic-turtle-curators-${stamp}.json`);
-  writeFileSync(archivePath, JSON.stringify({ generatedAt: stamp, curators: synthetic }, null, 2));
-  console.log(`[cleanup] Archived ${synthetic.length} curators to ${archivePath}`);
+  writeFileSync(
+    archivePath,
+    JSON.stringify(
+      {
+        generatedAt: stamp,
+        promote: Object.fromEntries(promoteGroups),
+        drop: drops,
+      },
+      null,
+      2
+    )
+  );
+  console.log(`[cleanup] Archived ${synthetic.length} synthetic curators to ${archivePath}\n`);
 
-  const ids = synthetic.map((c) => c.id);
+  const promotedCuratorIds: string[] = [];
 
-  // Detach vaults (keep them as unattributed/hidden Turtle vaults), then delete curators.
-  const detached = await prisma.vault.updateMany({
-    where: { curatorId: { in: ids } },
-    data: { curatorId: null },
+  await prisma.$transaction(async (tx) => {
+    // Promote: upsert clean tc:<slug> curator, reassign matched vaults to it.
+    for (const [slug, g] of promoteGroups) {
+      const known = KNOWN_TURTLE_CURATORS.find((k) => k.slug === slug)!;
+      const curator = await tx.curator.upsert({
+        where: { address: `tc:${slug}` },
+        update: { name: known.name, website: known.website || undefined },
+        create: { address: `tc:${slug}`, name: known.name, website: known.website || undefined },
+      });
+      promotedCuratorIds.push(curator.id);
+      await tx.vault.updateMany({
+        where: { id: { in: g.vaultIds } },
+        data: { curatorId: curator.id },
+      });
+    }
+
+    // Drop: unattribute vaults of non-curator synthetic rows.
+    const dropVaultIds = drops.flatMap((r) => r.vaults.map((v) => v.id));
+    if (dropVaultIds.length > 0) {
+      await tx.vault.updateMany({ where: { id: { in: dropVaultIds } }, data: { curatorId: null } });
+    }
+
+    // Delete every original synthetic turtle-* row (child rows cascade).
+    await tx.curator.deleteMany({ where: { address: { startsWith: "turtle-" } } });
   });
-  console.log(`[cleanup] Set ${detached.count} vaults to unattributed (curatorId = NULL).`);
 
-  const deleted = await prisma.curator.deleteMany({ where: { id: { in: ids } } });
-  console.log(`[cleanup] Deleted ${deleted.count} synthetic curators (child rows cascade).\n`);
+  // Recompute promoted curators' aggregate stats from their vaults' latest snapshots.
+  for (const id of promotedCuratorIds) {
+    const vaults = await prisma.vault.findMany({
+      where: { curatorId: id },
+      select: { snapshots: { orderBy: { timestamp: "desc" }, take: 1, select: { totalAssetsUsd: true } } },
+    });
+    const totalAssetsManaged = vaults.reduce((s, v) => s + (v.snapshots[0]?.totalAssetsUsd ?? 0), 0);
+    await prisma.curator.update({
+      where: { id },
+      data: { totalAssetsManaged, vaultCount: vaults.length },
+    });
+  }
+
+  console.log(
+    `[cleanup] Done. Promoted ${promoteGroups.size} curators, dropped ${drops.length}, ` +
+      `archived to ${archivePath}.\n`
+  );
 }
 
 main()
