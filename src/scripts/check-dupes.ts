@@ -23,7 +23,5 @@ async function main() {
       console.log(`    ${r.address} ($${(r.totalAssetsManaged || 0).toFixed(0)})`);
     }
   }
-
-  await prisma.$disconnect();
 }
-main();
+main().catch(console.error).finally(() => prisma.$disconnect());

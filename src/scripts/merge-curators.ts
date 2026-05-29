@@ -125,7 +125,7 @@ async function main() {
       });
 
       log(`  Updated primary: vaultCount=${vaults.length}, totalAssetsManaged=$${totalAssets.toLocaleString()}`);
-    });
+    }, { timeout: 300000, maxWait: 10000 });
   }
 
   log("\nMerge complete!");

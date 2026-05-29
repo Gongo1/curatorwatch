@@ -164,7 +164,7 @@ async function main() {
 
     // Delete every original synthetic turtle-* row (child rows cascade).
     await tx.curator.deleteMany({ where: { address: { startsWith: "turtle-" } } });
-  });
+  }, { timeout: 300000, maxWait: 10000 });
 
   // Recompute promoted curators' aggregate stats from their vaults' latest snapshots.
   for (const id of promotedCuratorIds) {

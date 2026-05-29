@@ -297,10 +297,13 @@ if (isMain) {
   updateVaultGrades()
     .then((result) => {
       console.log("Done:", result);
-      process.exit(0);
+      process.exitCode = 0;
     })
     .catch((err) => {
       console.error("Failed:", err);
-      process.exit(1);
+      process.exitCode = 1;
+    })
+    .finally(() => {
+      prisma.$disconnect().catch(() => {});
     });
 }
