@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { formatCurrency, formatPercentage } from "@/lib/utils/format";
+import { formatCurrency } from "@/lib/utils/format";
 import { CuratorIndex } from "@/components/curators/CuratorIndex";
 import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
 
@@ -27,9 +27,22 @@ function compactUsd(n: number): string {
   return `$${Math.round(n / 1e3)}K`;
 }
 
+interface ApyDistribution {
+  count: number;
+  min: number;
+  q1: number;
+  median: number;
+  q3: number;
+  p95: number;
+  max: number;
+  histEdges: number[];
+  histogram: number[];
+}
+
 export default function CuratorsHome() {
   const [curators, setCurators] = useState<CuratorDashboardItem[]>([]);
   const [stats, setStats] = useState<CuratorDashboardStats | null>(null);
+  const [apyDist, setApyDist] = useState<ApyDistribution | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,6 +56,7 @@ export default function CuratorsHome() {
         if (!json.curators?.success) throw new Error("Failed to load curators");
         setCurators(json.curators.data.curators);
         setStats(json.curators.data.stats);
+        setApyDist(json.apyDistribution ?? null);
         setError(null);
       } catch {
         if (!cancelled) setError("Could not load curator data.");
@@ -165,7 +179,11 @@ export default function CuratorsHome() {
       <div className="flex gap-x-12 gap-y-4 flex-wrap py-4 border-y border-border-subtle mb-8">
         <Stat k="Curators" v={String(stats.totalCurators)} />
         <Stat k="Products managed" v={String(stats.totalVaults)} sub="vaults" />
-        <Stat k="Avg APY" v={formatPercentage(stats.avgApy)} />
+        {apyDist && apyDist.count > 0 ? (
+          <ApyDistViz d={apyDist} />
+        ) : (
+          <Stat k="Net APY" v="—" />
+        )}
         {largest && <Stat k="Largest curator" v={largest.name || "—"} sub={compactUsd(largest.totalAUM)} />}
       </div>
 
@@ -213,6 +231,42 @@ function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
       <div className="font-mono font-semibold text-xl tracking-tight mt-0.5 tabular-nums">
         {v}
         {sub && <span className="text-xs text-text-tertiary font-normal ml-1.5">{sub}</span>}
+      </div>
+    </div>
+  );
+}
+
+// Net-APY spread across curated vaults — a histogram beats an average: it shows the
+// cluster and the high-yield tail. Median bucket highlighted; max labels the tail.
+function ApyDistViz({ d }: { d: ApyDistribution }) {
+  const max = Math.max(1, ...d.histogram);
+  const medBucket = d.histEdges.findIndex(
+    (e, i) =>
+      i < d.histEdges.length - 1 &&
+      d.median >= e &&
+      (d.median < d.histEdges[i + 1] || i === d.histEdges.length - 2)
+  );
+  return (
+    <div className="min-w-[180px]">
+      <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
+        Net APY · {d.count} vaults
+      </div>
+      <div className="flex items-end gap-[3px] h-7 mt-1.5" aria-hidden="true">
+        {d.histogram.map((c, i) => (
+          <div
+            key={i}
+            className="flex-1 rounded-[2px] min-w-[6px]"
+            style={{
+              height: `${Math.max(10, (c / max) * 100)}%`,
+              background: i === medBucket ? "var(--accent-blue)" : "var(--background-hover)",
+            }}
+            title={`${d.histEdges[i]}–${d.histEdges[i + 1] >= 100 ? "∞" : d.histEdges[i + 1]}%: ${c} vault${c === 1 ? "" : "s"}`}
+          />
+        ))}
+      </div>
+      <div className="font-mono text-[0.62rem] text-text-tertiary mt-1 tabular-nums">
+        median <span className="text-text-secondary">{d.median.toFixed(1)}%</span> · 95th pct{" "}
+        <span className="text-text-secondary">{Math.round(d.p95)}%</span>
       </div>
     </div>
   );

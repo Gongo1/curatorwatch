@@ -153,6 +153,42 @@ export async function fetchAllDashboardData(params: {
   const globalAvgApy =
     globalTotalAUM > 0 ? globalWeightedApySum / globalTotalAUM : 0;
 
+  // ── 3c. Net-APY distribution across curated vaults (spread + tail, not a mean) ──
+  const apyValues: number[] = [];
+  for (const vault of vaultsData) {
+    if (!vault.curatorId) continue;
+    const snap = vault.snapshots[0];
+    if (!snap) continue;
+    const apy = sanitizeApy(snap.avgNetApy) * 100; // percent
+    if (apy > 0) apyValues.push(apy);
+  }
+  apyValues.sort((a, b) => a - b);
+  const at = (p: number) =>
+    apyValues.length
+      ? apyValues[Math.min(apyValues.length - 1, Math.floor(p * apyValues.length))]
+      : 0;
+  const histEdges = [0, 2, 4, 6, 8, 10, 15, 100];
+  const histogram = new Array(histEdges.length - 1).fill(0);
+  for (const v of apyValues) {
+    for (let i = 0; i < histEdges.length - 1; i++) {
+      if (v >= histEdges[i] && (v < histEdges[i + 1] || i === histEdges.length - 2)) {
+        histogram[i]++;
+        break;
+      }
+    }
+  }
+  const apyDistribution = {
+    count: apyValues.length,
+    min: apyValues[0] ?? 0,
+    q1: at(0.25),
+    median: at(0.5),
+    q3: at(0.75),
+    p95: at(0.95),
+    max: apyValues[apyValues.length - 1] ?? 0,
+    histEdges,
+    histogram,
+  };
+
   // ── 3a. Fees summary (morpho vaults only, matching ?dataSource=morpho) ──
   let annualizedCuratorFees = 0;
   let annualizedMorphoFees = 0;
@@ -270,5 +306,5 @@ export async function fetchAllDashboardData(params: {
         : [],
   };
 
-  return { curators, changes, fees, yields, aumGrowth, coverage };
+  return { curators, changes, fees, yields, aumGrowth, coverage, apyDistribution };
 }

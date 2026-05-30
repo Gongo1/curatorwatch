@@ -45,6 +45,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       yields: data.yields,
       aumGrowth: data.aumGrowth,
       coverage: data.coverage,
+      apyDistribution: data.apyDistribution,
     };
 
     await cacheSet(cacheKey, responseData, 120);
