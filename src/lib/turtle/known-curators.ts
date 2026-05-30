@@ -73,6 +73,28 @@ export const KNOWN_TURTLE_CURATORS: KnownTurtleCurator[] = [
   },
 ];
 
+/**
+ * Turtle "curators" that are actually protocols / infrastructure, NOT curators.
+ *
+ * Turtle tags many opportunities with a `curator` that is really the underlying
+ * protocol (Aave, Euler), a stablecoin issuer (Usual), restaking/vault infrastructure
+ * (Mellow, Veda), a chain (Zircuit), or the Turtle distributor itself. Surfacing these
+ * as curators pollutes the directory and grossly inflates TVL — Aave's markets alone
+ * sum to ~$24B (the whole lending market, not a curated book). Everything NOT on this
+ * list that carries a real curator name is auto-created as a curator (source-derived
+ * identity). Reviewed + approved 2026-05-30; Midas was reviewed and KEPT as a curator
+ * (it is an RWA manager, not bare protocol infra).
+ */
+const PROTOCOL_DENYLIST = new Set([
+  "aave", "euler", "spark", "sparkdao", "usual", "mellow", "veda", "zircuit", "turtle",
+]);
+
+/** True if the Turtle-provided name is a protocol/infra entity, not a curator. */
+export function isProtocolDenylisted(name: string | null | undefined): boolean {
+  if (!name) return false;
+  return PROTOCOL_DENYLIST.has(name.toLowerCase().replace(/\s+/g, " ").trim());
+}
+
 function normalize(s: string): string {
   return s.toLowerCase().replace(/\s+/g, " ").trim();
 }

@@ -1,18 +1,19 @@
 /**
- * Matches Turtle opportunities to EXISTING DB curators by name.
+ * Resolves a Turtle opportunity to a curator — matching an existing one, or creating
+ * one from the Turtle-provided curator name.
  *
  * Turtle's API gives a curator *name* only (no on-chain address — see TurtleCurator),
- * so matching is name-based and best-effort. We NEVER fabricate a curator: a curator
- * is an entity that manages vaults, and Turtle is a distributor/data source, not a
- * curator. If we can't confidently match a Turtle opportunity to a real curator, we
- * return null and the caller leaves the vault unattributed (hidden from the directory)
- * and reports it — rather than minting a synthetic "turtle-<slug>" curator that would
- * pollute the curator directory and inflate curator TVL.
+ * so this is name-based. Resolution order: (1) match an existing DB curator by name /
+ * alias; (2) an allowlisted Turtle-only curator with a curated name + website; (3) the
+ * source-derived path — auto-create a clean `tc:<slug>` curator from the API curator
+ * name, UNLESS it is a denylisted protocol/infra entity (Aave, Euler, …) or has no
+ * name, in which case we return null and the caller skips the opportunity. We never
+ * create from a name guessed off the vault title (that caused generic-name pollution).
  */
 
 import { prisma } from "@/lib/db";
 import { extractCuratorFromVaultName } from "@/lib/utils/extract-curator-name";
-import { resolveKnownCurator } from "./known-curators";
+import { resolveKnownCurator, isProtocolDenylisted } from "./known-curators";
 import type { TurtleCurator } from "./types";
 
 /**
@@ -56,6 +57,16 @@ function normalizeName(name: string): string {
     .split(/[^a-z0-9]+/)
     .filter((w) => w && !NORMALIZE_STOPWORDS.has(w))
     .join("");
+}
+
+/** URL/address-safe slug from a curator name, for the `tc:<slug>` address. */
+function slugifyCurator(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[\s_]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-{2,}/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 interface CuratorRef {
@@ -141,10 +152,9 @@ export async function matchCurator(
     if (match) return match;
   }
 
-  // 2. Allowlisted Turtle-only curators (verified, human-reviewed). These don't
-  // exist in the Morpho-sourced set, so attribute them to a clean `tc:<slug>`
-  // curator row, upserting it on first sight. Gated entirely by the allowlist —
-  // this is the only path that creates a curator, and only for reviewed entities.
+  // 2. Allowlisted Turtle-only curators (verified, human-reviewed). Attributed to a
+  // clean `tc:<slug>` row with a curated display name + website, upserted on first
+  // sight. Checked before step 3 so these keep their nicer canonical name/website.
   for (const raw of rawCandidates) {
     const known = resolveKnownCurator(raw);
     if (known) {
@@ -156,6 +166,24 @@ export async function matchCurator(
           name: known.name,
           website: known.website || undefined,
         },
+      });
+      return c.id;
+    }
+  }
+
+  // 3. Source-derived identity: auto-create a curator from the Turtle-provided curator
+  // name. Create a clean `tc:<slug>` row for any opportunity whose curator isn't already
+  // in the DB, isn't allowlisted, and isn't a denylisted protocol/infra entity. Only the
+  // explicit API curator field is trusted — never a name guessed off the vault title —
+  // so this doesn't resurrect the generic-name pollution of the old synthetic collector.
+  const turtleName = curatorData?.name?.trim();
+  if (turtleName && turtleName.length >= 2 && !isProtocolDenylisted(turtleName)) {
+    const slug = slugifyCurator(turtleName);
+    if (slug) {
+      const c = await prisma.curator.upsert({
+        where: { address: `tc:${slug}` },
+        update: {},
+        create: { address: `tc:${slug}`, name: turtleName },
       });
       return c.id;
     }

@@ -1,9 +1,12 @@
 /**
  * Turtle data collection pipeline.
- * Fetches managed vaults from Turtle API for cross-protocol coverage.
+ * Fetches managed positions from Turtle API for cross-protocol curator coverage.
  *
- * Filters: type === "vault" AND tvl > $1M AND protocol !== "morpho"
- * (Morpho vaults are already covered by the primary Morpho pipeline.)
+ * Filters: tvl >= $100K AND protocol !== "morpho" AND not a testnet chain (all
+ * opportunity types — vault / lending / staking; curators run more than vaults).
+ * Morpho vaults are already covered by the primary Morpho pipeline, so excluding them
+ * prevents double-counting. Opportunities that don't resolve to a curator (denylisted
+ * protocols/infra, or no curator name) are skipped, not stored.
  */
 
 import { prisma } from "../lib/db";
@@ -13,7 +16,12 @@ import { matchCurator } from "../lib/turtle/curator-matcher";
 import { getChainId, getChainName } from "../lib/turtle/chain-mapper";
 import type { TurtleOpportunity } from "../lib/turtle/types";
 
-const MIN_TVL_USD = 1_000_000; // $1M
+const MIN_TVL_USD = 100_000; // $100K dust floor
+
+/** Testnet chains — balances here are not real TVL and must never be counted. */
+const TESTNET_CHAINS = new Set([
+  "sepolia", "pharos", "goerli", "holesky", "fuji", "mumbai",
+]);
 
 export interface TurtleCollectionResult {
   success: boolean;
@@ -46,15 +54,22 @@ function filterOpportunities(
   opportunities: TurtleOpportunity[]
 ): TurtleOpportunity[] {
   return opportunities.filter((opp) => {
-    // Only managed vaults
-    if (opp.type !== "vault") return false;
+    // All managed types (vault / lending / staking) — curators run more than vaults.
 
-    // TVL threshold
+    // TVL threshold (dust floor)
     if ((opp.tvl ?? 0) < MIN_TVL_USD) return false;
 
-    // Exclude Morpho (already covered by primary pipeline)
+    // Exclude Morpho (already covered by the primary pipeline → no double-counting)
     const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
     if (protocol === "morpho") return false;
+
+    // Exclude testnets — testnet balances are not real TVL
+    const chainSlug = (
+      opp.depositTokens?.[0]?.chain?.slug ??
+      opp.chain?.slug ??
+      "ethereum"
+    ).toLowerCase();
+    if (TESTNET_CHAINS.has(chainSlug)) return false;
 
     return true;
   });
@@ -65,7 +80,7 @@ function filterOpportunities(
  */
 async function upsertTurtleVault(
   opp: TurtleOpportunity
-): Promise<{ upserted: boolean; matched: boolean; curatorName: string; error?: string }> {
+): Promise<{ upserted: boolean; matched: boolean; skipped?: boolean; curatorName: string; error?: string }> {
   try {
     const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
 
@@ -83,40 +98,24 @@ async function upsertTurtleVault(
     const assetSymbol = depositToken?.symbol ?? "UNKNOWN";
     const assetDecimals = depositToken?.decimals ?? 18;
 
-    // Best-effort match to an existing curator (name-based; Turtle gives no address).
-    // null = unattributed: we still ingest the vault but leave it hidden from the
-    // curator directory and report it, rather than minting a synthetic curator.
+    // Resolve to a curator (name-based; Turtle gives no address). Returns null for
+    // denylisted protocols/infra or opportunities with no curator name.
     const curatorName = opp.curator?.name ?? opp.name;
     const curatorId = await matchCurator(opp.name, opp.curator);
 
-    // Check if existing by turtleId
-    const existingByTurtle = await prisma.vault.findUnique({
-      where: { turtleId: opp.id },
-    });
+    // Only ingest opportunities that resolve to a curator — skip the rest (don't store
+    // hidden rows), keeping the vault table clean under the broadened filter.
+    if (curatorId === null) {
+      return { upserted: false, matched: false, skipped: true, curatorName };
+    }
 
-    // Check for potential duplicate by curator + asset + chain + protocol.
-    // Only when attributed — a null curatorId would wrongly collapse distinct
-    // unattributed vaults together.
-    const existingByCombo = !existingByTurtle && curatorId
-      ? await prisma.vault.findFirst({
-          where: {
-            curatorId,
-            assetSymbol,
-            chainId,
-            protocol,
-          },
-        })
-      : null;
-
-    const existing = existingByTurtle ?? existingByCombo;
     const syntheticAddress = `turtle-${opp.id}`;
 
     // Turtle API returns estimatedApr as percentage (e.g. 8.33 = 8.33%).
     // Store directly as percentage — no APY conversion.
     const estTotalAPR = opp.estimatedApr ?? null;
 
-    // Build APR breakdown from incentives
-    // Turtle API incentives have: name, description, rewardType, apr
+    // Build APR breakdown from incentives (name, description, rewardType, apr).
     const aprBreakdown = opp.incentives?.length > 0
       ? opp.incentives.map((inc) => ({
           source: inc.name ?? inc.token?.symbol ?? "Unknown",
@@ -137,44 +136,19 @@ async function upsertTurtleVault(
       estTotalAPR,
       netAPR: estTotalAPR,
       aprBreakdown: aprBreakdown ?? undefined,
+      active: true, // a vault present in the current filtered set is active
     };
 
-    // Snapshot uses APR stored as decimal for avgApy/avgNetApy
-    // so yield calculations still work (they multiply tvl * netApy)
+    // Snapshot stores APR as a decimal so yield math (tvl * netApy) still works.
     const aprDecimal = estTotalAPR != null ? estTotalAPR / 100 : null;
 
-    if (existing) {
-      // Update existing vault
-      await prisma.vault.update({
-        where: { id: existing.id },
-        data: {
-          ...vaultFields,
-          updatedAt: new Date(),
-        },
-      });
-
-      // Create snapshot — store APR as decimal in apy/netApy fields
-      // for backward-compatible yield calculations
-      await prisma.vaultSnapshot.create({
-        data: {
-          vaultId: existing.id,
-          totalAssets: "0",
-          totalAssetsUsd: opp.tvl,
-          totalSupply: "0",
-          sharePrice: 1,
-          apy: aprDecimal,
-          netApy: aprDecimal,
-          avgApy: aprDecimal,
-          avgNetApy: aprDecimal,
-        },
-      });
-
-      return { upserted: true, matched: curatorId !== null, curatorName };
-    }
-
-    // Create new vault
-    const vault = await prisma.vault.create({
-      data: {
+    // Upsert keyed on the deterministic synthetic address (`turtle-<opp.id>`). One
+    // Turtle opportunity = one vault row — no curator+asset+chain dedup, which wrongly
+    // collapsed distinct vaults of the same curator and desynced turtleId↔address.
+    const vault = await prisma.vault.upsert({
+      where: { address: syntheticAddress },
+      update: { ...vaultFields, updatedAt: new Date() },
+      create: {
         address: syntheticAddress,
         symbol: assetSymbol,
         chainId,
@@ -185,7 +159,6 @@ async function upsertTurtleVault(
       },
     });
 
-    // Create initial snapshot
     await prisma.vaultSnapshot.create({
       data: {
         vaultId: vault.id,
@@ -200,7 +173,7 @@ async function upsertTurtleVault(
       },
     });
 
-    return { upserted: true, matched: curatorId !== null, curatorName };
+    return { upserted: true, matched: true, curatorName };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return {
@@ -269,12 +242,14 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
 
     // 2. Filter to relevant vaults
     const filtered = filterOpportunities(allOpportunities);
-    log(`Filtered to ${filtered.length} vaults (type=vault, TVL>$1M, non-Morpho)`);
+    log(`Filtered to ${filtered.length} opportunities (TVL>=$100K, non-Morpho, non-testnet)`);
 
     // 3. Upsert each vault
     let vaultsUpserted = 0;
     let snapshotsCreated = 0;
     let vaultsAttributed = 0;
+    // "hiddenVaults" now holds opportunities SKIPPED (not stored) because they didn't
+    // resolve to a curator — denylisted protocols/infra, or no curator name.
     const hiddenVaults: { name: string; tvl: number }[] = [];
 
     for (const opp of filtered) {
@@ -282,12 +257,9 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       if (result.upserted) {
         vaultsUpserted++;
         snapshotsCreated++;
-        if (result.matched) {
-          vaultsAttributed++;
-        } else {
-          // Ingested but unattributed: hidden from the curator directory, reported here.
-          hiddenVaults.push({ name: result.curatorName, tvl: opp.tvl ?? 0 });
-        }
+        vaultsAttributed++;
+      } else if (result.skipped) {
+        hiddenVaults.push({ name: result.curatorName, tvl: opp.tvl ?? 0 });
       } else if (result.error) {
         errors.push(`${opp.name}: ${result.error}`);
         logError(`Failed to upsert ${opp.name}: ${result.error}`);
@@ -307,12 +279,12 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     log(`  Vaults upserted: ${vaultsUpserted}`);
     log(`  Snapshots created: ${snapshotsCreated}`);
     log(`  Attributed to a curator: ${vaultsAttributed}`);
-    log(`  Unmatched (hidden, unattributed): ${unmatchedHidden}`);
+    log(`  Skipped (unresolved — denylisted protocols / no curator): ${unmatchedHidden}`);
     if (hiddenVaults.length > 0) {
-      log(`  Hidden vaults (need curator mapping in curator-matcher.ts):`);
-      for (const hv of hiddenVaults) {
-        log(`    - ${hv.name} ($${(hv.tvl / 1_000_000).toFixed(2)}M)`);
-      }
+      const distinct = [...new Set(hiddenVaults.map((h) => h.name))];
+      log(
+        `    ${distinct.slice(0, 30).join(", ")}${distinct.length > 30 ? ` … +${distinct.length - 30} more` : ""}`
+      );
     }
     log(`  Errors: ${errors.length}`);
     log(`  Duration: ${(duration / 1000).toFixed(1)}s`);

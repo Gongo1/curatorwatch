@@ -1,0 +1,28 @@
+{
+  "operation": "turtle-curated-broaden",
+  "date": "2026-05-30",
+  "approved_by": "Austin",
+  "summary": "Broadened the Turtle ingestion from (type=vault, >=$1M, allowlisted curators only) to (all types, >=$100K, non-Morpho, non-testnet) with source-derived curator identity: auto-create a clean tc:<slug> curator from the Turtle-provided curator name, EXCEPT a denylist of protocols/infra. Verified ZERO Morpho<->Turtle double-counting (extractProtocol excludes morpho-described opps; 82 name-overlap opps all excluded).",
+  "policy": {
+    "filter": "tvl>=100000 AND protocol!=morpho AND chain not in {sepolia,pharos,goerli,holesky,fuji,mumbai}; all opportunity types (vault/lending/staking)",
+    "curator_resolution": "1) match existing DB curator by name/alias; 2) allowlisted tc: curator; 3) auto-create tc:<slug> from Turtle curator name unless denylisted; else skip (not stored)",
+    "protocol_denylist": ["aave", "euler", "spark", "sparkdao", "usual", "mellow", "veda", "zircuit", "turtle"],
+    "midas_decision": "Midas KEPT as a curator (RWA manager), not denylisted — per Austin",
+    "dedup": "one Turtle opportunity = one vault, keyed on address `turtle-<opp.id>`. Removed the curator+asset+chain+protocol combo-dedup (it wrongly collapsed distinct vaults and desynced turtleId<->address)."
+  },
+  "baseline_before": {
+    "total_curators": 58,
+    "tc_curators": 6,
+    "tc_addresses": ["tc:9summits", "tc:axil", "tc:farm-capital", "tc:k3-capital", "tc:perseus-digital", "tc:telosc"],
+    "turtle_vaults_active": 75,
+    "turtle_unattributed": 50,
+    "curated_tvl_m": 1742.6
+  },
+  "code_changes": [
+    "known-curators.ts: add PROTOCOL_DENYLIST + isProtocolDenylisted()",
+    "curator-matcher.ts: step-3 auto-create tc:<slug> from opp.curator.name (non-denylisted); slugifyCurator()",
+    "collect-turtle-data.ts: filter broaden (all types, $100K, testnet exclusion); skip-if-unresolved; upsert keyed on address (removed combo-dedup); vaultFields.active=true",
+    "run-turtle.ts: new CLI runner (npm run collect:turtle)"
+  ],
+  "reversal": "To revert: git revert the broaden commit; then DELETE FROM Curator WHERE address LIKE 'tc:%' AND address NOT IN (the 6 baseline tc: addresses) after nulling/reassigning their vaults; re-run the old collector. Turtle vaults are fully reconstructable from the public API, so the safest reset is delete-all-turtle-vaults + re-run."
+}
