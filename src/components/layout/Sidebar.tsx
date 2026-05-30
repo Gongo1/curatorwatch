@@ -44,12 +44,12 @@ export function Sidebar() {
       title: "Intelligence",
       items: [
         { href: "/", icon: <Users className="w-5 h-5" />, label: "Curators" },
-        { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults" },
       ],
     },
     {
       title: "Lenses",
       items: [
+        { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults" },
         { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields" },
         { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees" },
         { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations" },

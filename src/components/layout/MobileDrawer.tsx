@@ -49,7 +49,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
 
   const navItems = [
     { href: "/", icon: <Users className="w-5 h-5" />, label: "Curators", section: "Intelligence" },
-    { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults", section: "Intelligence" },
+    { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults", section: "Lenses" },
     { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields", section: "Lenses" },
     { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Lenses" },
     { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Lenses" },

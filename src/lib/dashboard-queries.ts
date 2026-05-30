@@ -154,25 +154,27 @@ export async function fetchAllDashboardData(params: {
     globalTotalAUM > 0 ? globalWeightedApySum / globalTotalAUM : 0;
 
   // ── 3c. Net-APY distribution across curated vaults (spread + tail, not a mean) ──
-  const apyValues: number[] = [];
+  const apyPairs: { apy: number; tvl: number }[] = [];
   for (const vault of vaultsData) {
     if (!vault.curatorId) continue;
     const snap = vault.snapshots[0];
     if (!snap) continue;
     const apy = sanitizeApy(snap.avgNetApy) * 100; // percent
-    if (apy > 0) apyValues.push(apy);
+    if (apy > 0) apyPairs.push({ apy, tvl: snap.totalAssetsUsd || 0 });
   }
-  apyValues.sort((a, b) => a - b);
+  const apyValues = apyPairs.map((p) => p.apy).sort((a, b) => a - b);
   const at = (p: number) =>
     apyValues.length
       ? apyValues[Math.min(apyValues.length - 1, Math.floor(p * apyValues.length))]
       : 0;
   const histEdges = [0, 2, 4, 6, 8, 10, 15, 100];
   const histogram = new Array(histEdges.length - 1).fill(0);
-  for (const v of apyValues) {
+  const histogramTvl = new Array(histEdges.length - 1).fill(0); // $ concentration per band
+  for (const { apy, tvl } of apyPairs) {
     for (let i = 0; i < histEdges.length - 1; i++) {
-      if (v >= histEdges[i] && (v < histEdges[i + 1] || i === histEdges.length - 2)) {
+      if (apy >= histEdges[i] && (apy < histEdges[i + 1] || i === histEdges.length - 2)) {
         histogram[i]++;
+        histogramTvl[i] += tvl;
         break;
       }
     }
@@ -187,6 +189,7 @@ export async function fetchAllDashboardData(params: {
     max: apyValues[apyValues.length - 1] ?? 0,
     histEdges,
     histogram,
+    histogramTvl,
   };
 
   // ── 3a. Fees summary (morpho vaults only, matching ?dataSource=morpho) ──

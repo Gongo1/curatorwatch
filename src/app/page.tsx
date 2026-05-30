@@ -37,6 +37,7 @@ interface ApyDistribution {
   max: number;
   histEdges: number[];
   histogram: number[];
+  histogramTvl: number[];
 }
 
 export default function CuratorsHome() {
@@ -239,15 +240,12 @@ function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
 // Net-APY spread across curated vaults — a histogram beats an average: it shows the
 // cluster and the high-yield tail. Median bucket highlighted; max labels the tail.
 function ApyDistViz({ d }: { d: ApyDistribution }) {
-  const max = Math.max(1, ...d.histogram);
-  const medBucket = d.histEdges.findIndex(
-    (e, i) =>
-      i < d.histEdges.length - 1 &&
-      d.median >= e &&
-      (d.median < d.histEdges[i + 1] || i === d.histEdges.length - 2)
-  );
+  const maxCount = Math.max(1, ...d.histogram); // bar height = vault count (shape)
+  const maxTvl = Math.max(1, ...d.histogramTvl); // bar brightness = $ concentration
+  const fmtM = (n: number) =>
+    n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : `$${Math.round(n / 1e6)}M`;
   return (
-    <div className="min-w-[180px]">
+    <div className="min-w-[190px]">
       <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
         Net APY · {d.count} vaults
       </div>
@@ -255,18 +253,18 @@ function ApyDistViz({ d }: { d: ApyDistribution }) {
         {d.histogram.map((c, i) => (
           <div
             key={i}
-            className="flex-1 rounded-[2px] min-w-[6px]"
+            className="flex-1 rounded-[2px] min-w-[6px] bg-accent-blue"
             style={{
-              height: `${Math.max(10, (c / max) * 100)}%`,
-              background: i === medBucket ? "var(--accent-blue)" : "var(--background-hover)",
+              height: `${Math.max(10, (c / maxCount) * 100)}%`,
+              opacity: 0.22 + 0.78 * (d.histogramTvl[i] / maxTvl),
             }}
-            title={`${d.histEdges[i]}–${d.histEdges[i + 1] >= 100 ? "∞" : d.histEdges[i + 1]}%: ${c} vault${c === 1 ? "" : "s"}`}
+            title={`${d.histEdges[i]}–${d.histEdges[i + 1] >= 100 ? "∞" : d.histEdges[i + 1]}%: ${c} vault${c === 1 ? "" : "s"} · ${fmtM(d.histogramTvl[i])}`}
           />
         ))}
       </div>
       <div className="font-mono text-[0.62rem] text-text-tertiary mt-1 tabular-nums">
-        median <span className="text-text-secondary">{d.median.toFixed(1)}%</span> · 95th pct{" "}
-        <span className="text-text-secondary">{Math.round(d.p95)}%</span>
+        median <span className="text-text-secondary">{d.median.toFixed(1)}%</span> · 95th{" "}
+        <span className="text-text-secondary">{Math.round(d.p95)}%</span> · shade = TVL
       </div>
     </div>
   );
