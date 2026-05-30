@@ -7,7 +7,6 @@ import { usePathname } from "next/navigation";
 import { SidebarNavItem } from "./SidebarNavItem";
 import {
   Users,
-  Box,
   TrendingUp,
   Coins,
   Zap,
@@ -49,7 +48,6 @@ export function Sidebar() {
     {
       title: "Lenses",
       items: [
-        { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults" },
         { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields" },
         { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees" },
         { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations" },
