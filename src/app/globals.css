@@ -1,34 +1,37 @@
 @import "tailwindcss";
 
-/* Dark Theme Foundation - Institutional Grade */
+/* Slate Terminal — institutional dark OKLCH foundation (anchor hue 250).
+   Token NAMES are unchanged; only values move from literal hex/Tailwind-defaults
+   to a tinted OKLCH ramp so every existing utility renders the new system. */
 :root {
-  /* Background hierarchy */
-  --background: #0a0a0a;
-  --background-subtle: #141414;
-  --background-elevated: #1a1a1a;
-  --background-hover: #1f1f1f;
+  /* Background hierarchy — elevation gets LIGHTER, never pure #000 */
+  --background: oklch(15% 0.012 250);
+  --background-subtle: oklch(18.5% 0.013 250);
+  --background-elevated: oklch(21% 0.014 250);
+  --background-hover: oklch(24% 0.014 250);
 
-  /* Border colors */
-  --border: #262626;
-  --border-subtle: #1a1a1a;
-  --border-strong: #333333;
+  /* Border colors — tinted hairlines */
+  --border: oklch(30% 0.012 250);
+  --border-subtle: oklch(24% 0.010 250);
+  --border-strong: oklch(37% 0.012 250);
 
-  /* Text hierarchy */
-  --foreground: #ffffff;
-  --text-primary: #ffffff;
-  --text-secondary: #a3a3a3;
-  --text-tertiary: #737373;
-  --text-muted: #525252;
+  /* Text hierarchy — off-white, tinted, never pure #fff */
+  --foreground: oklch(95% 0.006 250);
+  --text-primary: oklch(95% 0.006 250);
+  --text-secondary: oklch(74% 0.010 250);
+  --text-tertiary: oklch(64% 0.010 250);
+  --text-muted: oklch(54% 0.010 250);
 
-  /* Accent colors */
-  --accent-blue: #3b82f6;
-  --accent-blue-hover: #2563eb;
-  --accent-green: #10b981;
-  --accent-green-muted: #065f46;
-  --accent-red: #ef4444;
-  --accent-red-muted: #7f1d1d;
-  --accent-yellow: #f59e0b;
-  --accent-yellow-muted: #78350f;
+  /* Accent — ONE institutional signal (logo-derived cyan-blue), not literal #3b82f6 */
+  --accent-blue: oklch(70% 0.13 235);
+  --accent-blue-hover: oklch(64% 0.14 235);
+  /* Semantic — reserved for data (up / warn / down), paired with glyphs in UI */
+  --accent-green: oklch(72% 0.15 150);
+  --accent-green-muted: oklch(45% 0.10 150);
+  --accent-red: oklch(64% 0.20 25);
+  --accent-red-muted: oklch(42% 0.13 25);
+  --accent-yellow: oklch(80% 0.13 80);
+  --accent-yellow-muted: oklch(46% 0.09 80);
 }
 
 @theme inline {
@@ -82,13 +85,13 @@ body {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #404040;
+  background: oklch(40% 0.012 250);
 }
 
 /* Selection styling */
 ::selection {
-  background: rgba(59, 130, 246, 0.3);
-  color: #ffffff;
+  background: oklch(70% 0.13 235 / 0.3);
+  color: var(--text-primary);
 }
 
 /* Focus ring styling */
@@ -106,7 +109,7 @@ body {
   --ag-border-color: var(--border);
   --ag-secondary-border-color: var(--border-subtle);
   --ag-row-hover-color: var(--background-hover);
-  --ag-selected-row-background-color: rgba(59, 130, 246, 0.08);
+  --ag-selected-row-background-color: oklch(70% 0.13 235 / 0.08);
   --ag-odd-row-background-color: transparent;
   --ag-font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   --ag-font-size: 13px;
