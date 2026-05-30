@@ -4,7 +4,6 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import type { CuratorDashboardItem } from "@/lib/types/api";
-import { curatorSlug } from "@/lib/curator-aliases";
 import { formatCurrency } from "@/lib/utils/format";
 
 function initials(name: string): string {
@@ -158,7 +157,7 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
           return (
             <Link
               key={c.curatorId}
-              href={`/curator/${curatorSlug(c.name, c.curatorAddress)}`}
+              href={`/curator/${c.curatorAddress}`}
               className="grid grid-cols-[34px_1fr_150px_96px_132px] gap-4 items-center px-3 py-3 border-t border-border-subtle hover:bg-background-subtle active:translate-y-px transition-colors group"
             >
               <span className="font-mono text-sm text-text-tertiary text-right tabular-nums">
