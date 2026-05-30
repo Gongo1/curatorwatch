@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
+  Users,
   Box,
   TrendingUp,
   Coins,
@@ -48,15 +48,15 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
   };
 
   const navItems = [
-    { href: "/", icon: <LayoutDashboard className="w-5 h-5" />, label: "Dashboard", section: "Analytics" },
-    { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults", section: "Analytics" },
-    { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields", section: "Economics" },
-    { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Economics" },
-    { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Economics" },
-    { href: "/calculator", icon: <Calculator className="w-5 h-5" />, label: "LP Calculator", section: "Economics" },
-    { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", section: "Monitoring" },
-    { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog", section: "Info" },
-    { href: "/docs", icon: <FileText className="w-5 h-5" />, label: "Docs", section: "Info" },
+    { href: "/", icon: <Users className="w-5 h-5" />, label: "Curators", section: "Intelligence" },
+    { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults", section: "Intelligence" },
+    { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields", section: "Lenses" },
+    { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Lenses" },
+    { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Lenses" },
+    { href: "/calculator", icon: <Calculator className="w-5 h-5" />, label: "LP Calculator", section: "Lenses" },
+    { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", section: "Monitor" },
+    { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog", section: "Monitor" },
+    { href: "/docs", icon: <FileText className="w-5 h-5" />, label: "Docs", section: "Monitor" },
   ];
 
   // Group by section
@@ -117,9 +117,10 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
                     key={item.href}
                     href={item.href}
                     onClick={onClose}
+                    aria-current={isActive(item.href) ? "page" : undefined}
                     className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                       isActive(item.href)
-                        ? "bg-accent-blue/10 text-accent-blue"
+                        ? "bg-background-elevated text-text-primary"
                         : "text-text-secondary hover:text-text-primary hover:bg-background-hover"
                     }`}
                   >

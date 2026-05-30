@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { SidebarNavItem } from "./SidebarNavItem";
 import {
-  LayoutDashboard,
+  Users,
   Box,
   TrendingUp,
   Coins,
@@ -17,11 +17,7 @@ import {
   FileText,
 } from "lucide-react";
 
-interface SidebarProps {
-  collapsed: boolean;
-}
-
-export function Sidebar({ collapsed }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname();
   const [alertCount, setAlertCount] = useState(0);
 
@@ -42,71 +38,30 @@ export function Sidebar({ collapsed }: SidebarProps) {
     return () => clearInterval(interval);
   }, []);
 
+  // Curator-first IA: Curators leads; vaults/economics are lenses applied to them.
   const sections = [
     {
-      title: "Analytics",
+      title: "Intelligence",
       items: [
-        {
-          href: "/",
-          icon: <LayoutDashboard className="w-5 h-5" />,
-          label: "Dashboard",
-        },
-        {
-          href: "/vaults",
-          icon: <Box className="w-5 h-5" />,
-          label: "Vaults",
-        },
+        { href: "/", icon: <Users className="w-5 h-5" />, label: "Curators" },
+        { href: "/vaults", icon: <Box className="w-5 h-5" />, label: "Vaults" },
       ],
     },
     {
-      title: "Economics",
+      title: "Lenses",
       items: [
-        {
-          href: "/yields",
-          icon: <TrendingUp className="w-5 h-5" />,
-          label: "Yields",
-        },
-        {
-          href: "/fees",
-          icon: <Coins className="w-5 h-5" />,
-          label: "Fees",
-        },
-        {
-          href: "/liquidations",
-          icon: <Zap className="w-5 h-5" />,
-          label: "Liquidations",
-        },
-        {
-          href: "/calculator",
-          icon: <Calculator className="w-5 h-5" />,
-          label: "LP Calculator",
-        },
+        { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields" },
+        { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees" },
+        { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations" },
+        { href: "/calculator", icon: <Calculator className="w-5 h-5" />, label: "LP Calculator" },
       ],
     },
     {
-      title: "Monitoring",
+      title: "Monitor",
       items: [
-        {
-          href: "/alerts",
-          icon: <Bell className="w-5 h-5" />,
-          label: "Alerts",
-          badge: alertCount,
-        },
-      ],
-    },
-    {
-      title: "Info",
-      items: [
-        {
-          href: "/changelog",
-          icon: <BookOpen className="w-5 h-5" />,
-          label: "Changelog",
-        },
-        {
-          href: "/docs",
-          icon: <FileText className="w-5 h-5" />,
-          label: "Docs",
-        },
+        { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", badge: alertCount },
+        { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog" },
+        { href: "/docs", icon: <FileText className="w-5 h-5" />, label: "Docs" },
       ],
     },
   ];
@@ -117,40 +72,28 @@ export function Sidebar({ collapsed }: SidebarProps) {
   };
 
   return (
-    <aside
-      className={`hidden lg:flex flex-col h-screen sticky top-0 border-r border-border bg-background-subtle transition-all duration-200 ease-in-out ${
-        collapsed ? "w-14" : "w-[220px]"
-      }`}
-    >
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-3 py-4 border-b border-border">
+    <aside className="hidden lg:flex flex-col h-screen sticky top-0 w-[224px] border-r border-border bg-background">
+      {/* Wordmark */}
+      <div className="flex items-center gap-2.5 px-4 py-4 border-b border-border">
         <Link href="/" className="flex items-center gap-2.5 min-w-0">
           <Image
             src="/logo.png"
             alt="CuratorWatch"
-            width={28}
-            height={28}
+            width={26}
+            height={26}
             className="rounded-lg flex-shrink-0"
           />
-          <span
-            className={`text-sm font-bold text-text-primary whitespace-nowrap transition-opacity duration-200 ${
-              collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-            }`}
-          >
+          <span className="text-sm font-semibold text-text-primary font-mono tracking-tight whitespace-nowrap">
             CuratorWatch
           </span>
         </Link>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
+      <nav className="flex-1 overflow-y-auto py-4 px-2.5 space-y-5">
         {sections.map((section) => (
           <div key={section.title}>
-            <p
-              className={`px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-text-muted transition-opacity duration-200 ${
-                collapsed ? "opacity-0" : "opacity-100"
-              }`}
-            >
+            <p className="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-text-tertiary font-mono">
               {section.title}
             </p>
             <div className="space-y-0.5">
@@ -161,7 +104,6 @@ export function Sidebar({ collapsed }: SidebarProps) {
                   icon={item.icon}
                   label={item.label}
                   active={isActive(item.href)}
-                  collapsed={collapsed}
                   badge={"badge" in item ? item.badge : undefined}
                 />
               ))}
@@ -170,17 +112,11 @@ export function Sidebar({ collapsed }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Live Status */}
-      <div className="px-3 py-3 border-t border-border">
-        <div className="flex items-center gap-2">
+      {/* Data freshness — the single live indicator */}
+      <div className="px-4 py-3.5 border-t border-border">
+        <div className="flex items-center gap-2 text-xs text-text-tertiary font-mono">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-green flex-shrink-0" />
-          <span
-            className={`text-xs text-text-tertiary transition-opacity duration-200 ${
-              collapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
-            }`}
-          >
-            Live
-          </span>
+          <span>Live · updated hourly</span>
         </div>
       </div>
     </aside>

@@ -11,20 +11,14 @@ interface AppShellProps {
 }
 
 export function AppShell({ children }: AppShellProps) {
-  const [sidebarHovered, setSidebarHovered] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Desktop Sidebar */}
-      <div
-        onMouseEnter={() => setSidebarHovered(true)}
-        onMouseLeave={() => setSidebarHovered(false)}
-      >
-        <Sidebar collapsed={!sidebarHovered} />
-      </div>
+      {/* Desktop Sidebar — always-expanded, labeled (institutional density) */}
+      <Sidebar />
 
       {/* Mobile Drawer */}
       <MobileDrawer open={drawerOpen} onClose={closeDrawer} />
