@@ -116,7 +116,7 @@ export function Sidebar() {
       <div className="px-4 py-3.5 border-t border-border">
         <div className="flex items-center gap-2 text-xs text-text-tertiary font-mono">
           <span className="w-1.5 h-1.5 rounded-full bg-accent-green flex-shrink-0" />
-          <span>Live · updated hourly</span>
+          <span>Live · updated every 6h</span>
         </div>
       </div>
     </aside>

@@ -369,8 +369,10 @@ export async function GET() {
       })
       .sort((a, b) => (a.date as string).localeCompare(b.date as string));
 
-    // If we don't have enough historical data (less than 7 days), blend with mock data
-    if (chartData.length < 7) {
+    // Honest copy: never fabricate missing dates. The mock-blend below is disabled by
+    // default (opt-in only via env) — we return real snapshot history even when short.
+    const ALLOW_MOCK_BLEND = process.env.ALLOW_MOCK_BLEND === "true";
+    if (ALLOW_MOCK_BLEND && chartData.length < 7) {
       // Get current snapshot data with weighted APY - deduplicated by vault
       const latestSnapshots = await prisma.vaultSnapshot.findMany({
         where: {

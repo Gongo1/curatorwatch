@@ -38,12 +38,12 @@ export async function fetchAllDashboardData(params: {
     curatorsWeightedApySum += c.avgNetApy * c.totalAUM;
   }
 
-  const start = (params.page - 1) * params.pageSize;
+  // Return the full curated set — the Curators home paginates client-side and
+  // computes reconciled aggregates (asset mix, grade distribution) from this array.
   const curators = {
     success: true,
     data: {
       curators: allResult.curators
-        .slice(start, start + params.pageSize)
         .map((c) => ({
           curatorId: c.curatorId,
           curatorAddress: c.curatorAddress,

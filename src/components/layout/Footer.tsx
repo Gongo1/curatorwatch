@@ -20,7 +20,7 @@ export function Footer() {
             + Turtle public API
           </span>
           <span className="text-text-muted">·</span>
-          <span>Updated hourly</span>
+          <span>Updated every 6h</span>
           <span className="text-text-muted">·</span>
           <Link
             href="/changelog"

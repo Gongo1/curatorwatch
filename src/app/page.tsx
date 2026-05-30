@@ -1,726 +1,240 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { formatCurrency, formatPercentage } from "@/lib/utils/format";
+import { CuratorIndex } from "@/components/curators/CuratorIndex";
+import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
 
-const CuratorGrid = dynamic(() => import("@/components/grid/CuratorGrid").then(mod => mod.CuratorGrid), {
-  ssr: false,
-  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
-});
-const TabbedMetricChart = dynamic(() => import("@/components/TabbedMetricChart").then(mod => mod.TabbedMetricChart), {
-  ssr: false,
-  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
-});
-const StablecoinBreakdown = dynamic(() => import("@/components/StablecoinBreakdown").then(mod => mod.StablecoinBreakdown), {
-  ssr: false,
-  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
-});
-const TopCurators = dynamic(() => import("@/components/TopCurators").then(mod => mod.TopCurators), {
-  ssr: false,
-  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
-});
-const VaultsOfTheWeek = dynamic(() => import("@/components/VaultsOfTheWeek").then(mod => mod.VaultsOfTheWeek), {
-  ssr: false,
-  loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
-});
-import { formatTimeAgo, formatCurrency, formatPercentage } from "@/lib/utils/format";
-import { InfoTooltip } from "@/components/Tooltip";
-import type { CuratorDashboardResponse, CuratorDashboardItem, CuratorDashboardStats, PaginationInfo } from "@/lib/types/api";
-import { curatorSlug } from "@/lib/curator-aliases";
+const CuratorTvlChart = dynamic(
+  () => import("@/components/curators/CuratorTvlChart").then((m) => m.CuratorTvlChart),
+  { ssr: false, loading: () => <div className="h-[310px] bg-background-subtle border border-border rounded-xl animate-pulse" /> }
+);
 
+// Categorical palette — distinct hues for the asset-mix bar (matches the chart).
+const MIX_COLORS = [
+  "oklch(70% 0.14 235)",
+  "oklch(74% 0.13 162)",
+  "oklch(80% 0.13 78)",
+  "oklch(68% 0.17 18)",
+  "oklch(70% 0.13 305)",
+  "oklch(77% 0.11 205)",
+];
 
-interface ChangeSummary {
-  critical: number;
-  warning: number;
-  info: number;
-  total: number;
+function compactUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  return `$${Math.round(n / 1e3)}K`;
 }
 
-interface FeesStats {
-  annualized: {
-    curatorFees: number;
-    morphoFees: number;
-    totalFees: number;
-  };
-}
-
-interface YieldStats {
-  yield30d: number;
-  dailyAvg: number;
-}
-
-interface ProtocolCoverageItem {
-  dataSource: string;
-  vaultCount: number;
-  totalAUM: number;
-  curatorCount: number;
-}
-
-const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
-const PAGE_SIZE = 20;
-
-export default function Home() {
-  const router = useRouter();
+export default function CuratorsHome() {
   const [curators, setCurators] = useState<CuratorDashboardItem[]>([]);
   const [stats, setStats] = useState<CuratorDashboardStats | null>(null);
-  const [pagination, setPagination] = useState<PaginationInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [timeAgo, setTimeAgo] = useState<string>("");
-  const [changeSummary, setChangeSummary] = useState<ChangeSummary | null>(null);
-  const [feesStats, setFeesStats] = useState<FeesStats | null>(null);
-  const [yieldStats, setYieldStats] = useState<YieldStats | null>(null);
-  const [aumChange30d, setAumChange30d] = useState<number | null>(null);
-  const [protocolCoverage, setProtocolCoverage] = useState<ProtocolCoverageItem[]>([]);
 
-  // Search and pagination state
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Autocomplete dropdown state
-  const [showDropdown, setShowDropdown] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const fetchData = useCallback(async (page = 1, search = "") => {
-    try {
-      if (isInitialLoad) {
-        setLoading(true);
-      }
-
-      const params = new URLSearchParams({
-        page: page.toString(),
-        pageSize: PAGE_SIZE.toString(),
-        sortBy: "aum",
-        sortOrder: "desc",
-      });
-
-      if (search.trim()) {
-        params.set("search", search.trim());
-      }
-
-      // Single combined fetch to avoid 6 concurrent serverless DB connections
-      const dashboardResponse = await fetch(`/api/dashboard?${params.toString()}`);
-      const dashboardData = await dashboardResponse.json();
-
-      const curatorsData: CuratorDashboardResponse = dashboardData.curators;
-      const changesData = dashboardData.changes;
-      const feesData = dashboardData.fees;
-      const yieldData = dashboardData.yields;
-      const aumGrowthData = dashboardData.aumGrowth;
-      const coverageData = dashboardData.coverage;
-
-      if (!curatorsData.success) {
-        throw new Error(curatorsData.error || "Failed to fetch curators");
-      }
-
-      setCurators(curatorsData.data.curators);
-      setStats(curatorsData.data.stats);
-      setPagination(curatorsData.data.pagination || null);
-      setLastUpdated(new Date());
-      setError(null);
-      setIsInitialLoad(false);
-
-      if (changesData.success) {
-        setChangeSummary(changesData.data.summary);
-      }
-
-      if (feesData.success) {
-        setFeesStats(feesData.data.summary);
-      }
-
-      if (yieldData.success && yieldData.data.length > 0) {
-        const latestYield = yieldData.data[yieldData.data.length - 1].yield || 0;
-        const totalDays = yieldData.data.length;
-        const dailyAvg = totalDays > 0 ? latestYield / totalDays : 0;
-        setYieldStats({
-          yield30d: latestYield,
-          dailyAvg,
-        });
-      }
-
-      // Compute 30-day AUM change from growth data
-      if (aumGrowthData.success && aumGrowthData.data.length >= 2) {
-        const points = aumGrowthData.data;
-        const latest = points[points.length - 1].aum;
-        const oldest = points[0].aum;
-        if (oldest > 0) {
-          setAumChange30d(((latest - oldest) / oldest) * 100);
-        }
-      }
-
-      // Protocol coverage
-      if (coverageData.success && coverageData.data) {
-        setProtocolCoverage(coverageData.data);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setLoading(false);
-    }
-  }, [isInitialLoad]);
-
-  // Initial fetch
   useEffect(() => {
-    fetchData(1, searchQuery);
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/dashboard?page=1&pageSize=100&sortBy=aum&sortOrder=desc");
+        const json = await res.json();
+        if (cancelled) return;
+        if (!json.curators?.success) throw new Error("Failed to load curators");
+        setCurators(json.curators.data.curators);
+        setStats(json.curators.data.stats);
+        setError(null);
+      } catch {
+        if (!cancelled) setError("Could not load curator data.");
+      } finally {
+        if (!cancelled) setLoaded(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Auto-refresh every 5 minutes (only for first page without search)
-  useEffect(() => {
-    if (currentPage === 1 && !searchQuery) {
-      const interval = setInterval(() => fetchData(1, ""), REFRESH_INTERVAL);
-      return () => clearInterval(interval);
+  // Asset mix + ecosystem grade distribution, summed from the curator list so they
+  // reconcile exactly with the tracked-TVL hero (no separate, differently-scoped query).
+  const mix = useMemo(() => {
+    const map: Record<string, number> = {};
+    let total = 0;
+    for (const c of curators)
+      for (const a of c.assetDistribution) {
+        map[a.symbol] = (map[a.symbol] || 0) + a.amountUsd;
+        total += a.amountUsd;
+      }
+    const sorted = Object.entries(map).sort((x, y) => y[1] - x[1]);
+    const top = sorted.slice(0, 6);
+    const otherAmt = sorted.slice(6).reduce((s, [, v]) => s + v, 0);
+    const stableAmt = sorted
+      .filter(([s]) => !/eth|btc/i.test(s))
+      .reduce((s, [, v]) => s + v, 0);
+    const segments = [
+      ...top.map(([symbol, amount]) => ({ symbol, pct: total ? (amount / total) * 100 : 0 })),
+      ...(otherAmt > 0 ? [{ symbol: "Other", pct: total ? (otherAmt / total) * 100 : 0 }] : []),
+    ];
+    return { segments, stablePct: total ? (stableAmt / total) * 100 : 0 };
+  }, [curators]);
+
+  const grade = useMemo(() => {
+    const g = { high: 0, medium: 0, low: 0 };
+    for (const c of curators) {
+      g.high += c.gradeDistribution.high;
+      g.medium += c.gradeDistribution.medium;
+      g.low += c.gradeDistribution.low;
     }
-  }, [currentPage, searchQuery, fetchData]);
+    return g;
+  }, [curators]);
 
-  // Update "time ago" display every second
-  useEffect(() => {
-    const updateTimeAgo = () => {
-      if (lastUpdated) {
-        setTimeAgo(formatTimeAgo(lastUpdated));
-      }
-    };
+  const largest = curators.length
+    ? curators.reduce((a, b) => (b.totalAUM > a.totalAUM ? b : a))
+    : null;
+  const gradedTotal = grade.high + grade.medium + grade.low || 1;
 
-    updateTimeAgo();
-    const interval = setInterval(updateTimeAgo, 1000);
-    return () => clearInterval(interval);
-  }, [lastUpdated]);
-
-  // Handle search with debounce
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setCurrentPage(1);
-      fetchData(1, searchQuery).then(() => {
-        setShowDropdown(searchQuery.trim().length > 0);
-      });
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchQuery, fetchData]);
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleMouseDown = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleMouseDown);
-    return () => document.removeEventListener("mousedown", handleMouseDown);
-  }, []);
-
-  // Handle page change
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-    fetchData(newPage, searchQuery);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
+  if (!loaded) {
+    return <div className="h-[60vh]" />;
+  }
+  if (error || !stats) {
+    return (
+      <div className="font-mono text-sm text-text-tertiary py-16 text-center">
+        {error || "No data."}
+      </div>
+    );
+  }
 
   return (
-    <>
-      <PageHeader
-        title="CuratorWatch"
-        description="Real-time vault curator intelligence"
-        actions={
-          changeSummary && changeSummary.total > 0 ? (
-            <Link
-              href="/alerts"
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors hover:opacity-90 ${
-                changeSummary.critical > 0
-                  ? "bg-accent-red/15 text-accent-red"
-                  : changeSummary.warning > 0
-                    ? "bg-accent-yellow/15 text-accent-yellow"
-                    : "bg-accent-blue/10 text-accent-blue"
-              }`}
-            >
-              <span className="relative flex h-2 w-2">
-                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                  changeSummary.critical > 0 ? "bg-accent-red" : changeSummary.warning > 0 ? "bg-accent-yellow" : "bg-accent-blue"
-                }`} />
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${
-                  changeSummary.critical > 0 ? "bg-accent-red" : changeSummary.warning > 0 ? "bg-accent-yellow" : "bg-accent-blue"
-                }`} />
-              </span>
-              {changeSummary.total} alert{changeSummary.total !== 1 ? "s" : ""}
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
-          ) : undefined
-        }
-      />
-
-        {/* Stats Row */}
-        {stats && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 sm:gap-3 mb-5">
-            <StatCard
-              label="Curators"
-              value={stats.totalCurators.toString()}
-              tooltip="Total number of vault curators actively managing vaults across all protocols"
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              }
-            />
-            <StatCard
-              label="Total AUM"
-              value={formatCurrency(stats.totalAUM)}
-              tooltip="Total Assets Under Management across all tracked vaults"
-              highlight
-              change={aumChange30d}
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              }
-            />
-            <StatCard
-              label="Vaults"
-              value={stats.totalVaults.toString()}
-              tooltip="Total number of tracked vaults across all protocols"
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-              }
-            />
-            <StatCard
-              label="Yield Paid (30d)"
-              value={yieldStats ? formatCurrency(yieldStats.yield30d) : "-"}
-              tooltip="Total yield generated for depositors over the past 30 days"
-              highlight
-              valueClass="text-emerald-500"
-              href="/yields"
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              }
-            />
-            <StatCard
-              label="Curator Fees (Ann.)"
-              value={feesStats ? formatCurrency(feesStats.annualized.curatorFees) : "-"}
-              tooltip="Estimated annualized fees earned by curators (management + performance fees)"
-              valueClass="text-accent-blue"
-              href="/fees"
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              }
-            />
-            <StatCard
-              label="Protocol Fees (Ann.)"
-              value={feesStats ? formatCurrency(feesStats.annualized.morphoFees) : "-"}
-              tooltip="Estimated annualized protocol fees (e.g. Morpho's 15% of interest). Only calculated for protocols with known fee structures."
-              valueClass="text-accent-purple"
-              href="/fees"
-              icon={
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                </svg>
-              }
-            />
+    <div>
+      {/* ── Hero: tracked TVL + asset mix ── */}
+      <header className="grid lg:grid-cols-2 gap-8 items-end mb-6">
+        <div>
+          <div className="font-mono text-xs uppercase tracking-[0.12em] text-text-tertiary">
+            Tracked curated TVL
           </div>
-        )}
-
-        {/* Loading Stats Skeleton */}
-        {!stats && loading && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-5">
-            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="bg-background-subtle border border-border rounded-xl p-4">
-                <div className="h-4 w-16 bg-background-elevated rounded animate-pulse mb-2" />
-                <div className="h-7 w-24 bg-background-elevated rounded animate-pulse" />
-              </div>
+          <div className="font-mono font-semibold text-[clamp(2.6rem,7vw,4.2rem)] leading-[0.98] tracking-[-0.03em] tabular-nums my-2">
+            {compactUsd(stats.totalAUM)}
+          </div>
+          <div className="font-mono text-sm text-text-secondary">
+            across <span className="text-text-primary font-semibold">{stats.totalCurators}</span>{" "}
+            curators
+            <span className="text-text-muted mx-2">·</span>
+            <span className="text-text-primary font-semibold">{stats.totalVaults}</span> products
+            <span className="text-text-muted mx-2">·</span>
+            updated every 6h
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between items-baseline mb-2">
+            <span className="font-mono text-xs uppercase tracking-[0.06em] text-text-tertiary">
+              What the {compactUsd(stats.totalAUM)} holds
+            </span>
+            <span className="font-mono text-xs text-accent-green tabular-nums">
+              {Math.round(mix.stablePct)}% stablecoin
+            </span>
+          </div>
+          <div className="h-3 rounded-md overflow-hidden flex bg-background-elevated">
+            {mix.segments.map((s, i) => (
+              <span
+                key={s.symbol}
+                style={{
+                  width: `${s.pct}%`,
+                  background: s.symbol === "Other" ? "var(--text-tertiary)" : MIX_COLORS[i % MIX_COLORS.length],
+                }}
+              />
             ))}
           </div>
-        )}
-
-        {/* Protocol Ecosystem */}
-        {protocolCoverage.length > 0 && (
-          <div className="mb-5">
-            <h3 className="text-sm font-semibold text-text-primary mb-3">Protocol Ecosystem</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {protocolCoverage
-                .sort((a, b) => b.totalAUM - a.totalAUM)
-                .map((item) => {
-                  const isTurtle = item.dataSource === "turtle";
-                  return (
-                    <div
-                      key={item.dataSource}
-                      className={`rounded-xl border-l-4 border border-border bg-background-subtle p-5 ${
-                        isTurtle ? "border-l-green-500" : "border-l-blue-500"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <span
-                            className={`px-2.5 py-0.5 rounded text-xs font-bold ${
-                              isTurtle
-                                ? "bg-green-500/10 text-green-400"
-                                : "bg-blue-500/10 text-blue-400"
-                            }`}
-                          >
-                            {isTurtle ? "Turtle" : "Morpho"}
-                          </span>
-                          <p className="text-xs text-text-muted mt-1.5">
-                            {isTurtle
-                              ? "DeFi liquidity coordination platform"
-                              : "The universal lending network"}
-                          </p>
-                        </div>
-                        <Link
-                          href={isTurtle ? "/vaults/turtle" : "/vaults/morpho"}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                            isTurtle
-                              ? "bg-green-500/10 text-green-400 hover:bg-green-500/20"
-                              : "bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
-                          }`}
-                        >
-                          Explore
-                        </Link>
-                      </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div>
-                          <p className="text-xs text-text-secondary">Vaults</p>
-                          <p className="text-lg font-bold text-text-primary tabular-nums">{item.vaultCount}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-text-secondary">AUM</p>
-                          <p className="text-lg font-bold text-text-primary tabular-nums">{formatCurrency(item.totalAUM)}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-text-secondary">Curators</p>
-                          <p className="text-lg font-bold text-text-primary tabular-nums">{item.curatorCount}</p>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-        )}
-
-        {/* Tabbed Chart - Below Stats */}
-        <div className="mb-5">
-          <TabbedMetricChart />
-        </div>
-
-        {/* Cards Row - Stablecoin + Top Performers */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-5">
-          <div className="lg:col-span-1">
-            <StablecoinBreakdown />
-          </div>
-          <div className="lg:col-span-2">
-            <TopCurators />
-          </div>
-        </div>
-
-        {/* Vaults of the Week */}
-        <VaultsOfTheWeek />
-
-
-        {/* All Curators Section */}
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-text-primary">All Curators</h2>
-            <p className="text-xs text-text-tertiary">Browse and search vault curators</p>
-          </div>
-          {!loading && (
-            <button
-              onClick={() => fetchData(currentPage, searchQuery)}
-              className="text-xs text-accent-blue hover:text-accent-blue-hover font-medium transition-colors flex items-center gap-1"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </button>
-          )}
-        </div>
-
-        {/* Search Bar */}
-        <div className="mb-3">
-          {/* Search Input with Autocomplete */}
-          <div className="relative w-full sm:w-72" ref={dropdownRef}>
-            <input
-              type="text"
-              placeholder="Search curators..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onFocus={() => { if (searchQuery.trim() && curators.length > 0) setShowDropdown(true); }}
-              onKeyDown={(e) => { if (e.key === "Escape") setShowDropdown(false); }}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-background-subtle border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue"
-            />
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {searchQuery && (
-              <button
-                onClick={() => { setSearchQuery(""); setShowDropdown(false); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+          <div className="flex gap-x-4 gap-y-2 flex-wrap mt-3">
+            {mix.segments.map((s, i) => (
+              <span
+                key={s.symbol}
+                className={`font-mono text-xs inline-flex items-center gap-1.5 ${s.symbol === "Other" ? "text-text-tertiary" : "text-text-secondary"}`}
               >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-
-            {/* Autocomplete Dropdown */}
-            {showDropdown && searchQuery.trim() && (
-              <div className="absolute z-50 top-full mt-1 w-full sm:w-96 bg-background-elevated border border-border rounded-lg shadow-xl overflow-hidden">
-                {curators.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-text-secondary">
-                    No curators found
-                  </div>
-                ) : (
-                  <ul className="max-h-80 overflow-y-auto">
-                    {curators.slice(0, 8).map((curator) => (
-                      <li key={curator.curatorId}>
-                        <button
-                          className="w-full text-left px-4 py-2.5 hover:bg-background-subtle transition-colors flex items-center justify-between gap-3"
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            setShowDropdown(false);
-                            setSearchQuery("");
-                            router.push(`/curator/${curatorSlug(curator.name, curator.curatorAddress)}`);
-                          }}
-                        >
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-text-primary truncate">
-                              {curator.name || "Unknown Curator"}
-                            </div>
-                            <div className="text-xs text-text-muted truncate">
-                              {curator.vaultCount} vault{curator.vaultCount !== 1 ? "s" : ""}
-                            </div>
-                          </div>
-                          <div className="flex-shrink-0 text-right">
-                            <div className="text-xs font-medium text-text-secondary">
-                              {formatCurrency(curator.totalAUM)}
-                            </div>
-                            <div className="text-[11px] text-text-muted">
-                              {curator.vaultCount} vault{curator.vaultCount !== 1 ? "s" : ""}
-                            </div>
-                          </div>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Search Results Info */}
-        {searchQuery && !loading && (
-          <div className="mb-3 text-xs text-text-secondary">
-            {pagination?.total === 0 ? (
-              <span>No curators found for "{searchQuery}"</span>
-            ) : (
-              <span>
-                Found {pagination?.total} curator{pagination?.total !== 1 ? "s" : ""} matching "{searchQuery}"
+                <span
+                  className="inline-block w-2 h-2 rounded-sm"
+                  style={{ background: s.symbol === "Other" ? "var(--text-tertiary)" : MIX_COLORS[i % MIX_COLORS.length] }}
+                />
+                {s.symbol} {Math.round(s.pct)}%
               </span>
-            )}
-          </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="mb-4 p-3 bg-accent-red-muted/30 border border-accent-red/30 rounded-lg">
-            <div className="flex items-center gap-2.5">
-              <svg className="h-4 w-4 text-accent-red flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-              <div className="flex-1">
-                <p className="text-sm text-text-secondary">{error}</p>
-              </div>
-              <button onClick={() => fetchData(currentPage, searchQuery)} className="text-xs text-accent-red hover:text-accent-red font-medium">
-                Retry
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Loading State */}
-        {loading && isInitialLoad && (
-          <div className="animate-pulse space-y-2">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-12 bg-background-elevated rounded" />
             ))}
           </div>
-        )}
-
-        {/* Curator Grid */}
-        {!(loading && isInitialLoad) && !error && curators.length > 0 && (
-          <CuratorGrid curators={curators} />
-        )}
-
-        {/* Empty State */}
-        {!loading && !error && curators.length === 0 && !searchQuery && (
-          <div className="text-center py-12 bg-background-subtle rounded-lg border border-border">
-            <svg className="mx-auto h-10 w-10 text-text-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <h3 className="mt-3 text-sm font-medium text-text-primary">No curators found</h3>
-            <p className="mt-1 text-xs text-text-secondary">
-              Run <code className="bg-background-elevated px-1.5 py-0.5 rounded font-mono text-accent-blue">npm run collect</code> to populate data.
-            </p>
-          </div>
-        )}
-
-        {/* Pagination Controls */}
-        {!loading && !error && pagination && pagination.totalPages > 1 && (
-          <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-            <div className="text-xs text-text-secondary">
-              {(pagination.page - 1) * pagination.pageSize + 1}-{Math.min(pagination.page * pagination.pageSize, pagination.total)} of {pagination.total}
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={pagination.page === 1}
-                className="p-1.5 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-
-              {/* Page Numbers */}
-              <div className="flex items-center gap-0.5">
-                {getPageNumbers(pagination.page, pagination.totalPages).map((pageNum, idx) => (
-                  pageNum === -1 ? (
-                    <span key={`ellipsis-${idx}`} className="px-1.5 text-text-muted text-xs">...</span>
-                  ) : (
-                    <button
-                      key={pageNum}
-                      onClick={() => handlePageChange(pageNum)}
-                      className={`min-w-[28px] h-7 px-1.5 text-xs rounded ${
-                        pageNum === pagination.page
-                          ? "bg-accent-blue text-white font-medium"
-                          : "text-text-secondary hover:bg-background-elevated"
-                      }`}
-                    >
-                      {pageNum}
-                    </button>
-                  )
-                ))}
-              </div>
-
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={pagination.page === pagination.totalPages}
-                className="p-1.5 text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        )}
-    </>
-  );
-}
-
-// Helper function to generate page numbers with ellipsis
-function getPageNumbers(current: number, total: number): number[] {
-  if (total <= 5) {
-    return Array.from({ length: total }, (_, i) => i + 1);
-  }
-
-  const pages: number[] = [];
-  pages.push(1);
-
-  if (current > 3) {
-    pages.push(-1);
-  }
-
-  for (let i = Math.max(2, current - 1); i <= Math.min(total - 1, current + 1); i++) {
-    pages.push(i);
-  }
-
-  if (current < total - 2) {
-    pages.push(-1);
-  }
-
-  if (total > 1) {
-    pages.push(total);
-  }
-
-  return pages;
-}
-
-function StatCard({
-  label,
-  value,
-  highlight,
-  valueClass,
-  icon,
-  tooltip,
-  change,
-  href,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-  valueClass?: string;
-  icon?: React.ReactNode;
-  tooltip?: string;
-  change?: number | null;
-  href?: string;
-}) {
-  const content = (
-    <div
-      className={`rounded-xl border p-3 sm:p-3.5 transition-colors ${
-        highlight
-          ? "border-accent-blue/30 bg-accent-blue/5"
-          : "border-border bg-background-subtle"
-      } ${href ? "hover:bg-background-hover cursor-pointer" : ""}`}
-    >
-      <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center gap-1">
-          <p className="text-xs text-text-secondary">{label}</p>
-          {tooltip && <InfoTooltip content={tooltip} />}
         </div>
-        {icon && (
-          <span className={`hidden sm:block ${highlight ? "text-accent-blue" : "text-text-muted"}`}>
-            {icon}
-          </span>
-        )}
+      </header>
+
+      {/* ── Context strip ── */}
+      <div className="flex gap-x-12 gap-y-4 flex-wrap py-4 border-y border-border-subtle mb-8">
+        <Stat k="Curators" v={String(stats.totalCurators)} />
+        <Stat k="Products managed" v={String(stats.totalVaults)} sub="vaults" />
+        <Stat k="Avg APY" v={formatPercentage(stats.avgApy)} />
+        {largest && <Stat k="Largest curator" v={largest.name || "—"} sub={compactUsd(largest.totalAUM)} />}
       </div>
-      <p
-        className={`text-lg sm:text-xl font-bold tabular-nums ${
-          valueClass || (highlight ? "text-accent-blue" : "text-text-primary")
-        }`}
-      >
-        {value}
-      </p>
-      {change != null && (
-        <p
-          className={`text-[11px] font-medium tabular-nums mt-0.5 ${
-            change >= 0 ? "text-emerald-500" : "text-accent-red"
-          }`}
-        >
-          {change >= 0 ? "\u25B2" : "\u25BC"} {Math.abs(change).toFixed(1)}% 30d
-        </p>
-      )}
+
+      {/* ── TVL by curator (30d) ── */}
+      <section className="mt-2">
+        <SectionHead title="Tracked TVL by curator" meta="top 6 · 30 days · hover to inspect" />
+        <CuratorTvlChart />
+      </section>
+
+      {/* ── Curator index ── */}
+      <section className="mt-12">
+        <SectionHead title="All curators" meta={`${stats.totalCurators} · ranked by TVL · search & sort`} />
+        <CuratorIndex curators={curators} />
+      </section>
+
+      {/* ── Product quality ── */}
+      <section className="mt-12">
+        <SectionHead title="Product quality" meta="grade of every managed vault" />
+        <div className="border border-border rounded-2xl bg-background-subtle p-6">
+          <div className="h-4 rounded-lg overflow-hidden flex bg-background-elevated mb-4">
+            <span className="bg-accent-green h-full" style={{ width: `${(grade.high / gradedTotal) * 100}%` }} />
+            <span className="bg-accent-yellow h-full" style={{ width: `${(grade.medium / gradedTotal) * 100}%` }} />
+            <span className="bg-accent-red h-full" style={{ width: `${(grade.low / gradedTotal) * 100}%` }} />
+          </div>
+          <div className="flex gap-x-8 gap-y-3 flex-wrap font-mono text-sm">
+            <GradeLegend color="bg-accent-green" n={grade.high} pct={(grade.high / gradedTotal) * 100} label="High-grade" sub="pass all 10 requirements" />
+            <GradeLegend color="bg-accent-yellow" n={grade.medium} pct={(grade.medium / gradedTotal) * 100} label="Medium-grade" sub="fail 1–3 requirements" />
+            <GradeLegend color="bg-accent-red" n={grade.low} pct={(grade.low / gradedTotal) * 100} label="Low-grade" sub="fail 4+ requirements" />
+          </div>
+          <p className="font-mono text-xs text-text-tertiary mt-4 leading-relaxed">
+            Across the {gradedTotal} vaults curators actively manage, the model grades each on a
+            10-requirement check. The low-grade tail is where allocator due-diligence concentrates —
+            and what each curator&rsquo;s profile breaks down vault by vault.
+          </p>
+        </div>
+      </section>
     </div>
   );
+}
 
-  if (href) {
-    return <Link href={href}>{content}</Link>;
-  }
-  return content;
+function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
+  return (
+    <div>
+      <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">{k}</div>
+      <div className="font-mono font-semibold text-xl tracking-tight mt-0.5 tabular-nums">
+        {v}
+        {sub && <span className="text-xs text-text-tertiary font-normal ml-1.5">{sub}</span>}
+      </div>
+    </div>
+  );
+}
+
+function SectionHead({ title, meta }: { title: string; meta: string }) {
+  return (
+    <div className="flex items-baseline gap-3 mb-5 pb-3 border-b border-border flex-wrap">
+      <span className="w-[7px] h-[7px] rounded-sm bg-accent-blue -translate-y-0.5" />
+      <span className="font-display font-bold text-xl tracking-tight">{title}</span>
+      <span className="font-mono text-xs text-text-tertiary ml-auto text-right">{meta}</span>
+    </div>
+  );
+}
+
+function GradeLegend({ color, n, pct, label, sub }: { color: string; n: number; pct: number; label: string; sub: string }) {
+  return (
+    <div>
+      <span className={`inline-block w-2.5 h-2.5 rounded-sm mr-2 ${color}`} />
+      <span className="font-semibold tabular-nums">{n}</span> {label}{" "}
+      <span className="text-text-tertiary tabular-nums">({Math.round(pct)}%)</span>
+      <div className="text-text-tertiary text-xs mt-0.5">{sub}</div>
+    </div>
+  );
 }
