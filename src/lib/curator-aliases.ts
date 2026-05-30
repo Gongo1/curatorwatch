@@ -40,6 +40,22 @@ export const CURATOR_ALIAS_GROUPS: CuratorAliasGroup[] = [
       "0x7e43df1c1c5a2245858b60d4655fda83704e4171",
       "0xe5aec7d0e795456f90cebefba56470f0e5dfc075",
       "0xd15f11b334e1e233127302e5f759c17da1260df5",
+      "0x834e1c1ea40173b82106f9177646b66d96ae7de8",
+      "0x7a2ce012fe37db488c24e31f5e38816cad82b45e",
+    ],
+  },
+  {
+    curatorName: "Re7 Labs",
+    primaryAddress: "0x72882eb5d27c7088dfa6dde941dd42e5d184f0ef",
+    aliasAddresses: [
+      "0xe86399fe6d7007fdecb08a2ee1434ee677a04433",
+    ],
+  },
+  {
+    curatorName: "API3",
+    primaryAddress: "0x24db7c6f689e480d6e5d45dad400cc4456c832f0",
+    aliasAddresses: [
+      "0xbbe0de9757f93e3306adbfebe906ab285edd13da",
     ],
   },
   {

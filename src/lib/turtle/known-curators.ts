@@ -55,11 +55,10 @@ export const KNOWN_TURTLE_CURATORS: KnownTurtleCurator[] = [
     name: "Perseus Digital",
     aliases: ["perseus digital", "perseus"],
   },
-  {
-    slug: "clearstar",
-    name: "Clearstar Labs",
-    aliases: ["clearstar", "clearstar labs", "clearstar earn"],
-  },
+  // Clearstar removed from the turtle allowlist: it already exists as the morpho
+  // curator "Clearstar Labs AG" (address "clearstar"). Turtle Clearstar opportunities
+  // now match that canonical via CURATOR_NAME_ALIASES (matchCurator step-1), so we no
+  // longer mint a duplicate tc:clearstar row.
   {
     slug: "9summits",
     name: "9Summits",

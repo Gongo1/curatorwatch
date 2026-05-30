@@ -1,0 +1,54 @@
+{
+  "operation": "curator-deduplication-merge",
+  "date": "2026-05-30",
+  "reason": "4 brand families fragmented across multiple Curator rows (same entity, different on-chain deployer addresses / turtle vs morpho). Merged each into one canonical curator. Reversible via this archive.",
+  "families": [
+    {
+      "brand": "KPK",
+      "canonical": { "id": "cmlpyw9zs00stvoy81tc4lhh9", "address": "0xc266b1181a80e84edc2c6596718e88e8115c1eaa" },
+      "merged_dups": [
+        { "id": "cmmnjj37000p6l5041u98isuh", "address": "0x834e1c1ea40173b82106f9177646b66d96ae7de8", "name": "Kpk", "vaultIds": ["cmmnjj3nb00p8l5048yruw5ca"] },
+        { "id": "cmp44tb5m00ahlh041r7uxx4l", "address": "0x7a2ce012fe37db488c24e31f5e38816cad82b45e", "name": "KPK", "vaultIds": ["cmmjdbrko001pjr046fh8fhcc", "cmp44tbue00anlh04919p102s"] }
+      ]
+    },
+    {
+      "brand": "Re7",
+      "canonical": { "id": "cmlpyuq7g000cvoun7kc259pp", "address": "0x72882eb5d27c7088dfa6dde941dd42e5d184f0ef" },
+      "merged_dups": [
+        { "id": "cmlzuabis008d73ydr17m3fe5", "address": "0xe86399fe6d7007fdecb08a2ee1434ee677a04433", "name": "Re7", "vaultIds": ["cmlpyycxd038rvoy8yg7vc8xv", "cmlpyyvx103mwvoy8bwz0nj19"] }
+      ]
+    },
+    {
+      "brand": "Clearstar",
+      "canonical": { "id": "cmlz53yzp000073deeejtwrtn", "address": "clearstar" },
+      "merged_dups": [
+        { "id": "tc_05fc4aa8ec404668b9c0ada0f4c98dbd", "address": "tc:clearstar", "name": "Clearstar Labs", "vaultIds": ["cmpl5mx07000ajy04776xkjfo", "cmpqveihd0019l5043sefj1sq"] }
+      ]
+    },
+    {
+      "brand": "API3",
+      "canonical": { "id": "cmpkst8fh005hlb04cqg3q0sr", "address": "0x24db7c6f689e480d6e5d45dad400cc4456c832f0" },
+      "merged_dups": [
+        { "id": "cmlpyw9zs00suvoy859t4jl5b", "address": "0xbbe0de9757f93e3306adbfebe906ab285edd13da", "name": "API3", "vaultIds": [], "note": "0 live vaults (stray); cached vaultCount was stale" }
+      ]
+    }
+  ],
+  "actions": [
+    "UPDATE Vault SET curatorId = <canonical.id> WHERE curatorId IN (<dup.ids>)  [7 vaults total]",
+    "DELETE CuratorSnapshot WHERE curatorId IN (<5 dup ids>)  [3679 stale aggregate snapshots]",
+    "DELETE PlatformAlert WHERE curatorId IN (<5 dup ids>)  [2 alerts]",
+    "DELETE Curator WHERE id IN (<5 dup ids>)"
+  ],
+  "durability_code_changes": [
+    "curator-aliases.ts: add 0x834e.. + 0x7a2c.. to KPK alias group; add Re7 group (0x72882e <- 0xe86399); add API3 group (0x24db7c <- 0xbbe0)",
+    "curator-matcher.ts CURATOR_NAME_ALIASES: clearstar / clearstar labs / clearstar earn -> 'Clearstar Labs AG' (so turtle Clearstar matches the canonical, step-1, before tc: mint)",
+    "known-curators.ts: remove the 'clearstar' entry from KNOWN_TURTLE_CURATORS (no tc:clearstar re-mint)"
+  ],
+  "dup_curator_rows_snapshot": [
+    {"id":"cmmnjj37000p6l5041u98isuh","address":"0x834e1c1ea40173b82106f9177646b66d96ae7de8","name":"Kpk","entityType":null,"jurisdiction":null,"foundedYear":null,"totalAssetsManaged":2002116.85,"vaultCount":1,"createdAt":"2026-03-12T14:05:46.861"},
+    {"id":"cmlpyw9zs00suvoy859t4jl5b","address":"0xbbe0de9757f93e3306adbfebe906ab285edd13da","name":"API3","entityType":"DAO","website":"https://api3.org","twitter":"API3DAO","description":"Decentralized APIs for Web3","foundedYear":2020,"logoUrl":"https://unavatar.io/x/API3DAO","totalAssetsManaged":13823322.77,"vaultCount":3,"createdAt":"2026-02-17T02:11:46.457"},
+    {"id":"tc_05fc4aa8ec404668b9c0ada0f4c98dbd","address":"tc:clearstar","name":"Clearstar Labs","foundedYear":null,"totalAssetsManaged":3556835.25,"vaultCount":2,"createdAt":"2026-05-29T19:54:46.865"},
+    {"id":"cmp44tb5m00ahlh041r7uxx4l","address":"0x7a2ce012fe37db488c24e31f5e38816cad82b45e","name":"KPK","foundedYear":null,"totalAssetsManaged":1563057.82,"vaultCount":2,"createdAt":"2026-05-13T14:05:18.558"},
+    {"id":"cmlzuabis008d73ydr17m3fe5","address":"0xe86399fe6d7007fdecb08a2ee1434ee677a04433","name":"Re7","foundedYear":2023,"totalAssetsManaged":219221.21,"vaultCount":2,"createdAt":"2026-02-24T00:00:24.323"}
+  ]
+}
