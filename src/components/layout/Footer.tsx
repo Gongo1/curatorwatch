@@ -7,18 +7,7 @@ export function Footer() {
         <div className="flex items-center gap-2 flex-wrap text-xs text-text-tertiary font-mono">
           <span>CuratorWatch</span>
           <span className="text-text-muted">·</span>
-          <span>
-            Data from{" "}
-            <a
-              href="https://api.morpho.org/graphql"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-text-primary transition-colors"
-            >
-              Morpho GraphQL
-            </a>{" "}
-            + Turtle public API
-          </span>
+          <span>On-chain curator &amp; vault intelligence</span>
           <span className="text-text-muted">·</span>
           <span>Updated every 6h</span>
           <span className="text-text-muted">·</span>

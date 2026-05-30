@@ -37,7 +37,6 @@ const GRADE_TEXT: Record<string, string> = {
   medium: "text-accent-yellow",
   low: "text-accent-red",
 };
-const srcLabel = (s: string) => (s === "turtle" ? "Turtle" : "Morpho");
 
 export default function CuratorProfile({ params }: PageProps) {
   const { address } = use(params);
@@ -251,7 +250,10 @@ export default function CuratorProfile({ params }: PageProps) {
           </div>
           <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border-subtle">
             <Fact k="Networks" v={derived.networks.join(" · ")} />
-            <Fact k="Source" v={derived.sources.map(srcLabel).join(" · ")} />
+            <Fact
+              k="Top asset"
+              v={derived.assets[0] ? `${derived.assets[0].symbol} · ${Math.round(derived.assets[0].pct)}%` : "—"}
+            />
             <Fact k="Avg net APY" v={`${(derived.weightedApy * 100).toFixed(1)}%`} />
             <Fact k="Annual yield" v={formatCurrency(derived.annualYield)} />
           </div>

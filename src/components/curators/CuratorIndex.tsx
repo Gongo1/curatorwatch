@@ -16,15 +16,11 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-const srcLabel = (s: string) => (s === "turtle" ? "Turtle" : "Morpho");
-
 type SortKey = "name" | "grade" | "vaults" | "tvl";
-type SrcFilter = "all" | "morpho" | "turtle" | "regulated";
+type SrcFilter = "all" | "regulated";
 
 const CHIPS: { key: SrcFilter; label: string }[] = [
   { key: "all", label: "All" },
-  { key: "morpho", label: "Morpho" },
-  { key: "turtle", label: "Turtle" },
   { key: "regulated", label: "Has jurisdiction" },
 ];
 
@@ -41,8 +37,6 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
     const q = query.toLowerCase().trim();
     const list = curators.filter((c) => {
       if (q && !(c.name || "").toLowerCase().includes(q)) return false;
-      if (filterSrc === "morpho" || filterSrc === "turtle")
-        return c.dataSources.includes(filterSrc);
       if (filterSrc === "regulated") return !!c.jurisdiction;
       return true;
     });
@@ -185,17 +179,11 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
                   <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
                     {name}
                   </div>
-                  <div className="font-mono text-xs text-text-tertiary mt-0.5 flex items-center gap-2 flex-wrap min-w-0">
-                    {c.jurisdiction && <span>{c.jurisdiction}</span>}
-                    {c.dataSources.map((s) => (
-                      <span
-                        key={s}
-                        className="text-[10px] text-text-secondary border border-border rounded px-1.5"
-                      >
-                        {srcLabel(s)}
-                      </span>
-                    ))}
-                  </div>
+                  {c.jurisdiction && (
+                    <div className="font-mono text-xs text-text-tertiary mt-0.5 truncate">
+                      {c.jurisdiction}
+                    </div>
+                  )}
                 </div>
               </div>
               {/* grade mix */}
