@@ -83,6 +83,8 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
       assetDistribution: c.assetDistribution,
       protocols: c.protocols,
       networks: c.networks,
+      gradeDistribution: c.gradeDistribution,
+      dataSources: c.dataSources,
       lastActive: c.lastActive?.toISOString() ?? null,
       riskScore: c.riskScore,
       strategyType: c.strategyType,

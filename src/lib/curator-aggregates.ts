@@ -29,6 +29,8 @@ export interface CuratorAggregates {
   assetDistribution: AssetDistribution[];
   protocols: string[];
   networks: string[];
+  gradeDistribution: { high: number; medium: number; low: number };
+  dataSources: string[];
   lastActive: Date | null;
   riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";
@@ -140,8 +142,19 @@ export async function getPaginatedCuratorAggregates(
     const assetMap: Record<string, number> = {};
     const protocolSet = new Set<string>();
     const networkSet = new Set<string>();
+    const gradeDistribution = { high: 0, medium: 0, low: 0 };
+    const sourceSet = new Set<string>();
 
     for (const vault of vaults) {
+      // Vault grade + ingestion source are independent of snapshots.
+      const grade = (vault as Record<string, unknown>).grade as string | null;
+      if (grade === "high-grade") gradeDistribution.high++;
+      else if (grade === "medium-grade") gradeDistribution.medium++;
+      else if (grade === "low-grade") gradeDistribution.low++;
+      sourceSet.add(
+        ((vault as Record<string, unknown>).dataSource as string) ?? "morpho"
+      );
+
       const snap = vault.snapshots[0];
       if (!snap) continue;
 
@@ -190,6 +203,8 @@ export async function getPaginatedCuratorAggregates(
       assetDistribution,
       protocols: Array.from(protocolSet),
       networks: Array.from(networkSet),
+      gradeDistribution,
+      dataSources: Array.from(sourceSet),
       lastActive: null,
       riskScore,
       strategyType,
@@ -277,8 +292,18 @@ export async function getCuratorAggregates(
   const assetMap: Record<string, number> = {};
   const protocolSet = new Set<string>();
   const networkSet = new Set<string>();
+  const gradeDistribution = { high: 0, medium: 0, low: 0 };
+  const sourceSet = new Set<string>();
 
   for (const vault of vaults) {
+    const grade = (vault as Record<string, unknown>).grade as string | null;
+    if (grade === "high-grade") gradeDistribution.high++;
+    else if (grade === "medium-grade") gradeDistribution.medium++;
+    else if (grade === "low-grade") gradeDistribution.low++;
+    sourceSet.add(
+      ((vault as Record<string, unknown>).dataSource as string) ?? "morpho"
+    );
+
     const snap = vault.snapshots[0];
     if (!snap) continue;
 
@@ -324,6 +349,8 @@ export async function getCuratorAggregates(
     assetDistribution,
     protocols: Array.from(protocolSet),
     networks: Array.from(networkSet),
+    gradeDistribution,
+    dataSources: Array.from(sourceSet),
     lastActive: null,
     riskScore,
     strategyType,

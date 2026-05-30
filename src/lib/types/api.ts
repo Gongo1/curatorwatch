@@ -304,6 +304,8 @@ export interface CuratorDashboardItem {
   assetDistribution: AssetDistribution[];
   protocols: string[];
   networks: string[];
+  gradeDistribution: { high: number; medium: number; low: number };
+  dataSources: string[];
   lastActive: string | null;
   riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";
