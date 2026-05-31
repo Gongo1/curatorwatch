@@ -6,6 +6,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { summarizeIncidents, type CuratorIncident } from "@/lib/incidents";
 
 // ============================================================================
 // TYPES
@@ -33,6 +34,7 @@ interface BadDebtFactor {
   hasEvents: boolean;
   totalExposure: number;
   eventDescription: string | null;
+  incidents: CuratorIncident[];
 }
 
 interface TimeInOperationFactor {
@@ -113,15 +115,6 @@ const BLUE_CHIP_COLLATERAL = [
   "stkAAVE", "wstMKR",
 ];
 
-const KNOWN_BAD_DEBT_CURATORS: Record<string, { exposure: number; event: string }> = {
-  "mev capital": { exposure: 25_400_000, event: "Stream Finance xUSD collapse" },
-  "re7 labs": { exposure: 14_650_000, event: "Stream Finance xUSD collapse" },
-  "re7": { exposure: 14_650_000, event: "Stream Finance xUSD collapse" },
-  "telosc": { exposure: 123_600_000, event: "Stream Finance xUSD collapse" },
-  "elixir": { exposure: 68_000_000, event: "Stream Finance deUSD collapse" },
-  "varlamore": { exposure: 30_000_000, event: "Stream Finance xUSD collapse" },
-};
-
 // ============================================================================
 // HELPERS
 // ============================================================================
@@ -152,13 +145,6 @@ function getMonthsActive(foundedYear: number | null, createdAt: Date): number {
   return Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24 * 30));
 }
 
-function checkBadDebt(name: string): { exposure: number; event: string } | null {
-  const lower = name.toLowerCase();
-  for (const [key, info] of Object.entries(KNOWN_BAD_DEBT_CURATORS)) {
-    if (lower.includes(key)) return info;
-  }
-  return null;
-}
 
 function governanceScore(c: {
   legalName: string | null;
@@ -227,7 +213,7 @@ export async function calculateCuratorRiskProfile(
   const curatorName = curator.name ?? "Unknown";
 
   // Pre-compute per-factor values for ALL curators so we can derive percentiles
-  const allBadDebt = allCurators.map((c) => (checkBadDebt(c.name ?? "") ? 0 : 1));
+  const allBadDebt = allCurators.map((c) => (summarizeIncidents(c.address).hasEvents ? 0 : 1));
   const allMonths = allCurators.map((c) => getMonthsActive(c.foundedYear, c.createdAt));
   const allGov = allCurators.map((c) => governanceScore(c));
   const allAum = allCurators.map((c) => c.totalAssetsManaged ?? 0);
@@ -240,8 +226,8 @@ export async function calculateCuratorRiskProfile(
   const blueChipWithData = allBlueChipPct.filter((v) => v >= 0);
 
   // --- Target curator values ---
-  const badDebtInfo = checkBadDebt(curatorName);
-  const targetBadDebt = badDebtInfo ? 0 : 1;
+  const badDebtSummary = summarizeIncidents(curator.address);
+  const targetBadDebt = badDebtSummary.hasEvents ? 0 : 1;
   const targetMonths = getMonthsActive(curator.foundedYear, curator.createdAt);
   const targetCollateral = analyzeCollateral(curator.vaults);
   const targetGov = governanceScore(curator);
@@ -263,7 +249,7 @@ export async function calculateCuratorRiskProfile(
 
   // 1. Bad Debt — binary factor: clean = top, has events = bottom
   const badDebtCount = allBadDebt.filter((v) => v === 0).length;
-  const badDebtPercentile = badDebtInfo
+  const badDebtPercentile = badDebtSummary.hasEvents
     ? Math.min(10, Math.round((badDebtCount > 1 ? 0.5 : 0) / peerCount * 100))
     : Math.max(80, Math.round(((badDebtCount + (peerCount - badDebtCount) * 0.5) / peerCount) * 100));
   factors.push({
@@ -271,12 +257,13 @@ export async function calculateCuratorRiskProfile(
     label: "Bad Debt History",
     peer: {
       percentile: badDebtPercentile,
-      tier: badDebtInfo ? "bottom" : "top",
+      tier: badDebtSummary.hasEvents ? "bottom" : "top",
       peerCount,
     },
-    hasEvents: !!badDebtInfo,
-    totalExposure: badDebtInfo?.exposure ?? 0,
-    eventDescription: badDebtInfo?.event ?? null,
+    hasEvents: badDebtSummary.hasEvents,
+    totalExposure: badDebtSummary.totalExposure,
+    eventDescription: badDebtSummary.primaryEvent,
+    incidents: badDebtSummary.incidents,
   });
 
   // 2. Time in Operation

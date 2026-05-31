@@ -304,6 +304,19 @@ function FactorCard({ factor }: { factor: RiskFactor }) {
       <div className="mb-3">
         <div className="text-lg font-semibold text-text-primary">{primary}</div>
         <div className="text-xs text-text-tertiary mt-0.5">{secondary}</div>
+        {factor.id === "bad-debt" && factor.incidents.length > 0 && (
+          <div className="text-[10px] text-text-muted mt-1 leading-snug">
+            Estimated exposure, not a confirmed realized loss.{" "}
+            <a
+              href={factor.incidents[0].sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-accent-blue hover:underline"
+            >
+              {factor.incidents[0].date} · source ↗
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Percentile bar */}
@@ -339,11 +352,11 @@ function getFactorDisplay(factor: RiskFactor): { primary: string; secondary: str
           ? `$${(factor.totalExposure / 1e6).toFixed(1)}M`
           : `$${(factor.totalExposure / 1e3).toFixed(0)}K`;
         return {
-          primary: formatted,
-          secondary: factor.eventDescription ?? "Bad debt event recorded",
+          primary: `${formatted} exposure`,
+          secondary: factor.incidents[0]?.event ?? factor.eventDescription ?? "Incident on record",
         };
       }
-      return { primary: "$0", secondary: "No known bad debt events" };
+      return { primary: "None on record", secondary: "No documented loss events" };
     }
 
     case "time-in-operation": {

@@ -10,7 +10,7 @@
  * Curators excluded from all aggregations, stats, and UI listings.
  * Their vaults will still exist in the DB but won't appear in any totals.
  */
-export const EXCLUDED_CURATORS: string[] = ["Maxshot"];
+export const EXCLUDED_CURATORS: string[] = ["Maxshot", "Duplicated Key", "Unified Test"];
 
 /**
  * Prisma where clause fragment to exclude vaults belonging to excluded curators.

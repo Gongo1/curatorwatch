@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { summarizeIncidents } from "@/lib/incidents";
 
 // ============================================================================
 // TYPES
@@ -83,15 +84,6 @@ const KNOWN_AAA_CURATORS = [
   "block analitica"
 ];
 
-// Curators with known bad debt events from Stream Finance collapse
-const KNOWN_BAD_DEBT_CURATORS: Record<string, { exposure: number; event: string }> = {
-  "mev capital": { exposure: 25_400_000, event: "Stream Finance xUSD collapse" },
-  "re7 labs": { exposure: 14_650_000, event: "Stream Finance xUSD collapse" },
-  "re7": { exposure: 14_650_000, event: "Stream Finance xUSD collapse" },
-  "telosc": { exposure: 123_600_000, event: "Stream Finance xUSD collapse" },
-  "elixir": { exposure: 68_000_000, event: "Stream Finance deUSD collapse" },
-  "varlamore": { exposure: 30_000_000, event: "Stream Finance xUSD collapse" },
-};
 
 // Tier thresholds and guidance
 const TIER_CONFIG: Record<CuratorTier, {
@@ -192,7 +184,7 @@ export async function calculateCuratorRating(curatorAddress: string): Promise<Cu
   // =========================================================================
   // FACTOR 1: Bad Debt History (CRITICAL - from Stream Finance lessons)
   // =========================================================================
-  const badDebtInfo = checkBadDebtHistory(curatorName);
+  const badDebtInfo = checkBadDebtHistory(curator.address);
 
   if (badDebtInfo) {
     const lossPercentage = totalAUM > 0 ? (badDebtInfo.exposure / totalAUM) * 100 : 100;
@@ -512,13 +504,11 @@ function getMonthsOperating(foundedYear: number | null, createdAt: Date): number
   return Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30));
 }
 
-function checkBadDebtHistory(curatorName: string): { exposure: number; event: string } | null {
-  for (const [name, info] of Object.entries(KNOWN_BAD_DEBT_CURATORS)) {
-    if (curatorName.includes(name)) {
-      return info;
-    }
-  }
-  return null;
+function checkBadDebtHistory(address: string): { exposure: number; event: string } | null {
+  const s = summarizeIncidents(address);
+  return s.hasEvents
+    ? { exposure: s.totalExposure, event: s.primaryEvent ?? "documented incident" }
+    : null;
 }
 
 interface CollateralAnalysis {
@@ -655,6 +645,7 @@ function analyzeConcentration(vaults: Array<{
 }
 
 async function calculateAllPeerScores(curators: Array<{
+  address: string;
   name: string | null;
   createdAt: Date;
   foundedYear: number | null;
@@ -678,7 +669,7 @@ async function calculateAllPeerScores(curators: Array<{
 
     if (c.isRegulated) score += 10;
 
-    const badDebt = checkBadDebtHistory(c.name?.toLowerCase() ?? "");
+    const badDebt = checkBadDebtHistory(c.address);
     if (badDebt) score -= 30;
     else if (months >= 12) score += 15;
 
