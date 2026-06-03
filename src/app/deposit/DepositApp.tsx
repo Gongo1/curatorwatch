@@ -9,13 +9,18 @@ import {
   TURTLE_DISTRIBUTOR_ID,
   type EarnOpportunity,
 } from "@/lib/turtle/earn-client";
+import { useEthereum, chainName } from "@/lib/turtle/useEthereum";
 import { formatCurrency } from "@/lib/utils/format";
 
-// Phase 0 shell: the "discover" step only. Lists the opportunities curated under
-// CuratorWatch's distributor ID — the set a user could deposit into through the site.
-// Wallet connect, membership, and the deposit flow land in later phases; this page
-// validates auth + the pk_live_ origin allowlist before any wallet code exists.
+function shortAddr(a: string): string {
+  return a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
+}
+
+// /deposit: discover (curated set) + wallet connect. Membership, deposit, and verify
+// land in later phases. Validates auth + the pk_live_ origin allowlist, and the raw
+// window.ethereum wallet primitive, before any on-chain action.
 export function DepositApp() {
+  const wallet = useEthereum();
   const [opps, setOpps] = useState<EarnOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +29,6 @@ export function DepositApp() {
     setLoading(true);
     try {
       const curated = await getDistributorOpportunities();
-      // TVL desc, featured first.
       curated.sort(
         (a, b) =>
           Number(b.featured ?? false) - Number(a.featured ?? false) ||
@@ -61,6 +65,47 @@ export function DepositApp() {
           opportunities curated under our distributor ID via the Turtle Earn API.
         </p>
       </div>
+
+      {/* Wallet bar */}
+      <div className="mb-6 flex items-center justify-between p-4 bg-background-elevated border border-border rounded-xl">
+        <div className="text-sm">
+          {wallet.account ? (
+            <span className="flex items-center gap-2">
+              <span className="inline-block w-2 h-2 bg-cyan-500 rounded-full" />
+              <span className="font-mono text-text-primary">
+                {shortAddr(wallet.account)}
+              </span>
+              <span className="text-text-tertiary">·</span>
+              <span className="text-text-secondary">
+                {chainName(wallet.chainId)}
+              </span>
+            </span>
+          ) : wallet.available ? (
+            <span className="text-text-secondary">
+              Connect a wallet to deposit.
+            </span>
+          ) : (
+            <span className="text-text-secondary">
+              No Ethereum wallet detected — install MetaMask to deposit.
+            </span>
+          )}
+        </div>
+        {wallet.available && !wallet.account && (
+          <button
+            onClick={() => wallet.connect()}
+            disabled={wallet.connecting}
+            className="text-sm font-medium px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+          >
+            {wallet.connecting ? "Connecting…" : "Connect Wallet"}
+          </button>
+        )}
+      </div>
+
+      {wallet.error && (
+        <div className="mb-6 p-3 bg-accent-red-muted/30 border border-accent-red/30 rounded-lg text-sm text-accent-red">
+          {wallet.error}
+        </div>
+      )}
 
       {error && (
         <div className="mb-6 p-4 bg-accent-red-muted/30 border border-accent-red/30 rounded-lg">
