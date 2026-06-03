@@ -4,6 +4,9 @@ import { useState, useEffect, useCallback } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
   getDistributorOpportunities,
+  checkMembership,
+  getMembershipAgreement,
+  registerMembership,
   chainLabel,
   isDepositable,
   TURTLE_DISTRIBUTOR_ID,
@@ -16,14 +19,20 @@ function shortAddr(a: string): string {
   return a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
 }
 
-// /deposit: discover (curated set) + wallet connect. Membership, deposit, and verify
-// land in later phases. Validates auth + the pk_live_ origin allowlist, and the raw
-// window.ethereum wallet primitive, before any on-chain action.
+// /deposit: discover (curated set) + wallet connect + Turtle membership (SIWE). The
+// per-opportunity deposit + verify flow lands in the next phase. Validates auth, the
+// pk_live_ origin allowlist, the raw window.ethereum primitive, and the membership
+// sign/register round-trip.
 export function DepositApp() {
   const wallet = useEthereum();
   const [opps, setOpps] = useState<EarnOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Membership (per-wallet, opportunity-independent).
+  const [member, setMember] = useState<boolean | null>(null);
+  const [joining, setJoining] = useState(false);
+  const [memberMsg, setMemberMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,6 +58,60 @@ export function DepositApp() {
     load();
   }, [load]);
 
+  // Check membership whenever the connected wallet changes.
+  useEffect(() => {
+    if (!wallet.account) {
+      setMember(null);
+      return;
+    }
+    let active = true;
+    setMemberMsg(null);
+    checkMembership(wallet.account)
+      .then((r) => {
+        if (active) setMember(r.isMember);
+      })
+      .catch(() => {
+        if (active) setMember(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [wallet.account]);
+
+  const join = useCallback(async () => {
+    if (!wallet.account) return;
+    setJoining(true);
+    setMemberMsg(null);
+    try {
+      const { message, nonce } = await getMembershipAgreement(
+        wallet.account,
+        window.location.origin
+      );
+      const signature = await wallet.personalSign(message, wallet.account);
+      const res = await registerMembership({
+        address: wallet.account,
+        nonce,
+        signature,
+      });
+      if (res.isMember) {
+        setMember(true);
+      } else {
+        setMemberMsg(res.error || "Registration did not complete.");
+      }
+    } catch (e) {
+      const code = (e as { code?: number })?.code;
+      setMemberMsg(
+        code === 4001
+          ? "Signature rejected."
+          : e instanceof Error
+            ? e.message
+            : "Failed to join Turtle"
+      );
+    } finally {
+      setJoining(false);
+    }
+  }, [wallet]);
+
   return (
     <>
       <PageHeader
@@ -66,11 +129,11 @@ export function DepositApp() {
         </p>
       </div>
 
-      {/* Wallet bar */}
-      <div className="mb-6 flex items-center justify-between p-4 bg-background-elevated border border-border rounded-xl">
-        <div className="text-sm">
+      {/* Wallet + membership bar */}
+      <div className="mb-6 flex items-center justify-between gap-4 p-4 bg-background-elevated border border-border rounded-xl">
+        <div className="text-sm min-w-0">
           {wallet.account ? (
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 flex-wrap">
               <span className="inline-block w-2 h-2 bg-cyan-500 rounded-full" />
               <span className="font-mono text-text-primary">
                 {shortAddr(wallet.account)}
@@ -79,6 +142,20 @@ export function DepositApp() {
               <span className="text-text-secondary">
                 {chainName(wallet.chainId)}
               </span>
+              <span className="text-text-tertiary">·</span>
+              {member === true ? (
+                <span className="text-[11px] font-semibold text-cyan-500">
+                  Turtle member
+                </span>
+              ) : member === false ? (
+                <span className="text-[11px] text-text-tertiary">
+                  Not a member
+                </span>
+              ) : (
+                <span className="text-[11px] text-text-tertiary">
+                  checking membership…
+                </span>
+              )}
             </span>
           ) : wallet.available ? (
             <span className="text-text-secondary">
@@ -90,20 +167,31 @@ export function DepositApp() {
             </span>
           )}
         </div>
-        {wallet.available && !wallet.account && (
-          <button
-            onClick={() => wallet.connect()}
-            disabled={wallet.connecting}
-            className="text-sm font-medium px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
-          >
-            {wallet.connecting ? "Connecting…" : "Connect Wallet"}
-          </button>
-        )}
+        <div className="shrink-0">
+          {!wallet.account && wallet.available && (
+            <button
+              onClick={() => wallet.connect()}
+              disabled={wallet.connecting}
+              className="text-sm font-medium px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+            >
+              {wallet.connecting ? "Connecting…" : "Connect Wallet"}
+            </button>
+          )}
+          {wallet.account && member === false && (
+            <button
+              onClick={join}
+              disabled={joining}
+              className="text-sm font-medium px-4 py-2 rounded-lg bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20 transition-colors disabled:opacity-50"
+            >
+              {joining ? "Signing…" : "Join Turtle"}
+            </button>
+          )}
+        </div>
       </div>
 
-      {wallet.error && (
+      {(wallet.error || memberMsg) && (
         <div className="mb-6 p-3 bg-accent-red-muted/30 border border-accent-red/30 rounded-lg text-sm text-accent-red">
-          {wallet.error}
+          {wallet.error || memberMsg}
         </div>
       )}
 

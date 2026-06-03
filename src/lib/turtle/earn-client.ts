@@ -169,11 +169,51 @@ export async function getOpportunity(id: string): Promise<EarnOpportunity> {
   return earnFetch<EarnOpportunity>(`/opportunities/${id}`);
 }
 
-/** Membership: is this wallet already a Turtle member? */
+export interface MembershipAgreement {
+  message: string;
+  nonce: string;
+}
+
+/** Membership: is this wallet already a Turtle member? (path has a trailing slash) */
 export async function checkMembership(
   address: string
 ): Promise<MembershipStatus> {
   return earnFetch<MembershipStatus>(
-    `/membership?address=${encodeURIComponent(address)}`
+    `/membership/?address=${encodeURIComponent(address)}&walletEcosystem=evm`
   );
+}
+
+/** Membership step 1: fetch the SIWE message + nonce for the wallet to sign. */
+export async function getMembershipAgreement(
+  address: string,
+  url: string
+): Promise<MembershipAgreement> {
+  return earnFetch<MembershipAgreement>(`/membership/agreement`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ address, url, walletEcosystem: "evm" }),
+  });
+}
+
+/**
+ * Membership step 2: submit the signed message to register the wallet.
+ * NB: the distributor field here is snake_case `distributor_id` (the deposit endpoint
+ * uses camelCase `distributorId` — they differ), and we submit `nonce`, not `message`.
+ */
+export async function registerMembership(params: {
+  address: string;
+  nonce: string;
+  signature: string;
+}): Promise<{ isMember: boolean; error?: string }> {
+  return earnFetch(`/membership/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      address: params.address,
+      nonce: params.nonce,
+      signature: params.signature,
+      walletEcosystem: "evm",
+      distributor_id: TURTLE_DISTRIBUTOR_ID,
+    }),
+  });
 }
