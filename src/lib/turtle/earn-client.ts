@@ -328,3 +328,50 @@ export function explorerTxUrl(
   }
   return undefined;
 }
+
+// ── Track ────────────────────────────────────────────────────────────────────
+
+export interface DepositRecord {
+  id?: string;
+  txHash: string;
+  walletAddress: string;
+  chainId?: number;
+  opportunityId?: string;
+  amountInUsd?: string | null;
+  amountToken?: string | null;
+  tokenSymbol?: string | null;
+  tokenIconUrl?: string | null;
+  blockTimestamp?: string | null;
+  isSwap?: boolean;
+  interaction?: string;
+}
+
+export interface DepositsPage {
+  deposits: DepositRecord[];
+  pagination?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+    hasNext?: boolean;
+    hasPrevious?: boolean;
+  };
+}
+
+/** Track: deposits attributed to CuratorWatch's distributor ID. */
+export async function getDistributorDeposits(params?: {
+  page?: number;
+  limit?: number;
+  opportunityId?: string;
+}): Promise<DepositsPage> {
+  const qs = new URLSearchParams();
+  if (params?.page != null) qs.set("page", String(params.page));
+  if (params?.limit != null) qs.set("limit", String(params.limit));
+  if (params?.opportunityId) qs.set("opportunity_id", params.opportunityId);
+  const q = qs.toString();
+  const data = await earnFetch<DepositsPage | DepositRecord[]>(
+    `/deposit/${TURTLE_DISTRIBUTOR_ID}${q ? `?${q}` : ""}`
+  );
+  if (Array.isArray(data)) return { deposits: data };
+  return { deposits: data.deposits ?? [], pagination: data.pagination };
+}

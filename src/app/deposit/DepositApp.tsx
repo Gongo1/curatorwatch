@@ -14,6 +14,7 @@ import {
 } from "@/lib/turtle/earn-client";
 import { useEthereum, chainName } from "@/lib/turtle/useEthereum";
 import { DepositPanel } from "./DepositPanel";
+import { DepositsTracker } from "./DepositsTracker";
 import { formatCurrency } from "@/lib/utils/format";
 
 function shortAddr(a: string): string {
@@ -37,6 +38,8 @@ export function DepositApp() {
 
   // Which opportunity's deposit panel is open.
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Bumped after a successful deposit to refresh the attributed-deposits tracker.
+  const [depositsKey, setDepositsKey] = useState(0);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -282,6 +285,7 @@ export function DepositApp() {
                     opportunity={o}
                     wallet={wallet}
                     member={member}
+                    onDeposited={() => setDepositsKey((k) => k + 1)}
                   />
                 )}
               </div>
@@ -300,6 +304,8 @@ export function DepositApp() {
           </p>
         </div>
       )}
+
+      <DepositsTracker refreshKey={depositsKey} />
     </>
   );
 }
