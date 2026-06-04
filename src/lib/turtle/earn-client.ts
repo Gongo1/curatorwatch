@@ -217,3 +217,114 @@ export async function registerMembership(params: {
     }),
   });
 }
+
+// ── Deposit ──────────────────────────────────────────────────────────────────
+
+export interface DepositTransaction {
+  type?: string;
+  description?: string;
+  /** Tx data is nested HERE, not flat on the item. item.to is undefined. */
+  transaction: {
+    to: string;
+    data: string;
+    value?: string;
+    gasLimit?: string;
+    chainId?: number;
+  };
+  metadata?: unknown;
+}
+
+export interface DepositQuote {
+  actionId?: string;
+  transactions: DepositTransaction[];
+}
+
+/**
+ * Deposit: build the ordered transactions (approval(s) then deposit) for a wallet.
+ * `amount` is in the token's smallest unit (use toBaseUnits). The distributor field
+ * here is camelCase `distributorId` (membership register uses snake_case).
+ */
+export async function createDeposit(params: {
+  opportunityId: string;
+  userAddress: string;
+  tokenIn: string;
+  amount: string;
+  mode?: "direct" | "swap";
+  slippageBps?: number;
+}): Promise<DepositQuote> {
+  const { opportunityId, userAddress, tokenIn, amount, mode, slippageBps } =
+    params;
+  return earnFetch<DepositQuote>(`/actions/deposit/${opportunityId}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userAddress,
+      tokenIn,
+      amount,
+      distributorId: TURTLE_DISTRIBUTOR_ID,
+      ...(mode ? { mode } : {}),
+      ...(slippageBps != null ? { slippageBps } : {}),
+    }),
+  });
+}
+
+export interface VerifyResult {
+  signatureValid: boolean;
+  tag?: string;
+  error?: string;
+  metadata?: {
+    distributorId?: string;
+    actionId?: string;
+    amount?: string;
+    amountUsd?: string;
+    opportunityId?: string;
+    referralCode?: string;
+    tokenIn?: string;
+    tokenInDecimals?: number;
+    action?: string;
+  };
+}
+
+/** Verify: confirm a deposit tx was attributed. distributorId is under `metadata`. */
+export async function verifyDeposit(
+  chainIdNum: number,
+  txHash: string
+): Promise<VerifyResult> {
+  return earnFetch<VerifyResult>(
+    `/actions/verify?chainId=${chainIdNum}&txHash=${encodeURIComponent(txHash)}`
+  );
+}
+
+/** Was a verified deposit attributed to CuratorWatch's distributor ID? */
+export function isAttributedToUs(v: VerifyResult): boolean {
+  return Boolean(
+    v.signatureValid && v.metadata?.distributorId === TURTLE_DISTRIBUTOR_ID
+  );
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Convert a human decimal amount to the token's smallest unit (no floats). */
+export function toBaseUnits(amount: string, decimals: number): string {
+  const s = amount.trim();
+  if (!s || s.startsWith("-") || !/^\d*\.?\d*$/.test(s)) {
+    throw new Error("Enter a valid positive amount");
+  }
+  const [intPart = "0", fracPart = ""] = s.split(".");
+  if (fracPart.length > decimals) {
+    throw new Error(`At most ${decimals} decimal places`);
+  }
+  const base = BigInt((intPart || "0") + fracPart.padEnd(decimals, "0"));
+  return base.toString();
+}
+
+/** Block-explorer tx URL when the token's chain object carries an explorerUrl. */
+export function explorerTxUrl(
+  token: EarnToken | undefined,
+  hash: string
+): string | undefined {
+  if (token && typeof token.chain === "object" && token.chain.explorerUrl) {
+    return `${token.chain.explorerUrl.replace(/\/$/, "")}/tx/${hash}`;
+  }
+  return undefined;
+}

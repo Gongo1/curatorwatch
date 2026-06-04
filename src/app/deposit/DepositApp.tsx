@@ -13,6 +13,7 @@ import {
   type EarnOpportunity,
 } from "@/lib/turtle/earn-client";
 import { useEthereum, chainName } from "@/lib/turtle/useEthereum";
+import { DepositPanel } from "./DepositPanel";
 import { formatCurrency } from "@/lib/utils/format";
 
 function shortAddr(a: string): string {
@@ -33,6 +34,9 @@ export function DepositApp() {
   const [member, setMember] = useState<boolean | null>(null);
   const [joining, setJoining] = useState(false);
   const [memberMsg, setMemberMsg] = useState<string | null>(null);
+
+  // Which opportunity's deposit panel is open.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -226,43 +230,60 @@ export function DepositApp() {
         <div className="space-y-2">
           {opps.map((o) => {
             const token = o.depositTokens?.[0];
+            const open = selectedId === o.id;
             return (
-              <div
-                key={o.id}
-                className="flex items-center justify-between p-4 bg-background-elevated border border-border rounded-xl"
-              >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-text-primary truncate">
-                      {o.name}
-                    </span>
-                    {o.featured && (
-                      <span className="text-[10px] uppercase tracking-wide font-semibold text-cyan-500 bg-cyan-500/10 px-1.5 py-0.5 rounded">
-                        Featured
+              <div key={o.id}>
+                <div className="flex items-center justify-between p-4 bg-background-elevated border border-border rounded-xl">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-text-primary truncate">
+                        {o.name}
                       </span>
+                      {o.featured && (
+                        <span className="text-[10px] uppercase tracking-wide font-semibold text-cyan-500 bg-cyan-500/10 px-1.5 py-0.5 rounded">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-text-secondary">
+                      {token?.symbol ?? "—"}
+                      {chainLabel(token) ? ` · ${chainLabel(token)}` : ""}
+                      {o.curator?.name ? ` · ${o.curator.name}` : ""}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0 pl-4">
+                    <div className="text-right text-sm">
+                      <div className="text-text-secondary">
+                        TVL{" "}
+                        <span className="text-text-primary tabular-nums">
+                          {formatCurrency(o.tvl)}
+                        </span>
+                      </div>
+                      <div className="text-text-tertiary text-xs mt-0.5">
+                        {isDepositable(o)
+                          ? o.swapDirectEnabled
+                            ? "direct"
+                            : "swap"
+                          : "not depositable"}
+                      </div>
+                    </div>
+                    {isDepositable(o) && (
+                      <button
+                        onClick={() => setSelectedId(open ? null : o.id)}
+                        className="text-sm font-medium px-3 py-1.5 rounded-lg bg-cyan-500/10 text-cyan-500 hover:bg-cyan-500/20 transition-colors"
+                      >
+                        {open ? "Close" : "Deposit"}
+                      </button>
                     )}
                   </div>
-                  <div className="text-sm text-text-secondary">
-                    {token?.symbol ?? "—"}
-                    {chainLabel(token) ? ` · ${chainLabel(token)}` : ""}
-                    {o.curator?.name ? ` · ${o.curator.name}` : ""}
-                  </div>
                 </div>
-                <div className="text-right text-sm shrink-0 pl-4">
-                  <div className="text-text-secondary">
-                    TVL{" "}
-                    <span className="text-text-primary tabular-nums">
-                      {formatCurrency(o.tvl)}
-                    </span>
-                  </div>
-                  <div className="text-text-tertiary text-xs mt-0.5">
-                    {isDepositable(o)
-                      ? o.swapDirectEnabled
-                        ? "direct"
-                        : "swap"
-                      : "not depositable"}
-                  </div>
-                </div>
+                {open && (
+                  <DepositPanel
+                    opportunity={o}
+                    wallet={wallet}
+                    member={member}
+                  />
+                )}
               </div>
             );
           })}
