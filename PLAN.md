@@ -1,11 +1,13 @@
 # CuratorWatch: One-Stop Shop for Curation — Engagement Plan
 
-Status: **Phases 1+2 implemented and preview-verified on `phase2-curator-hub`
-(contains `phase1-clean-fast`) — awaiting merge approval.** Preview Lighthouse
-numbers below; open decision: LCP 3.5–3.9s vs the <2.0s target (font render
-delay — `display: optional` design tradeoff). (Phase 0 approved 2026-06-09;
-protocol integrations beyond Morpho/Turtle confirmed out of scope; /deposit
-flag stays on.)
+Status: **Phases 1+2 SHIPPED — merged to main (`d576eaf`) and live on
+curatorwatch.com 2026-06-09; prod smoke-tested (all routes 200, education copy +
+Compare entry points serving, ISR cache HIT).** Open decision: LCP 3.5–3.9s
+simulated vs the <2.0s target (hero font render delay — `display: optional`
+design tradeoff; current lean = accept and watch field data). Next: Phase 3
+(deals & returns) — needs migration approval before build. (Phase 0 approved
+2026-06-09; protocol integrations beyond Morpho/Turtle confirmed out of scope;
+/deposit flag stays on.)
 Baseline captured 2026-06-09 against production (curatorwatch.com), repo at `main` = `31698c5`.
 
 North star: Curator → Vaults → Deals → Returns → Deposit, as one continuous flow,
@@ -323,3 +325,7 @@ preview deployments — expected; prod serves 100.
   Bypass secret generated (Austin-approved); Lighthouse run on preview;
   `link-in-text-block` a11y fix landed (`9eb547a`); both pages A11y/BP 100,
   Perf 85/90, CLS 0. **Awaiting: merge approval + LCP font tradeoff decision.**
+- 2026-06-09 (later) — Merge approved by Austin; `phase2-curator-hub`
+  fast-forwarded into `main` (`31698c5..d576eaf`), deployed to prod, smoke
+  verified (/, /compare, curator page, /deposit all 200; ISR HIT). Phases 1+2
+  COMPLETE. LCP font tradeoff: accepted for now, revisit with field data.
