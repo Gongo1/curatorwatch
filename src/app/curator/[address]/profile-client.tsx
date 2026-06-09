@@ -23,6 +23,8 @@ function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
+type VSortKey = "name" | "asset" | "protocol" | "grade" | "tvl" | "apy" | "fee";
+
 const netApyOf = (v: CuratorVaultSummary): number =>
   v.latestSnapshot?.avgNetApy ?? v.netAPR ?? 0; // fraction
 const tvlOf = (v: CuratorVaultSummary): number => v.latestSnapshot?.totalAssetsUsd ?? 0;
@@ -45,7 +47,7 @@ interface CuratorProfileViewProps {
 
 export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
-  const [vsort, setVsort] = useState<{ k: "name" | "asset" | "grade" | "tvl" | "apy"; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
+  const [vsort, setVsort] = useState<{ k: VSortKey; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
 
   const { vaults } = data;
   const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
@@ -104,15 +106,17 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
     const dir = vsort.dir;
     if (vsort.k === "name") return a.name.toLowerCase() < b.name.toLowerCase() ? -dir : dir;
     if (vsort.k === "asset") return a.asset.symbol < b.asset.symbol ? -dir : dir;
+    if (vsort.k === "protocol") return (a.protocol || "") < (b.protocol || "") ? -dir : dir;
     if (vsort.k === "grade") {
       const rank = (v: CuratorVaultSummary) => ({ high: 3, medium: 2, low: 1 }[gradeKey(v.grade) || "low"] || 0);
       return (rank(a) - rank(b)) * dir;
     }
+    if (vsort.k === "fee") return ((a.performanceFee ?? 0) - (b.performanceFee ?? 0)) * dir;
     if (vsort.k === "apy") return (netApyOf(a) - netApyOf(b)) * dir;
     return (tvlOf(a) - tvlOf(b)) * dir;
   });
   const onVSort = (k: typeof vsort.k) =>
-    setVsort((s) => (s.k === k ? { k, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { k, dir: k === "name" || k === "asset" ? 1 : -1 }));
+    setVsort((s) => (s.k === k ? { k, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { k, dir: k === "name" || k === "asset" || k === "protocol" ? 1 : -1 }));
 
   return (
     <div className="max-w-[1000px]">
@@ -231,9 +235,11 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
               <tr>
                 <VTh k="name" sort={vsort} onSort={onVSort} className="text-left">Vault</VTh>
                 <VTh k="asset" sort={vsort} onSort={onVSort} className="text-left">Asset</VTh>
+                <VTh k="protocol" sort={vsort} onSort={onVSort} className="text-left">Protocol</VTh>
                 <VTh k="grade" sort={vsort} onSort={onVSort} className="text-left">Grade</VTh>
                 <VTh k="tvl" sort={vsort} onSort={onVSort} className="text-right">TVL</VTh>
                 <VTh k="apy" sort={vsort} onSort={onVSort} className="text-right">Net APY</VTh>
+                <VTh k="fee" sort={vsort} onSort={onVSort} className="text-right">Perf fee</VTh>
               </tr>
             </thead>
             <tbody>
@@ -248,6 +254,9 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                     </td>
                     <td className="py-3 px-3"><span className="font-mono text-xs text-text-secondary border border-border rounded px-1.5 py-0.5">{v.asset.symbol}</span></td>
                     <td className="py-3 px-3">
+                      <span className="font-mono text-xs text-text-secondary capitalize">{v.protocol || "—"}</span>
+                    </td>
+                    <td className="py-3 px-3">
                       {gk ? (
                         <span className={`font-mono text-xs inline-flex items-center gap-1.5 ${GRADE_TEXT[gk]}`}>
                           <span className={`w-1.5 h-1.5 rounded-sm ${GRADE_DOT[gk]}`} />
@@ -259,6 +268,9 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                     </td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{formatCurrency(tvlOf(v))}</td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{netApyOf(v) > 0 ? `${(netApyOf(v) * 100).toFixed(2)}%` : "—"}</td>
+                    <td className="py-3 px-3 text-right font-mono text-sm tabular-nums text-text-secondary">
+                      {v.performanceFee != null ? `${(v.performanceFee * 100).toFixed(0)}%` : "—"}
+                    </td>
                   </tr>
                 );
               })}
@@ -306,6 +318,32 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
             </div>
           ))}
         </div>
+      </Section>
+
+      {/* ── Liquidations lens (inline) ── */}
+      <Section title="Liquidations" meta="across markets this curator allocates to">
+        {data.liquidationSummary ? (
+          <div className="flex gap-x-10 gap-y-3 flex-wrap">
+            <Fact k="All time" v={String(data.liquidationSummary.total)} />
+            <Fact k="Last 30 days" v={String(data.liquidationSummary.recent30d)} />
+            <Fact k="Repaid" v={formatCurrency(data.liquidationSummary.totalRepaidUsd)} />
+            <Fact k="Seized" v={formatCurrency(data.liquidationSummary.totalSeizedUsd)} />
+            <div>
+              <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">Bad debt</div>
+              <div className={`font-mono text-sm mt-0.5 tabular-nums ${data.liquidationSummary.totalBadDebtUsd > 0 ? "text-accent-red" : "text-accent-green"}`}>
+                {data.liquidationSummary.totalBadDebtUsd > 0
+                  ? formatCurrency(data.liquidationSummary.totalBadDebtUsd)
+                  : "None"}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="font-mono text-sm text-text-tertiary">No liquidation data for this curator&rsquo;s markets.</p>
+        )}
+        <p className="font-mono text-xs text-text-tertiary mt-3">
+          Healthy liquidations repay lenders in full; bad debt is the loss signal.
+          Full event detail lives in the <Link href="/liquidations" className="text-accent-blue hover:underline">Liquidations lens</Link>.
+        </p>
       </Section>
 
       {/* ── Changes & alerts: what moved, when ── */}
@@ -482,7 +520,7 @@ function ECard({ label, value, sub, accent }: { label: string; value: string; su
   );
 }
 
-function VTh({ k, sort, onSort, className = "", children }: { k: "name" | "asset" | "grade" | "tvl" | "apy"; sort: { k: string; dir: number }; onSort: (k: "name" | "asset" | "grade" | "tvl" | "apy") => void; className?: string; children: React.ReactNode }) {
+function VTh({ k, sort, onSort, className = "", children }: { k: VSortKey; sort: { k: string; dir: number }; onSort: (k: VSortKey) => void; className?: string; children: React.ReactNode }) {
   const active = sort.k === k;
   return (
     <th className={`font-mono text-[0.62rem] uppercase tracking-[0.1em] font-medium pb-3 px-3 ${className}`}>
