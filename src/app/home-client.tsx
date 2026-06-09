@@ -25,7 +25,7 @@ function ChartWhenVisible() {
     if (!el || inView) return;
     const obs = new IntersectionObserver(
       (entries) => entries[0].isIntersecting && setInView(true),
-      { rootMargin: "300px" }
+      { threshold: 0.05 }
     );
     obs.observe(el);
     return () => obs.disconnect();

@@ -20,7 +20,9 @@ export function SidebarNavItem({
   return (
     <Link
       href={href}
-      prefetch={true}
+      // No eager prefetch: nine route payloads competing with first paint
+      // cost more than the ~200ms a click-time fetch adds to navigation.
+      prefetch={false}
       aria-current={active ? "page" : undefined}
       className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-200 ${
         active
