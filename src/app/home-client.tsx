@@ -1,14 +1,38 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { CuratorIndex } from "@/components/curators/CuratorIndex";
 import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
 
+const ChartSkeleton = () => (
+  <div className="h-[310px] bg-background-subtle border border-border rounded-xl animate-pulse" />
+);
+
 const CuratorTvlChart = dynamic(
   () => import("@/components/curators/CuratorTvlChart").then((m) => m.CuratorTvlChart),
-  { ssr: false, loading: () => <div className="h-[310px] bg-background-subtle border border-border rounded-xl animate-pulse" /> }
+  { ssr: false, loading: ChartSkeleton }
 );
+
+// The chart is below the fold: don't let its recharts chunk + data fetch
+// compete with first paint. Mount it only when the section nears the viewport.
+function ChartWhenVisible() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || inView) return;
+    const obs = new IntersectionObserver(
+      (entries) => entries[0].isIntersecting && setInView(true),
+      { rootMargin: "300px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [inView]);
+
+  return <div ref={ref}>{inView ? <CuratorTvlChart /> : <ChartSkeleton />}</div>;
+}
 
 // Categorical palette — distinct hues for the asset-mix bar (matches the chart).
 const MIX_COLORS = [
@@ -156,7 +180,7 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
       {/* ── TVL by curator (30d) ── */}
       <section className="mt-2">
         <SectionHead title="Tracked TVL by curator" meta="top 6 · 30 days · hover to inspect" />
-        <CuratorTvlChart />
+        <ChartWhenVisible />
       </section>
 
       {/* ── Curator index ── */}

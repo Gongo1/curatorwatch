@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { fetchCuratorDetail } from "@/lib/curator-detail";
@@ -15,6 +16,21 @@ export async function generateStaticParams(): Promise<{ address: string }[]> {
 
 interface PageProps {
   params: Promise<{ address: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { address } = await params;
+  const data = await fetchCuratorDetail(address);
+  if (!data) return { title: "Curator not found - CuratorWatch" };
+
+  const name = data.curator.name || `Curator ${data.curator.address.slice(0, 6)}`;
+  const tvl = data.vaults.reduce((s, v) => s + (v.latestSnapshot?.totalAssetsUsd ?? 0), 0);
+  const tvlStr =
+    tvl >= 1e9 ? `$${(tvl / 1e9).toFixed(2)}B` : `$${(tvl / 1e6).toFixed(1)}M`;
+  return {
+    title: `${name} - Curator Profile - CuratorWatch`,
+    description: `${name} manages ${data.vaults.length} vaults with ${tvlStr} TVL. Track record, risk signals, managed vaults, and yield intelligence on CuratorWatch.`,
+  };
 }
 
 export default async function CuratorProfile({ params }: PageProps) {

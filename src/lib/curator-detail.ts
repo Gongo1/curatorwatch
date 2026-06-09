@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { resolveCuratorSlug } from "@/lib/curator-aliases";
 import type {
@@ -114,9 +115,12 @@ export interface CuratorDetail {
 /**
  * Full curator detail (profile, vaults, news, liquidations) for the curator
  * page and the /api/curators/[address] route. Returns null when the curator
- * doesn't exist.
+ * doesn't exist. React-cached so generateMetadata and the page body share
+ * one query per render pass.
  */
-export async function fetchCuratorDetail(addressOrSlug: string): Promise<CuratorDetail | null> {
+export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
+  addressOrSlug: string
+): Promise<CuratorDetail | null> {
   const resolvedAddress = await resolveCuratorSlug(addressOrSlug);
 
   // Fetch curator by address with risk data for strategy calculation
@@ -318,4 +322,4 @@ export async function fetchCuratorDetail(addressOrSlug: string): Promise<Curator
     news,
     liquidationSummary,
   };
-}
+});

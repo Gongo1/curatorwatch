@@ -35,10 +35,8 @@ export const metadata: Metadata = {
   description:
     "Hourly intelligence on DeFi vault curators. Track managed vaults across Morpho, Aave, Euler, Compound, Spark, and more. Monitor changes, assess risk, compare strategies.",
   keywords: ["DeFi", "Morpho", "Aave", "Euler", "vault curators", "risk intelligence", "yield", "multi-protocol"],
-  icons: {
-    icon: "/logo.png",
-    apple: "/logo.png",
-  },
+  // Favicons come from the app/icon.png + app/apple-icon.png file conventions —
+  // pointing icons at /logo.png shipped the raw 731KB PNG on every page load.
   openGraph: {
     title: "CuratorWatch",
     description: "Track DeFi vault curators",
