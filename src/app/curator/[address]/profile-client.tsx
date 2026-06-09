@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Plus, Check, Globe } from "lucide-react";
+import { ExternalLink, Plus, Check, Globe, GitCompare } from "lucide-react";
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -161,6 +161,12 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                   {isTracked ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
                   {isTracked ? "Tracking" : "Track"}
                 </button>
+                <Link
+                  href={`/compare?c=${curator.address}`}
+                  className="inline-flex items-center gap-1.5 text-sm rounded-lg px-3.5 py-1.5 border border-border text-text-primary hover:bg-background-subtle transition-colors"
+                >
+                  <GitCompare className="w-3.5 h-3.5" /> Compare
+                </Link>
                 {curator.website && (
                   <a href={curator.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm rounded-lg px-3.5 py-1.5 border border-border text-text-primary hover:bg-background-subtle transition-colors">
                     <Globe className="w-3.5 h-3.5" /> Website

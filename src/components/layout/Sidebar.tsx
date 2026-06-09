@@ -14,6 +14,7 @@ import {
   BookOpen,
   Calculator,
   FileText,
+  GitCompare,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -43,6 +44,7 @@ export function Sidebar() {
       title: "Intelligence",
       items: [
         { href: "/", icon: <Users className="w-5 h-5" />, label: "Curators" },
+        { href: "/compare", icon: <GitCompare className="w-5 h-5" />, label: "Compare" },
       ],
     },
     {
