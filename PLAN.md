@@ -390,7 +390,11 @@ Branch `phase4-deposit` (off main `a0ab924`), 2 commits. No schema changes.
   3a/3b/3c implemented on `phase3-deals` (3 commits), built + smoke-tested.
 - 2026-06-09 (later) — Phase 3 merge approved; `phase3-deals` fast-forwarded
   into `main` (`c7de921..0c46472`), deployed, prod smoke-tested (all routes
-  200, Deal column live). Phase 3 COMPLETE. **Deal data populates on the next
-  collect-turtle cron (00:00/12:00 UTC) — verify dealSync numbers in that run's
-  response/log (expect ~225 mapped, ~555 unmatched logged). Next: Phase 4
-  (reusable deposit panel from any deal card).**
+  200, Deal column live). Phase 3 COMPLETE.
+- 2026-06-09 (later) — Phase 4 implemented on `phase4-deposit` (3 commits),
+  merge approved, fast-forwarded into `main` (`a0ab924..6ce3477`), deployed,
+  prod smoke-tested (all routes 200). Phase 4 CODE COMPLETE. **Remaining to
+  close the engagement: (1) first collect-turtle cron run populates deal data
+  (~225 mapped expected — verify dealSync numbers); (2) 4d flight test: a real
+  small deposit from a curator-page Deal entry, attribution verified (needs
+  Austin's wallet).**
