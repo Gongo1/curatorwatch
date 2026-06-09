@@ -262,6 +262,24 @@ export interface CuratorVaultSummary {
   estTotalAPR: number | null;
 }
 
+export interface CuratorAumPoint {
+  date: string; // YYYY-MM-DD
+  aumUsd: number;
+  vaultCount: number;
+}
+
+export interface CuratorTimelineEntry {
+  id: string;
+  source: "vault" | "curator";
+  vaultAddress: string | null;
+  vaultName: string | null;
+  changeType: string;
+  severity: string;
+  title: string;
+  description: string;
+  detectedAt: string;
+}
+
 export interface CuratorDetailResponse {
   success: boolean;
   data: {
@@ -269,6 +287,8 @@ export interface CuratorDetailResponse {
     vaults: CuratorVaultSummary[];
     news: CuratorNewsItem[];
     liquidationSummary?: LiquidationSummary;
+    aumHistory?: CuratorAumPoint[];
+    timeline?: CuratorTimelineEntry[];
   };
   error?: string;
 }

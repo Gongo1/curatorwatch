@@ -6,8 +6,13 @@ import { ExternalLink, Plus, Check, Globe } from "lucide-react";
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { usePortfolio } from "@/hooks/usePortfolio";
-import { formatCurrency } from "@/lib/utils/format";
-import type { CuratorDetailResponse, CuratorVaultSummary } from "@/lib/types/api";
+import { formatCurrency, formatTimeAgo } from "@/lib/utils/format";
+import type {
+  CuratorDetailResponse,
+  CuratorVaultSummary,
+  CuratorAumPoint,
+  CuratorTimelineEntry,
+} from "@/lib/types/api";
 
 function initials(name: string): string {
   return name
@@ -201,6 +206,18 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
         </div>
       </header>
 
+      {/* ── Track record: AUM under management over time ── */}
+      <Section
+        title="Track record"
+        meta={
+          data.aumHistory && data.aumHistory.length > 1
+            ? `AUM · daily · since ${fmtDay(data.aumHistory[0].date)}`
+            : "AUM over time"
+        }
+      >
+        <TrackRecord history={data.aumHistory ?? []} />
+      </Section>
+
       {/* ── Risk profile (inline, above the fold) ── */}
       <Section title="Risk profile" meta="peer-ranked among tracked curators">
         <CuratorRiskProfile curatorAddress={curator.address} />
@@ -291,11 +308,145 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
         </div>
       </Section>
 
+      {/* ── Changes & alerts: what moved, when ── */}
+      <Section
+        title="Changes & alerts"
+        meta="auto-detected across this curator’s vaults"
+      >
+        <CuratorTimeline entries={data.timeline ?? []} />
+      </Section>
+
       {/* ── Top depositors (live) ── */}
       <Section title="Top depositors" meta="across this curator’s vaults">
         <CuratorDepositors curatorAddress={curator.address} />
       </Section>
     </div>
+  );
+}
+
+function fmtDay(iso: string): string {
+  const d = new Date(iso + "T00:00:00Z");
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+function compactUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;
+  return `$${Math.round(n / 1e3)}K`;
+}
+
+// Server-data SVG area chart — no chart library, nothing to lazy-load.
+function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
+  if (history.length < 2) {
+    return (
+      <p className="font-mono text-sm text-text-tertiary">
+        Not enough history yet — AUM tracking for this curator began recently.
+        The chart appears once a few days of snapshots accumulate.
+      </p>
+    );
+  }
+
+  const W = 640;
+  const H = 150;
+  const first = history[0];
+  const last = history[history.length - 1];
+  const max = Math.max(...history.map((p) => p.aumUsd));
+  const min = Math.min(...history.map((p) => p.aumUsd));
+  const span = max - min || 1;
+  const x = (i: number) => (i / (history.length - 1)) * W;
+  // 8% padding top and bottom so the line never kisses the frame.
+  const y = (v: number) => H - ((v - min) / span) * (H * 0.84) - H * 0.08;
+  const line = history.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.aumUsd).toFixed(1)}`).join(" ");
+  const area = `${line} L${W},${H} L0,${H} Z`;
+
+  const changePct = first.aumUsd > 0 ? ((last.aumUsd - first.aumUsd) / first.aumUsd) * 100 : 0;
+  const d30 = history.length > 30 ? history[history.length - 31] : first;
+  const change30Pct = d30.aumUsd > 0 ? ((last.aumUsd - d30.aumUsd) / d30.aumUsd) * 100 : 0;
+  const sign = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
+  const tone = (v: number) => (v >= 0 ? "text-accent-green" : "text-accent-red");
+
+  return (
+    <div>
+      <div className="flex gap-x-10 gap-y-3 flex-wrap mb-4">
+        <Fact k="AUM today" v={compactUsd(last.aumUsd)} />
+        <div>
+          <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">30d change</div>
+          <div className={`font-mono text-sm mt-0.5 tabular-nums ${tone(change30Pct)}`}>{sign(change30Pct)}</div>
+        </div>
+        <div>
+          <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">Since {fmtDay(first.date)}</div>
+          <div className={`font-mono text-sm mt-0.5 tabular-nums ${tone(changePct)}`}>{sign(changePct)}</div>
+        </div>
+        <Fact k="Peak" v={compactUsd(max)} />
+        <Fact k="Products" v={`${last.vaultCount} vaults`} />
+      </div>
+      <div className="border border-border rounded-2xl bg-background-subtle p-4">
+        <svg
+          viewBox={`0 0 ${W} ${H}`}
+          className="w-full h-auto block"
+          role="img"
+          aria-label={`AUM from ${compactUsd(first.aumUsd)} on ${fmtDay(first.date)} to ${compactUsd(last.aumUsd)} on ${fmtDay(last.date)}`}
+        >
+          <path d={area} fill="var(--accent-blue)" opacity="0.12" />
+          <path d={line} fill="none" stroke="var(--accent-blue)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+        </svg>
+        <div className="flex justify-between font-mono text-[0.62rem] text-text-tertiary mt-2 tabular-nums">
+          <span>{fmtDay(first.date)} · {compactUsd(first.aumUsd)}</span>
+          <span>{fmtDay(last.date)} · {compactUsd(last.aumUsd)}</span>
+        </div>
+      </div>
+      <p className="font-mono text-xs text-text-tertiary mt-3">
+        Daily closing AUM from CuratorWatch snapshots — history begins when
+        tracking began, not at the curator&rsquo;s inception.
+      </p>
+    </div>
+  );
+}
+
+const SEVERITY_DOT: Record<string, string> = {
+  critical: "bg-accent-red",
+  warning: "bg-accent-yellow",
+  info: "bg-accent-blue",
+};
+
+function CuratorTimeline({ entries }: { entries: CuratorTimelineEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <p className="font-mono text-sm text-text-tertiary">
+        No detected changes or alerts yet for this curator&rsquo;s vaults.
+      </p>
+    );
+  }
+  return (
+    <ol className="flex flex-col">
+      {entries.map((e) => (
+        <li key={`${e.source}-${e.id}`} className="flex gap-3 py-3 border-t border-border-subtle first:border-t-0">
+          <span
+            className={`mt-1.5 w-2 h-2 rounded-sm flex-none ${SEVERITY_DOT[e.severity] ?? "bg-text-tertiary"}`}
+            aria-hidden="true"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-sm font-medium text-text-primary">{e.title}</span>
+              {e.vaultAddress && e.vaultName && (
+                <Link
+                  href={`/vault/${e.vaultAddress}`}
+                  className="font-mono text-xs text-text-tertiary hover:text-accent-blue transition-colors truncate"
+                >
+                  {e.vaultName}
+                </Link>
+              )}
+              <span className="font-mono text-xs text-text-tertiary ml-auto whitespace-nowrap">
+                {formatTimeAgo(e.detectedAt)}
+              </span>
+            </div>
+            {e.description && (
+              <p className="text-xs text-text-secondary mt-0.5 line-clamp-2">{e.description}</p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }
 

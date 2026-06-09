@@ -5,6 +5,8 @@ import type {
   CuratorProfile,
   CuratorNewsItem,
   CuratorVaultSummary,
+  CuratorAumPoint,
+  CuratorTimelineEntry,
   LiquidationSummary,
   LiquidationEvent,
 } from "@/lib/types/api";
@@ -110,6 +112,8 @@ export interface CuratorDetail {
   vaults: CuratorVaultSummary[];
   news: CuratorNewsItem[];
   liquidationSummary: LiquidationSummary;
+  aumHistory: CuratorAumPoint[];
+  timeline: CuratorTimelineEntry[];
 }
 
 /**
@@ -303,6 +307,65 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
     };
   }
 
+  // ── Track record: AUM history (hourly snapshots downsampled to daily) ──
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const rawSnapshots = await prisma.curatorSnapshot.findMany({
+    where: { curatorId: curator.id, timestamp: { gte: ninetyDaysAgo } },
+    orderBy: { timestamp: "asc" },
+    select: { totalAssetsUsd: true, vaultCount: true, timestamp: true },
+  });
+  // Last snapshot per UTC day = the day's closing value.
+  const byDay = new Map<string, CuratorAumPoint>();
+  for (const s of rawSnapshots) {
+    const date = s.timestamp.toISOString().slice(0, 10);
+    byDay.set(date, { date, aumUsd: s.totalAssetsUsd, vaultCount: s.vaultCount });
+  }
+  const aumHistory = Array.from(byDay.values());
+
+  // ── Per-curator timeline: vault changes + curator-scoped platform alerts ──
+  const vaultIds = curator.vaults.map((v) => v.id);
+  const vaultById = new Map(curator.vaults.map((v) => [v.id, v]));
+  const [vaultChanges, platformAlerts] = await Promise.all([
+    vaultIds.length > 0
+      ? prisma.vaultChange.findMany({
+          where: { vaultId: { in: vaultIds } },
+          orderBy: { detectedAt: "desc" },
+          take: 25,
+        })
+      : Promise.resolve([]),
+    prisma.platformAlert.findMany({
+      where: { scope: "curator", curatorId: curator.id },
+      orderBy: { detectedAt: "desc" },
+      take: 25,
+    }),
+  ]);
+  const timeline: CuratorTimelineEntry[] = [
+    ...vaultChanges.map((c) => ({
+      id: c.id,
+      source: "vault" as const,
+      vaultAddress: vaultById.get(c.vaultId)?.address ?? null,
+      vaultName: vaultById.get(c.vaultId)?.name ?? null,
+      changeType: c.changeType,
+      severity: c.severity,
+      title: c.title,
+      description: c.description,
+      detectedAt: c.detectedAt.toISOString(),
+    })),
+    ...platformAlerts.map((a) => ({
+      id: a.id,
+      source: "curator" as const,
+      vaultAddress: null,
+      vaultName: null,
+      changeType: a.changeType,
+      severity: a.severity,
+      title: a.title,
+      description: a.description,
+      detectedAt: a.detectedAt.toISOString(),
+    })),
+  ]
+    .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt))
+    .slice(0, 25);
+
   // Transform news data
   const news: CuratorNewsItem[] = curator.news.map((item) => ({
     id: item.id,
@@ -321,5 +384,7 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
     vaults,
     news,
     liquidationSummary,
+    aumHistory,
+    timeline,
   };
 });
