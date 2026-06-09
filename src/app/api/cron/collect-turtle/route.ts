@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectTurtleData } from "@/scripts/collect-turtle-data";
+import { revalidateDataPages } from "@/lib/revalidate-pages";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -34,6 +35,8 @@ export async function GET(request: NextRequest) {
       vaults: result.vaultsUpserted,
       duration: `${(result.duration / 1000).toFixed(1)}s`,
     });
+
+    revalidateDataPages();
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData } from "@/scripts/collect-data";
 import { updateVaultGrades } from "@/scripts/update-vault-grades";
+import { revalidateDataPages } from "@/lib/revalidate-pages";
 
 export const maxDuration = 800; // Pro plan allows up to 900s
 export const dynamic = "force-dynamic";
@@ -57,6 +58,8 @@ export async function GET(request: NextRequest) {
     } catch (gradeError) {
       console.error("[CRON] Vault grade update failed (non-fatal):", gradeError);
     }
+
+    revalidateDataPages();
 
     return NextResponse.json({
       success: true,
