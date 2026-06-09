@@ -220,7 +220,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
         A curator is the risk team behind these vaults — they choose markets, set exposure caps,
         and rebalance deposits on LPs&rsquo; behalf. This page is their track record:
         what they manage, how it&rsquo;s{" "}
-        <Link href="/docs" className="text-accent-blue hover:underline">graded</Link>, and what has
+        <Link href="/docs" className="text-accent-blue underline underline-offset-2">graded</Link>, and what has
         changed.
       </p>
 
@@ -356,7 +356,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
         )}
         <p className="font-mono text-xs text-text-tertiary mt-3">
           Healthy liquidations repay lenders in full; bad debt is the loss signal.
-          Full event detail lives in the <Link href="/liquidations" className="text-accent-blue hover:underline">Liquidations lens</Link>.
+          Full event detail lives in the <Link href="/liquidations" className="text-accent-blue underline underline-offset-2">Liquidations lens</Link>.
         </p>
       </Section>
 

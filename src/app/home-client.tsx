@@ -185,7 +185,7 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
         delegate those decisions in exchange for yield. So the real due-diligence question
         isn&rsquo;t &ldquo;which vault?&rdquo; but &ldquo;whose judgment am I trusting?&rdquo; — this
         index tracks who curators are, what they manage, and how their products hold up under a{" "}
-        <Link href="/docs" className="text-accent-blue hover:underline">
+        <Link href="/docs" className="text-accent-blue underline underline-offset-2">
           10-requirement grading model
         </Link>
         .
