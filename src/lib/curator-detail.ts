@@ -215,6 +215,9 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
       chainName: (vault as Record<string, unknown>).chainName as string | null ?? null,
       netAPR: vault.netAPR ?? null,
       estTotalAPR: vault.estTotalAPR ?? null,
+      dealOpportunityId: vault.dealOpportunityId ?? null,
+      dealDepositable: vault.dealDepositable ?? false,
+      dealEstApr: vault.dealEstApr ?? null,
       latestSnapshot: snapshot
         ? {
             totalAssets: snapshot.totalAssets,

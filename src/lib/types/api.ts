@@ -72,6 +72,10 @@ export interface VaultData {
   chainName?: string | null;
   estTotalAPR?: number | null;
   netAPR?: number | null;
+  // Phase 3a deal mapping (distributor opportunity, when this vault is one)
+  dealOpportunityId?: string | null;
+  dealDepositable?: boolean;
+  dealEstApr?: number | null;
   aprBreakdown?: Array<{ source: string; apr: number; type: string }> | null;
   riskScore?: number | null;
   grade?: string | null;
@@ -260,6 +264,9 @@ export interface CuratorVaultSummary {
   latestSnapshot: VaultSnapshot | null;
   netAPR: number | null;
   estTotalAPR: number | null;
+  dealOpportunityId: string | null;
+  dealDepositable: boolean;
+  dealEstApr: number | null;
 }
 
 export interface CuratorAumPoint {

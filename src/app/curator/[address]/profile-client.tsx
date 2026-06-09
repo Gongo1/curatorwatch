@@ -25,6 +25,9 @@ function initials(name: string): string {
 }
 type VSortKey = "name" | "asset" | "protocol" | "grade" | "tvl" | "apy" | "fee";
 
+// Deal links route into /deposit, which 404s unless the flag is on.
+const DEPOSIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TURTLE_DEPOSIT === "true";
+
 const netApyOf = (v: CuratorVaultSummary): number =>
   v.latestSnapshot?.avgNetApy ?? v.netAPR ?? 0; // fraction
 const tvlOf = (v: CuratorVaultSummary): number => v.latestSnapshot?.totalAssetsUsd ?? 0;
@@ -254,6 +257,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                 <VTh k="tvl" sort={vsort} onSort={onVSort} className="text-right">TVL</VTh>
                 <VTh k="apy" sort={vsort} onSort={onVSort} className="text-right">Net APY</VTh>
                 <VTh k="fee" sort={vsort} onSort={onVSort} className="text-right">Perf fee</VTh>
+                <th className="font-mono text-[0.62rem] uppercase tracking-[0.1em] font-medium pb-3 px-3 text-right text-text-tertiary">Deal</th>
               </tr>
             </thead>
             <tbody>
@@ -285,13 +289,29 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums text-text-secondary">
                       {v.performanceFee != null ? `${(v.performanceFee * 100).toFixed(0)}%` : "—"}
                     </td>
+                    <td className="py-3 px-3 text-right">
+                      {DEPOSIT_ENABLED && v.dealDepositable && v.dealOpportunityId ? (
+                        <Link
+                          href={`/deposit?opportunity=${v.dealOpportunityId}`}
+                          className="font-mono text-xs text-cyan-500 underline underline-offset-2 hover:text-cyan-400 transition-colors whitespace-nowrap"
+                        >
+                          Deposit{v.dealEstApr != null ? ` · ${v.dealEstApr.toFixed(1)}%` : ""}
+                        </Link>
+                      ) : (
+                        <span className="font-mono text-xs text-text-tertiary" title="Not available as a distributor deal">—</span>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="font-mono text-xs text-text-tertiary mt-4">Grade is source-derived per vault (10-requirement model). Click a vault for its full breakdown.</p>
+        <p className="font-mono text-xs text-text-tertiary mt-4">
+          Grade is source-derived per vault (10-requirement model). Click a vault for its full breakdown.
+          Deal links open the deposit flow for vaults available through CuratorWatch; rates shown are the
+          deal&rsquo;s estimated APR from the latest sync.
+        </p>
       </Section>
 
       {/* ── Economics: where the yield comes from ── */}

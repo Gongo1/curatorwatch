@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
   getDistributorOpportunities,
@@ -27,6 +28,7 @@ function shortAddr(a: string): string {
 // sign/register round-trip.
 export function DepositApp() {
   const wallet = useEthereum();
+  const searchParams = useSearchParams();
   const [opps, setOpps] = useState<EarnOpportunity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,22 @@ export function DepositApp() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Deal deep links (?opportunity=<id>, from curator/vault pages): once the
+  // curated list is in, open that opportunity's panel and scroll it into view.
+  useEffect(() => {
+    if (loading) return;
+    const target = searchParams.get("opportunity");
+    if (!target || !opps.some((o) => o.id === target)) return;
+    setSelectedId(target);
+    requestAnimationFrame(() =>
+      document
+        .getElementById(`opp-${target}`)
+        ?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+    // Intentionally keyed to loading: run once when the list first arrives.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
 
   // Check membership whenever the connected wallet changes.
   useEffect(() => {
@@ -235,7 +253,7 @@ export function DepositApp() {
             const token = o.depositTokens?.[0];
             const open = selectedId === o.id;
             return (
-              <div key={o.id}>
+              <div key={o.id} id={`opp-${o.id}`}>
                 <div className="flex items-center justify-between p-4 bg-background-elevated border border-border rounded-xl">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
