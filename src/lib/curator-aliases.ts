@@ -109,6 +109,13 @@ export function curatorSlug(name: string | null, address: string): string {
  * - Otherwise queries Prisma for a curator whose name slugifies to the input.
  */
 export async function resolveCuratorSlug(slug: string): Promise<string> {
+  // App Router route params arrive percent-encoded; Turtle curator addresses
+  // contain a colon (`tc:telosc` -> `tc%3Atelosc`), so decode before matching.
+  try {
+    slug = decodeURIComponent(slug);
+  } catch {
+    // Malformed escape sequence — match on the raw value.
+  }
   if (slug.startsWith("0x")) {
     return resolveCuratorAddress(slug);
   }
