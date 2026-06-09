@@ -20,8 +20,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 // Display face self-hosted (was a render-blocking Fontshare stylesheet).
 const cabinetGrotesk = localFont({
+  // Only the weights actually used (font-display is only ever bold/extrabold).
   src: [
-    { path: "../fonts/cabinet-grotesk-500.woff2", weight: "500" },
     { path: "../fonts/cabinet-grotesk-700.woff2", weight: "700" },
     { path: "../fonts/cabinet-grotesk-800.woff2", weight: "800" },
   ],

@@ -193,10 +193,10 @@ function RiskTrackRecord({
             />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-[10px] text-text-muted">
+            <span className="text-[10px] text-text-tertiary">
               {ordinal(usrExposure.percentile)} percentile
             </span>
-            <span className="text-[10px] text-text-muted">
+            <span className="text-[10px] text-text-tertiary">
               among {peerCount} curators
             </span>
           </div>
@@ -237,8 +237,8 @@ function RiskTrackRecord({
           <div className="h-full rounded-full bg-accent-green" style={{ width: "100%" }} />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-[10px] text-text-muted">100th percentile</span>
-          <span className="text-[10px] text-text-muted">among {peerCount} curators</span>
+          <span className="text-[10px] text-text-tertiary">100th percentile</span>
+          <span className="text-[10px] text-text-tertiary">among {peerCount} curators</span>
         </div>
       </div>
     </div>
@@ -305,7 +305,7 @@ function FactorCard({ factor }: { factor: RiskFactor }) {
         <div className="text-lg font-semibold text-text-primary">{primary}</div>
         <div className="text-xs text-text-tertiary mt-0.5">{secondary}</div>
         {factor.id === "bad-debt" && factor.incidents.length > 0 && (
-          <div className="text-[10px] text-text-muted mt-1 leading-snug">
+          <div className="text-[10px] text-text-tertiary mt-1 leading-snug">
             Estimated exposure, not a confirmed realized loss.{" "}
             <a
               href={factor.incidents[0].sourceUrl}
@@ -328,10 +328,10 @@ function FactorCard({ factor }: { factor: RiskFactor }) {
           />
         </div>
         <div className="flex justify-between mt-1">
-          <span className="text-[10px] text-text-muted">
+          <span className="text-[10px] text-text-tertiary">
             {ordinal(factor.peer.percentile)} percentile
           </span>
-          <span className="text-[10px] text-text-muted">
+          <span className="text-[10px] text-text-tertiary">
             among {factor.peer.peerCount} curators
           </span>
         </div>
