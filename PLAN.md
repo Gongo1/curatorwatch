@@ -362,5 +362,9 @@ deferred-from-2d `PlatformAlert.vaultId` drill-down column.
   COMPLETE. LCP font tradeoff: accepted for now, revisit with field data.
 - 2026-06-09 (later) — Phase 3 migration approved + applied to prod (additive);
   3a/3b/3c implemented on `phase3-deals` (3 commits), built + smoke-tested.
-  **Awaiting: preview verification → merge approval. Deal data populates on the
-  first post-merge collect-turtle cron run.**
+- 2026-06-09 (later) — Phase 3 merge approved; `phase3-deals` fast-forwarded
+  into `main` (`c7de921..0c46472`), deployed, prod smoke-tested (all routes
+  200, Deal column live). Phase 3 COMPLETE. **Deal data populates on the next
+  collect-turtle cron (00:00/12:00 UTC) — verify dealSync numbers in that run's
+  response/log (expect ~225 mapped, ~555 unmatched logged). Next: Phase 4
+  (reusable deposit panel from any deal card).**
