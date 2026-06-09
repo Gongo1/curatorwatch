@@ -5,15 +5,13 @@ import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
   getDistributorOpportunities,
-  checkMembership,
-  getMembershipAgreement,
-  registerMembership,
   chainLabel,
   isDepositable,
   TURTLE_DISTRIBUTOR_ID,
   type EarnOpportunity,
 } from "@/lib/turtle/earn-client";
 import { useEthereum, chainName } from "@/lib/turtle/useEthereum";
+import { useTurtleMembership } from "@/lib/turtle/useMembership";
 import { DepositPanel } from "./DepositPanel";
 import { DepositsTracker } from "./DepositsTracker";
 import { formatCurrency } from "@/lib/utils/format";
@@ -34,9 +32,7 @@ export function DepositApp() {
   const [error, setError] = useState<string | null>(null);
 
   // Membership (per-wallet, opportunity-independent).
-  const [member, setMember] = useState<boolean | null>(null);
-  const [joining, setJoining] = useState(false);
-  const [memberMsg, setMemberMsg] = useState<string | null>(null);
+  const { member, joining, message: memberMsg, join } = useTurtleMembership(wallet);
 
   // Which opportunity's deposit panel is open.
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -82,60 +78,6 @@ export function DepositApp() {
     // Intentionally keyed to loading: run once when the list first arrives.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading]);
-
-  // Check membership whenever the connected wallet changes.
-  useEffect(() => {
-    if (!wallet.account) {
-      setMember(null);
-      return;
-    }
-    let active = true;
-    setMemberMsg(null);
-    checkMembership(wallet.account)
-      .then((r) => {
-        if (active) setMember(r.isMember);
-      })
-      .catch(() => {
-        if (active) setMember(null);
-      });
-    return () => {
-      active = false;
-    };
-  }, [wallet.account]);
-
-  const join = useCallback(async () => {
-    if (!wallet.account) return;
-    setJoining(true);
-    setMemberMsg(null);
-    try {
-      const { message, nonce } = await getMembershipAgreement(
-        wallet.account,
-        window.location.origin
-      );
-      const signature = await wallet.personalSign(message, wallet.account);
-      const res = await registerMembership({
-        address: wallet.account,
-        nonce,
-        signature,
-      });
-      if (res.isMember) {
-        setMember(true);
-      } else {
-        setMemberMsg(res.error || "Registration did not complete.");
-      }
-    } catch (e) {
-      const code = (e as { code?: number })?.code;
-      setMemberMsg(
-        code === 4001
-          ? "Signature rejected."
-          : e instanceof Error
-            ? e.message
-            : "Failed to join Turtle"
-      );
-    } finally {
-      setJoining(false);
-    }
-  }, [wallet]);
 
   return (
     <>
