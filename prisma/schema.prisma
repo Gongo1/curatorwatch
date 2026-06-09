@@ -36,6 +36,14 @@ model Vault {
   netAPR          Float?                       // estTotalAPR - performanceFee - managementFee
   aprBreakdown    Json?                        // Incentive sources from Turtle API
 
+  // Deal mapping (Phase 3a): distributor opportunity this vault is depositable as.
+  // Matched by turtleId, else receiptToken address+chain. Written by the
+  // collect-turtle cron; dealCheckedAt stamps the last mapping change.
+  dealOpportunityId String?   @unique
+  dealDepositable   Boolean   @default(false)
+  dealEstApr        Float?
+  dealCheckedAt     DateTime?
+
   // Risk scoring (computed by update-vault-grades script)
   riskScore          Float?    // 0-100 composite risk score
   grade              String?   // "high-grade" | "other"
@@ -63,6 +71,8 @@ model Vault {
   changes              VaultChange[]
   positions            VaultPosition[]
   marketAllocations    MarketAllocation[]
+  depositRecords       DepositRecord[]
+  platformAlerts       PlatformAlert[]
 
   @@index([chainId])
   @@index([assetSymbol])
@@ -302,6 +312,8 @@ model PlatformAlert {
   scope       String   // "curator" | "ecosystem"
   curatorId   String?
   curator     Curator? @relation(fields: [curatorId], references: [id], onDelete: Cascade)
+  vaultId     String?  // Phase 3 (deferred 2d): vault drill-down for vault-scoped alerts
+  vault       Vault?   @relation(fields: [vaultId], references: [id], onDelete: SetNull)
   changeType  String   // CURATOR_AUM_DROP, ECOSYSTEM_AUM_DROP, etc.
   severity    String   // info, warning, critical
   title       String
@@ -317,6 +329,31 @@ model PlatformAlert {
   @@index([scope, detectedAt])
   @@index([curatorId, detectedAt])
   @@index([detectedAt])
+  @@index([vaultId, detectedAt])
+}
+
+// Phase 3b: deposits attributed to CuratorWatch's distributor ID, synced from
+// GET /v1/deposit/{distributorId} by the collect-turtle cron. The id is
+// Turtle's stable deposit UUID (upsert key); vaultId resolves through the
+// deal mapping and stays null for deals on untracked protocols.
+model DepositRecord {
+  id             String    @id
+  opportunityId  String?
+  vaultId        String?
+  vault          Vault?    @relation(fields: [vaultId], references: [id], onDelete: SetNull)
+  interaction    String    @default("deposit")
+  txHash         String
+  chainId        Int?
+  walletAddress  String
+  amountToken    String?
+  amountInUsd    Float?
+  tokenSymbol    String?
+  blockTimestamp DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([vaultId, blockTimestamp])
+  @@index([opportunityId])
+  @@index([walletAddress])
 }
 
 model VaultPosition {

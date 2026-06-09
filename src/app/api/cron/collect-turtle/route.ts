@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectTurtleData } from "@/scripts/collect-turtle-data";
+import {
+  syncDealsAndDeposits,
+  type DealSyncSummary,
+} from "@/lib/turtle/deal-sync";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
 
 export const maxDuration = 300;
@@ -36,6 +40,18 @@ export async function GET(request: NextRequest) {
       duration: `${(result.duration / 1000).toFixed(1)}s`,
     });
 
+    // Phase 3: deal mapping + attributed deposits. A failure here must not
+    // fail the whole collection run — report it in the response instead.
+    let dealSync: DealSyncSummary | null = null;
+    let dealSyncError: string | null = null;
+    try {
+      dealSync = await syncDealsAndDeposits();
+      console.log("[CRON] Deal sync complete:", dealSync);
+    } catch (e) {
+      dealSyncError = e instanceof Error ? e.message : "deal sync failed";
+      console.error("[CRON] Deal sync failed:", e);
+    }
+
     revalidateDataPages();
 
     return NextResponse.json({
@@ -50,6 +66,8 @@ export async function GET(request: NextRequest) {
         unmatchedHidden: result.unmatchedHidden,
         duration: result.duration,
       },
+      dealSync,
+      dealSyncError,
     });
   } catch (error) {
     console.error("[CRON] Turtle collection failed:", error);
