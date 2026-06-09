@@ -16,6 +16,7 @@ const DealDepositDrawer = dynamic(
 );
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
+import { ApyDistViz, buildApyDistribution } from "@/components/ApyDistViz";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { formatCurrency, formatTimeAgo } from "@/lib/utils/format";
 import type {
@@ -88,7 +89,12 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
     .sort((a, b) => b.dollars - a.dollars)
     .slice(0, 8);
   const weightedApy = totalTVL ? annualYield / totalTVL : 0;
+  const apyPairs = vaults
+    .filter((v) => netApyOf(v) > 0 && tvlOf(v) > 0)
+    .map((v) => ({ apy: netApyOf(v) * 100, tvl: tvlOf(v) }));
+  const apyDist = apyPairs.length ? buildApyDistribution(apyPairs) : null;
   const derived = {
+    apyDist,
     totalTVL,
     grade,
     graded: grade.high + grade.medium + grade.low,
@@ -339,7 +345,13 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
       <Section title="Economics" meta="annual yield, by vault">
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
           <ECard label="Annual yield to LPs" value={formatCurrency(derived.annualYield)} accent />
-          <ECard label="Avg net APY" value={`${(derived.weightedApy * 100).toFixed(2)}%`} sub="TVL-weighted" />
+          {derived.apyDist && derived.apyDist.count >= 3 ? (
+            <div className="border border-border rounded-xl bg-background-subtle p-5">
+              <ApyDistViz d={derived.apyDist} label={`Net APY · ${derived.apyDist.count} vaults`} />
+            </div>
+          ) : (
+            <ECard label="Avg net APY" value={`${(derived.weightedApy * 100).toFixed(2)}%`} sub="TVL-weighted" />
+          )}
           <ECard label="Vaults" value={String(vaults.length)} sub={`${derived.assets.length} assets`} />
         </div>
         <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary mb-3">Annual yield ($) by vault — bar = $ paid, figure = APY</div>

@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
  */
 export function revalidateDataPages(): void {
   revalidatePath("/");
+  revalidatePath("/yields");
   revalidatePath("/curator/[address]", "page");
   revalidatePath("/vault/[address]", "page");
 }

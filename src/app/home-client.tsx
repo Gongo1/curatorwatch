@@ -4,7 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { CuratorIndex } from "@/components/curators/CuratorIndex";
+import { ApyDistViz, type ApyDistribution } from "@/components/ApyDistViz";
 import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
+
+export type { ApyDistribution };
 
 const ChartSkeleton = () => (
   <div className="h-[310px] bg-background-subtle border border-border rounded-xl animate-pulse" />
@@ -49,19 +52,6 @@ function compactUsd(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
   if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
   return `$${Math.round(n / 1e3)}K`;
-}
-
-export interface ApyDistribution {
-  count: number;
-  min: number;
-  q1: number;
-  median: number;
-  q3: number;
-  p95: number;
-  max: number;
-  histEdges: number[];
-  histogram: number[];
-  histogramTvl: number[];
 }
 
 interface CuratorsHomeProps {
@@ -235,39 +225,6 @@ function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
       <div className="font-mono font-semibold text-xl tracking-tight mt-0.5 tabular-nums">
         {v}
         {sub && <span className="text-xs text-text-tertiary font-normal ml-1.5">{sub}</span>}
-      </div>
-    </div>
-  );
-}
-
-// Net-APY spread across curated vaults — a histogram beats an average: it shows the
-// cluster and the high-yield tail. Median bucket highlighted; max labels the tail.
-function ApyDistViz({ d }: { d: ApyDistribution }) {
-  const maxCount = Math.max(1, ...d.histogram); // bar height = vault count (shape)
-  const maxTvl = Math.max(1, ...d.histogramTvl); // bar brightness = $ concentration
-  const fmtM = (n: number) =>
-    n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : `$${Math.round(n / 1e6)}M`;
-  return (
-    <div className="min-w-[190px]">
-      <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
-        Net APY · {d.count} vaults
-      </div>
-      <div className="flex items-end gap-[3px] h-7 mt-1.5" aria-hidden="true">
-        {d.histogram.map((c, i) => (
-          <div
-            key={i}
-            className="flex-1 rounded-[2px] min-w-[6px] bg-accent-blue"
-            style={{
-              height: `${Math.max(10, (c / maxCount) * 100)}%`,
-              opacity: 0.22 + 0.78 * (d.histogramTvl[i] / maxTvl),
-            }}
-            title={`${d.histEdges[i]}–${d.histEdges[i + 1] >= 100 ? "∞" : d.histEdges[i + 1]}%: ${c} vault${c === 1 ? "" : "s"} · ${fmtM(d.histogramTvl[i])}`}
-          />
-        ))}
-      </div>
-      <div className="font-mono text-[0.62rem] text-text-tertiary mt-1 tabular-nums">
-        median <span className="text-text-secondary">{d.median.toFixed(1)}%</span> · 95th{" "}
-        <span className="text-text-secondary">{Math.round(d.p95)}%</span> · shade = TVL
       </div>
     </div>
   );
