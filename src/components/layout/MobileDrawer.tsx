@@ -96,6 +96,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
           </Link>
           <button
             onClick={onClose}
+            aria-label="Close menu"
             className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-background-hover transition-colors"
           >
             <X className="w-5 h-5" />

@@ -80,7 +80,7 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
     <button
       type="button"
       onClick={() => onSort(k)}
-      aria-sort={sortKey === k ? (sortDir < 0 ? "descending" : "ascending") : "none"}
+      aria-pressed={sortKey === k}
       className={`font-mono text-[10px] uppercase tracking-[0.1em] hover:text-text-primary transition-colors ${
         sortKey === k ? "text-accent-blue" : "text-text-tertiary"
       } ${className}`}

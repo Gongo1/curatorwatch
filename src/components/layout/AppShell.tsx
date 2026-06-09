@@ -30,6 +30,7 @@ export function AppShell({ children }: AppShellProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setDrawerOpen(true)}
+              aria-label="Open menu"
               className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-background-hover transition-colors"
             >
               <Menu className="w-5 h-5" />

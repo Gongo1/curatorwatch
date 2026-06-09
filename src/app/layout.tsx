@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/react";
 import { AppShell } from "@/components/layout/AppShell";
 import "./globals.css";
@@ -14,6 +15,17 @@ const geist = Geist({
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: "swap",
+});
+
+// Display face self-hosted (was a render-blocking Fontshare stylesheet).
+const cabinetGrotesk = localFont({
+  src: [
+    { path: "../fonts/cabinet-grotesk-500.woff2", weight: "500" },
+    { path: "../fonts/cabinet-grotesk-700.woff2", weight: "700" },
+    { path: "../fonts/cabinet-grotesk-800.woff2", weight: "800" },
+  ],
+  variable: "--font-cabinet",
   display: "swap",
 });
 
@@ -57,15 +69,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <head>
-        <link rel="preconnect" href="https://api.fontshare.com" />
-        <link
-          rel="stylesheet"
-          href="https://api.fontshare.com/v2/css?f=cabinet-grotesk@500,700,800&display=swap"
-        />
-      </head>
       <body
-        className={`${geist.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${geist.variable} ${jetbrainsMono.variable} ${cabinetGrotesk.variable} antialiased`}
       >
         <AppShell>{children}</AppShell>
         <Analytics />
