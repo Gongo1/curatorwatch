@@ -343,6 +343,32 @@ deferred-from-2d `PlatformAlert.vaultId` drill-down column.
   Austin approved schema, not data writes). First verified numbers land with the
   first post-merge `collect-turtle` run, or Austin can trigger the cron manually.
 
+## Phase 4 results (2026-06-09)
+
+Branch `phase4-deposit` (off main `a0ab924`), 2 commits. No schema changes.
+
+- **4a Reusable panel:** `DealDepositDrawer` — the deposit flow as a drawer
+  openable from any deal entry point. Turtle membership extracted to a shared
+  `useTurtleMembership` hook (DepositApp refactored onto it, no behavior
+  change). Wallet/deposit code stays out of page bundles via `next/dynamic`,
+  loading on first open.
+- **4b Wallet UX:** explicit steps indicator (connect → join/sign → approve &
+  deposit), connected-account + chain display, graceful no-wallet state
+  (MetaMask install link, mobile wallet-browser guidance, /deposit fallback —
+  no dead end). Chain switching stays automatic inside DepositPanel.
+- **4c Context at the moment of action:** the drawer header carries the deal's
+  vault, curator, asset + chain, and est APR — the deal researched is the deal
+  deposited. Attribution note with the distributor ID in the footer.
+- **4d Attribution verify:** the existing `actions/verify` path runs inside the
+  drawer (DepositPanel reuse) from curator/vault entry points. End-to-end
+  flight test on a real deposit needs Austin's wallet + populated deal data —
+  pending the first post-merge cron run.
+- Entry points: curator Deal column and vault Deposit CTA open the drawer in
+  place (no navigation); `/deposit` remains the full deals index.
+- Verification: `tsc` clean, build green (36/36), curator/vault/deposit pages
+  200 locally. Interactive drawer verification requires populated deal data
+  (cron) — buttons render only for mapped depositable vaults.
+
 ## Status log
 
 - 2026-06-09 — Phase 0 audit complete; baseline recorded; plan approved.
