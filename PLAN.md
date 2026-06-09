@@ -312,6 +312,37 @@ preview deployments — expected; prod serves 100.
   switch the display font to `font-display: optional` (no swap → LCP ≈ FCP, but
   first-visit users on slow connections may see fallback type permanently).
 
+## Phase 3 results (2026-06-09)
+
+Branch `phase3-deals` (off main `c7de921`). Schema migration approved and applied
+to prod via Supabase MCP before any code (all additive): Vault deal columns
+(`dealOpportunityId` unique / `dealDepositable` / `dealEstApr` / `dealCheckedAt`),
+new `DepositRecord` table (Turtle deposit UUID as PK, nullable vault FK), and the
+deferred-from-2d `PlatformAlert.vaultId` drill-down column.
+
+- **3a mapping (the audit's key find):** every distributor opportunity carries a
+  `receiptToken` — for vault deals that's the vault share token, i.e. the vault
+  contract address+chain. Probed against prod: **225/304 vaults map to a deal**
+  (134 via `turtleId`, 91 Morpho-sourced via receipt token, 0 conflicts); the
+  remaining 555 opportunities are untracked protocols, logged per run.
+  `lib/turtle/deal-sync.ts` runs in the collect-turtle cron (12h): matches
+  turtleId → receipt token, writes only on change, clears vanished deals, never
+  drops unmatched silently. Server-side pk_live use approved 2026-06-09.
+- **3b deposits:** cron pages `/v1/deposit/{distributorId}` and upserts
+  `DepositRecord` rows keyed by Turtle's stable deposit UUID; vault resolution
+  through the deal mapping. A deal-sync failure is reported in the cron response
+  without failing collection.
+- **3c UI:** Deal column on the curator vaults table (Deposit link + deal est
+  APR; honest "—" otherwise), attributed Deposit CTA on the vault page ahead of
+  the external protocol link (flag-gated), and `?opportunity=` deep links into
+  /deposit (opens + scrolls to the deal's panel).
+- Verification: `tsc` clean, build green (36/36), /deposit?opportunity= 200,
+  Deal column rendering, vault page 200.
+- **Data note:** deal columns are empty until the first cron run after deploy
+  (the classifier correctly blocked me from running the populate write locally —
+  Austin approved schema, not data writes). First verified numbers land with the
+  first post-merge `collect-turtle` run, or Austin can trigger the cron manually.
+
 ## Status log
 
 - 2026-06-09 — Phase 0 audit complete; baseline recorded; plan approved.
@@ -329,3 +360,7 @@ preview deployments — expected; prod serves 100.
   fast-forwarded into `main` (`31698c5..d576eaf`), deployed to prod, smoke
   verified (/, /compare, curator page, /deposit all 200; ISR HIT). Phases 1+2
   COMPLETE. LCP font tradeoff: accepted for now, revisit with field data.
+- 2026-06-09 (later) — Phase 3 migration approved + applied to prod (additive);
+  3a/3b/3c implemented on `phase3-deals` (3 commits), built + smoke-tested.
+  **Awaiting: preview verification → merge approval. Deal data populates on the
+  first post-merge collect-turtle cron run.**
