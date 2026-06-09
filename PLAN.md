@@ -1,10 +1,11 @@
 # CuratorWatch: One-Stop Shop for Curation — Engagement Plan
 
-Status: **Phase 2 implemented on branch `phase2-curator-hub` (stacked on
-`phase1-clean-fast`) — both await preview-deploy verification, then merge
-approval. Blocker: Vercel Preview env needs DATABASE_URL etc. enabled (Austin,
-dashboard).** (Phase 0 approved 2026-06-09; protocol integrations beyond
-Morpho/Turtle confirmed out of scope; /deposit flag stays on.)
+Status: **Phases 1+2 implemented and preview-verified on `phase2-curator-hub`
+(contains `phase1-clean-fast`) — awaiting merge approval.** Preview Lighthouse
+numbers below; open decision: LCP 3.5–3.9s vs the <2.0s target (font render
+delay — `display: optional` design tradeoff). (Phase 0 approved 2026-06-09;
+protocol integrations beyond Morpho/Turtle confirmed out of scope; /deposit
+flag stays on.)
 Baseline captured 2026-06-09 against production (curatorwatch.com), repo at `main` = `31698c5`.
 
 North star: Curator → Vaults → Deals → Returns → Deposit, as one continuous flow,
@@ -280,6 +281,35 @@ Verification: `tsc` clean, `next build` green (36/36 pages), `/compare` 200 +
 title in static HTML, profile Compare button + both education intros confirmed in
 served HTML via `next start`.
 
+### Preview verification (2026-06-09, Vercel preview, Lighthouse mobile)
+
+Access via Protection Bypass for Automation (generated with Austin's explicit
+approval; header `x-vercel-protection-bypass`). Branch tip `9eb547a`.
+
+| Metric | Home baseline (prod) | Home preview | Curator baseline | Curator preview |
+|---|---|---|---|---|
+| Performance | 60 | **85** | 62 | **90** |
+| Accessibility | 89 | **100** | 91 | **100** |
+| Best practices | 100 | **100** | 100 | **100** |
+| SEO | 100 | 63¹ | 100 | 63¹ |
+| LCP (simulated) | 8.0s | **3.9s** | 7.6s | **3.5s** |
+| FCP | 2.3s | **1.5s** | 2.3s | **1.1s** |
+| CLS | 0.089 | **0** | 0.089 | **0** |
+| TBT | 140ms | **10ms** | 40ms | **10ms** |
+
+¹ `is-crawlable` fails because Vercel serves `x-robots-tag: noindex` on all
+preview deployments — expected; prod serves 100.
+
+- The a11y gap found on preview (`link-in-text-block` on the new education-layer
+  links) was fixed in `9eb547a` (static underlines) and re-measured at 100.
+- **Perf 85–90 vs the ≥95 target: the entire remaining gap is LCP.** Breakdown:
+  TTFB ~200ms, element render delay ~2s on the hero text — the Cabinet Grotesk
+  swap moment under Lighthouse's simulated slow-4G/4× throttling. TBT 10ms and
+  CLS 0 mean there's nothing else left to fix. Decision for Austin: accept
+  (field LCP on real connections will be far below the simulated 3.5–3.9s), or
+  switch the display font to `font-display: optional` (no swap → LCP ≈ FCP, but
+  first-visit users on slow connections may see fallback type permanently).
+
 ## Status log
 
 - 2026-06-09 — Phase 0 audit complete; baseline recorded; plan approved.
@@ -289,3 +319,7 @@ served HTML via `next start`.
   local verification done. Awaiting: Vercel Preview env vars (Austin) →
   preview Lighthouse → merge approval. Deferred: `PlatformAlert.vaultId`
   migration; lens-page fold-in.
+- 2026-06-09 (later) — Preview env vars enabled (Austin); preview builds green.
+  Bypass secret generated (Austin-approved); Lighthouse run on preview;
+  `link-in-text-block` a11y fix landed (`9eb547a`); both pages A11y/BP 100,
+  Perf 85/90, CLS 0. **Awaiting: merge approval + LCP font tradeoff decision.**
