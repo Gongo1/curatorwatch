@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import dynamic from "next/dynamic";
 import { CuratorIndex } from "@/components/curators/CuratorIndex";
 import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
@@ -176,6 +177,19 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
         )}
         {largest && <Stat k="Largest curator" v={largest.name || "—"} sub={compactUsd(largest.totalAUM)} />}
       </div>
+
+      {/* ── What a curator is ── */}
+      <p className="text-sm text-text-secondary leading-relaxed max-w-[760px] mb-10">
+        A <span className="text-text-primary font-medium">curator</span> is the risk team behind a
+        vault: they pick the lending markets, set exposure caps, and rebalance deposits — LPs
+        delegate those decisions in exchange for yield. So the real due-diligence question
+        isn&rsquo;t &ldquo;which vault?&rdquo; but &ldquo;whose judgment am I trusting?&rdquo; — this
+        index tracks who curators are, what they manage, and how their products hold up under a{" "}
+        <Link href="/docs" className="text-accent-blue hover:underline">
+          10-requirement grading model
+        </Link>
+        .
+      </p>
 
       {/* ── TVL by curator (30d) ── */}
       <section className="mt-2">

@@ -216,6 +216,14 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
         </div>
       </header>
 
+      <p className="font-mono text-xs text-text-tertiary leading-relaxed max-w-[720px] mb-2">
+        A curator is the risk team behind these vaults — they choose markets, set exposure caps,
+        and rebalance deposits on LPs&rsquo; behalf. This page is their track record:
+        what they manage, how it&rsquo;s{" "}
+        <Link href="/docs" className="text-accent-blue hover:underline">graded</Link>, and what has
+        changed.
+      </p>
+
       {/* ── Track record: AUM under management over time ── */}
       <Section
         title="Track record"
