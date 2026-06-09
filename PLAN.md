@@ -1,6 +1,8 @@
 # CuratorWatch: One-Stop Shop for Curation — Engagement Plan
 
-Status: **Phase 0 (audit) complete — awaiting approval to start Phase 1.**
+Status: **Phase 1 implemented on branch `phase1-clean-fast` — needs preview-deploy
+verification, then merge approval.** (Phase 0 approved 2026-06-09; protocol
+integrations beyond Morpho/Turtle confirmed out of scope; /deposit flag stays on.)
 Baseline captured 2026-06-09 against production (curatorwatch.com), repo at `main` = `31698c5`.
 
 North star: Curator → Vaults → Deals → Returns → Deposit, as one continuous flow,
@@ -195,6 +197,59 @@ mapping is already ingesting.
 
 ---
 
+## Phase 1 results (2026-06-09)
+
+Measured with Lighthouse mobile emulation. Baseline = production; "after" =
+local `next start` (no CDN/H2 edge — prod numbers should come in better; verify
+on the Vercel preview before merge).
+
+| Metric | Home before (prod) | Home after (local) | Curator before | Curator after |
+|---|---|---|---|---|
+| Performance | 60 | **90** | 62 | **92** |
+| Accessibility | 89 | **100** | 91 | **96→100 expected**¹ |
+| Best practices | 100 | 96² | 100 | 96² |
+| SEO | 100 | **100** | 100 | **100** |
+| LCP (simulated) | 8.0s | **3.5s** | 7.6s | **3.4s** |
+| FCP | 2.3s | **0.9s** | 2.3s | **0.9s** |
+| CLS | 0.089 | **0** | 0.089 | **0** |
+| JS transferred | 408KB | **259KB** | 307KB | **159KB** |
+
+¹ the remaining contrast failure (risk-profile labels) was fixed after the last
+measured run. ² localhost-only: the Vercel Analytics script 500s off-platform.
+
+What landed (10 commits, each building + smoke-tested):
+- **ISR everywhere it matters**: `/`, `/curator/[address]`, `/vault/[address]` are
+  server components rendering from the DB with `revalidate = 21600`, per-path
+  caching (`generateStaticParams([])`, verified MISS→HIT), and **cron-triggered
+  `revalidatePath()`** after every collection — served HTML now refreshes exactly
+  when data does. Detail queries extracted to `lib/curator-detail.ts` /
+  `lib/vault-detail.ts`; API routes delegate to them (no behavior change).
+- **731KB favicon eliminated** — metadata.icons pointed at the raw 1024px logo;
+  file-convention icons (2.9KB) now serve.
+- **Eager nav prefetch removed** (9 route payloads were fetched on every load) and
+  the homepage TVL chart (recharts, ~200KB) mounts only when scrolled into view.
+- **Fonts self-hosted**: Cabinet Grotesk via next/font/local (was a render-blocking
+  Fontshare stylesheet); unused 500 weight dropped.
+- **A11y**: aria-labels on icon-only nav buttons, invalid `aria-sort` →
+  `aria-pressed`, contrast fix on 10px muted labels.
+- **SEO**: robots.ts; per-curator and per-vault generateMetadata (real titles/
+  descriptions on every detail page).
+- Curator + vault loading skeletons; unused `svix` dependency removed.
+
+Notes / residual:
+- LCP <2.0s target: local next start serves HTTP/1.1 without CDN; remaining gap is
+  mostly fonts+JS on a simulated 1.6Mbps link. Re-measure on the Vercel preview —
+  if still >2.0s, next levers are font `display: optional` (design tradeoff — ask
+  Austin) and trimming the hydration payload of CuratorIndex.
+- `/` is now prerendered at build → builds need a reachable DATABASE_URL.
+- Lens pages (/yields /fees /liquidations /calculator /alerts) still client-fetch;
+  they're Phase 2 material (they become curator-scoped lenses anyway).
+- The repo sits in an iCloud-synced Desktop folder; sync keeps minting
+  `.next/types/routes.d 2.ts` duplicates that intermittently break `tsc`. Consider
+  moving the repo out of Desktop or excluding `.next/` from sync.
+
 ## Status log
 
-- 2026-06-09 — Phase 0 audit complete; baseline recorded; awaiting approval.
+- 2026-06-09 — Phase 0 audit complete; baseline recorded; plan approved.
+- 2026-06-09 — Phase 1 implemented on `phase1-clean-fast` (10 commits); local
+  verification done; awaiting preview-deploy verification + merge approval.
