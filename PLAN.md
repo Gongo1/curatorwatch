@@ -1,8 +1,10 @@
 # CuratorWatch: One-Stop Shop for Curation — Engagement Plan
 
-Status: **Phase 1 implemented on branch `phase1-clean-fast` — needs preview-deploy
-verification, then merge approval.** (Phase 0 approved 2026-06-09; protocol
-integrations beyond Morpho/Turtle confirmed out of scope; /deposit flag stays on.)
+Status: **Phase 2 implemented on branch `phase2-curator-hub` (stacked on
+`phase1-clean-fast`) — both await preview-deploy verification, then merge
+approval. Blocker: Vercel Preview env needs DATABASE_URL etc. enabled (Austin,
+dashboard).** (Phase 0 approved 2026-06-09; protocol integrations beyond
+Morpho/Turtle confirmed out of scope; /deposit flag stays on.)
 Baseline captured 2026-06-09 against production (curatorwatch.com), repo at `main` = `31698c5`.
 
 North star: Curator → Vaults → Deals → Returns → Deposit, as one continuous flow,
@@ -248,8 +250,42 @@ Notes / residual:
   `.next/types/routes.d 2.ts` duplicates that intermittently break `tsc`. Consider
   moving the repo out of Desktop or excluding `.next/` from sync.
 
+## Phase 2 results (2026-06-09)
+
+Branch `phase2-curator-hub` (off `phase1-clean-fast`), 4 commits, each built +
+smoke-tested against the prod DB locally:
+
+- **2a Track record**: 90d of `CuratorSnapshot` downsampled to daily closes on the
+  profile — dependency-free inline SVG (no recharts cost), 30d/period change facts,
+  honest empty state when history is thin.
+- **2b Managed vaults table**: protocol + performance-fee columns added; sortable on
+  every dimension (asset, protocol, grade, TVL, net APY, fee).
+- **2c Inline lenses**: liquidations summary module on the profile (bad debt
+  highlighted, links to the full lens); yields economics were already inline.
+  *Residual*: the standalone /yields /fees /liquidations pages still client-fetch —
+  fold-in deferred to the approved "Fees → LP calculator + slim fee-compare" item.
+- **2d Changes & alerts timeline**: `VaultChange` (vault-linked) merged with
+  curator-scoped `PlatformAlert`s, newest 25. *Residual*: the additive
+  `PlatformAlert.vaultId` migration is deferred — it's a prod schema change, and the
+  timeline works without it; bundle it with the next approved migration.
+- **2e Comparison**: `/compare` — pick up to 4 curators (URL-addressable `?c=a,b`),
+  side-by-side AUM, 30d TVL change, vault count, net APY, est. annual yield, grade
+  mix, risk posture, top assets, networks, sources, entity/regulation; best-in-row
+  highlighted. Entry points: sidebar + mobile nav, and a Compare button on every
+  profile masthead.
+- **2f Education layer**: plain-language "what a curator is" intro on home + profile
+  (server-rendered), linking to the grading methodology in /docs.
+
+Verification: `tsc` clean, `next build` green (36/36 pages), `/compare` 200 +
+title in static HTML, profile Compare button + both education intros confirmed in
+served HTML via `next start`.
+
 ## Status log
 
 - 2026-06-09 — Phase 0 audit complete; baseline recorded; plan approved.
 - 2026-06-09 — Phase 1 implemented on `phase1-clean-fast` (10 commits); local
   verification done; awaiting preview-deploy verification + merge approval.
+- 2026-06-09 — Phase 2 (2a–2f) implemented on `phase2-curator-hub` (4 commits);
+  local verification done. Awaiting: Vercel Preview env vars (Austin) →
+  preview Lighthouse → merge approval. Deferred: `PlatformAlert.vaultId`
+  migration; lens-page fold-in.
