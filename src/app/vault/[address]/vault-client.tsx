@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import type { DealContext } from "@/components/deposit/DealDepositDrawer";
 import {
   formatCurrency,
   formatPercentage,
@@ -36,6 +37,12 @@ const AllocationCalculator = dynamic(() => import("@/components/AllocationCalcul
   ssr: false,
   loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
 });
+
+// Wallet + deposit code loads only when the deal drawer is first opened.
+const DealDepositDrawer = dynamic(
+  () => import("@/components/deposit/DealDepositDrawer").then((m) => m.DealDepositDrawer),
+  { ssr: false }
+);
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
 
@@ -62,6 +69,7 @@ function getAddressColor(address: string): string {
 
 export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
   const [showTrackPrompt, setShowTrackPrompt] = useState(false);
+  const [openDeal, setOpenDeal] = useState<DealContext | null>(null);
   const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
 
   const isTracked = isVaultTracked(address);
@@ -104,12 +112,21 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
             <MorphoVerifiedBadge listed={vault.listed} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
             {dealUrl && (
-              <Link
-                href={dealUrl}
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDeal({
+                    opportunityId: vault.dealOpportunityId as string,
+                    vaultName: vault.name,
+                    curatorName,
+                    assetSymbol: vault.asset.symbol,
+                    estApr: vault.dealEstApr ?? null,
+                  })
+                }
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 hover:bg-cyan-500/15"
               >
                 Deposit{vault.dealEstApr != null ? ` · ${vault.dealEstApr.toFixed(1)}%` : ""}
-              </Link>
+              </button>
             )}
             <a
               href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
@@ -616,6 +633,10 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
         open={showTrackPrompt}
         onClose={() => setShowTrackPrompt(false)}
       />
+
+      {openDeal && (
+        <DealDepositDrawer deal={openDeal} onClose={() => setOpenDeal(null)} />
+      )}
     </>
   );
 }

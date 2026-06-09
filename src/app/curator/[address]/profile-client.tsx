@@ -2,7 +2,18 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { ExternalLink, Plus, Check, Globe, GitCompare } from "lucide-react";
+import type { DealContext } from "@/components/deposit/DealDepositDrawer";
+
+// Wallet + deposit code loads only when a deal is first opened.
+const DealDepositDrawer = dynamic(
+  () =>
+    import("@/components/deposit/DealDepositDrawer").then(
+      (m) => m.DealDepositDrawer
+    ),
+  { ssr: false }
+);
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -51,6 +62,7 @@ interface CuratorProfileViewProps {
 export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
   const [vsort, setVsort] = useState<{ k: VSortKey; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
+  const [openDeal, setOpenDeal] = useState<DealContext | null>(null);
 
   const { vaults } = data;
   const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
@@ -291,12 +303,21 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                     </td>
                     <td className="py-3 px-3 text-right">
                       {DEPOSIT_ENABLED && v.dealDepositable && v.dealOpportunityId ? (
-                        <Link
-                          href={`/deposit?opportunity=${v.dealOpportunityId}`}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setOpenDeal({
+                              opportunityId: v.dealOpportunityId as string,
+                              vaultName: v.name,
+                              curatorName: name,
+                              assetSymbol: v.asset.symbol,
+                              estApr: v.dealEstApr,
+                            })
+                          }
                           className="font-mono text-xs text-cyan-500 underline underline-offset-2 hover:text-cyan-400 transition-colors whitespace-nowrap"
                         >
                           Deposit{v.dealEstApr != null ? ` · ${v.dealEstApr.toFixed(1)}%` : ""}
-                        </Link>
+                        </button>
                       ) : (
                         <span className="font-mono text-xs text-text-tertiary" title="Not available as a distributor deal">—</span>
                       )}
@@ -392,6 +413,10 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
       <Section title="Top depositors" meta="across this curator’s vaults">
         <CuratorDepositors curatorAddress={curator.address} />
       </Section>
+
+      {openDeal && (
+        <DealDepositDrawer deal={openDeal} onClose={() => setOpenDeal(null)} />
+      )}
     </div>
   );
 }
