@@ -183,7 +183,13 @@ export async function GET() {
       for (const snap of Object.values(vaultSnapshots)) {
         const aum = snap.totalAssetsUsd || 0;
         const apy = sanitizeApy(snap.avgNetApy);
-        const curatorAddress = snap.vault?.curatorAddress?.toLowerCase() || "__unassigned__";
+        // Key on the RESOLVED curator (via curatorId), not the denormalized
+        // curatorAddress column — 166/304 vaults have curatorId but a null
+        // curatorAddress, which otherwise dumps most TVL into "Unassigned".
+        const curatorAddress =
+          snap.vault?.curator?.address?.toLowerCase() ||
+          snap.vault?.curatorAddress?.toLowerCase() ||
+          "__unassigned__";
         const protocol = snap.vault?.protocol || "morpho";
         const network = snap.vault?.chainName || "Ethereum";
 
@@ -212,9 +218,9 @@ export async function GET() {
         dailyData[day].networkAUM[network] += aum;
         allNetworks.add(network);
 
-        // Track unique curators per day
-        if (snap.vault?.curatorAddress) {
-          dailyData[day].curatorSet.add(snap.vault.curatorAddress);
+        // Track unique curators per day (resolved curator, not the column)
+        if (curatorAddress !== "__unassigned__") {
+          dailyData[day].curatorSet.add(curatorAddress);
         }
       }
     }
