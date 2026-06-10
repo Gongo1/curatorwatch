@@ -2,6 +2,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { resolveCuratorSlug } from "@/lib/curator-aliases";
 import { sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
+import { prettyChainName } from "@/lib/turtle/chain-mapper";
 import type {
   CuratorProfile,
   CuratorNewsItem,
@@ -213,7 +214,7 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
       warnings: (vault.warnings as Array<{ type: string; level: string }>) ?? [],
       listed: vault.listed ?? true,
       creationTimestamp: vault.creationTimestamp ?? null,
-      chainName: (vault as Record<string, unknown>).chainName as string | null ?? null,
+      chainName: prettyChainName(vault.chainName, vault.chainId),
       // Implausible APYs (e.g. a Turtle-reported 5,769%) become null → "—",
       // and are excluded from yield math, rather than shown or trusted.
       netAPR: sanitizeApyPct(vault.netAPR),

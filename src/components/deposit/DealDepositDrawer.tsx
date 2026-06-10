@@ -20,6 +20,7 @@ export interface DealContext {
   vaultName: string;
   curatorName?: string | null;
   assetSymbol?: string | null;
+  chainName?: string | null;
   estApr?: number | null;
   tvl?: number | null;
 }
@@ -195,9 +196,14 @@ export function DealDepositDrawer({
                   <span className="block text-sm font-medium text-text-primary truncate">
                     {d.vaultName}
                   </span>
-                  <span className="block font-mono text-[0.65rem] text-text-tertiary mt-0.5">
-                    {d.assetSymbol ?? "—"}
-                    {d.tvl != null ? ` · ${formatCurrency(d.tvl)} TVL` : ""}
+                  <span className="flex items-center flex-wrap gap-x-1.5 font-mono text-[0.65rem] text-text-tertiary mt-1">
+                    <span className="text-text-secondary">{d.assetSymbol ?? "—"}</span>
+                    {d.chainName && (
+                      <span className="inline-flex items-center rounded border border-border px-1.5 py-0.5 text-text-secondary">
+                        {d.chainName}
+                      </span>
+                    )}
+                    {d.tvl != null && <span>· {formatCurrency(d.tvl)} TVL</span>}
                   </span>
                 </span>
                 <span className="flex items-center gap-2 flex-none">

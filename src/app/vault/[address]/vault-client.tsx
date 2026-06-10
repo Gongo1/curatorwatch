@@ -120,6 +120,7 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
                       vaultName: vault.name,
                       curatorName,
                       assetSymbol: vault.asset.symbol,
+                      chainName: vault.chainName,
                       estApr: vault.dealEstApr ?? null,
                     },
                   ])

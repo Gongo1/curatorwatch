@@ -5,6 +5,7 @@ import {
   type VaultRiskData,
 } from "@/lib/institutional-risk-assessment";
 import { sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
+import { prettyChainName } from "@/lib/turtle/chain-mapper";
 import type { VaultDetail } from "@/lib/types/api";
 
 /**
@@ -293,7 +294,7 @@ export const fetchVaultDetail = cache(async function fetchVaultDetail(
     turtleId: vault.turtleId || null,
     protocol: vault.protocol,
     dataSource: vault.dataSource,
-    chainName: vault.chainName,
+    chainName: prettyChainName(vault.chainName, vault.chainId),
     estTotalAPR: safeEstTotalAPR,
     netAPR: safeNetAPR,
     dealOpportunityId: vault.dealOpportunityId ?? null,

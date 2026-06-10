@@ -35,3 +35,23 @@ export function getChainNameById(id: number): string {
   }
   return "Unknown";
 }
+
+/**
+ * Display-ready chain label from a possibly-missing/slug-cased chainName plus a
+ * chainId fallback. Title-cases bare slugs ("monad" → "Monad"), keeps proper
+ * names ("BNB Chain"), and resolves a missing name from chainId (so the many
+ * Morpho vaults stored without a chainName but on chainId 1 show "Ethereum").
+ * Returns null only when the chain is genuinely unknown — never a guess.
+ */
+export function prettyChainName(
+  name: string | null | undefined,
+  chainId?: number | null
+): string | null {
+  const n = name?.trim();
+  if (n) return n === n.toLowerCase() ? n.charAt(0).toUpperCase() + n.slice(1) : n;
+  if (chainId != null) {
+    const byId = getChainNameById(chainId);
+    return byId === "Unknown" ? null : byId;
+  }
+  return null;
+}

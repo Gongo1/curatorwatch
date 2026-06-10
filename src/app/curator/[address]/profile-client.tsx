@@ -128,6 +128,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
           vaultName: v.name,
           curatorName: name,
           assetSymbol: v.asset.symbol,
+          chainName: v.chainName,
           estApr: v.dealEstApr ?? null,
           tvl: tvlOf(v),
         }))
@@ -353,6 +354,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                                 vaultName: v.name,
                                 curatorName: name,
                                 assetSymbol: v.asset.symbol,
+                                chainName: v.chainName,
                                 estApr: v.dealEstApr,
                                 tvl: tvlOf(v),
                               },
