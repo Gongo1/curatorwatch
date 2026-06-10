@@ -4,6 +4,7 @@ import {
   assessVaultRisk,
   type VaultRiskData,
 } from "@/lib/institutional-risk-assessment";
+import { sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
 import type { VaultDetail } from "@/lib/types/api";
 
 /**
@@ -248,14 +249,23 @@ export const fetchVaultDetail = cache(async function fetchVaultDetail(
   const vaultAgeMs = Date.now() - vaultOriginMs;
   const vaultAgeDays = vaultAgeMs / (24 * 60 * 60 * 1000);
 
+  // Implausible APYs (e.g. a Turtle-reported 5,769%) are suppressed so they
+  // never feed yield math or display. null → treated as unknown (0 yield).
+  const safeNetAPR = sanitizeApyPct(vault.netAPR);
+  const safeEstTotalAPR = sanitizeApyPct(vault.estTotalAPR);
+  const safeAvgNetApy = sanitizeApyForStorage(latestSnapshot?.avgNetApy);
+  // When the headline APR is implausible, the incentive breakdown that produced
+  // it is equally untrustworthy — suppress it rather than show bogus components.
+  const aprImplausible =
+    vault.estTotalAPR != null && safeEstTotalAPR == null;
+
   // For Turtle vaults: use simple interest from Est. Total APR
   // For Morpho vaults: use compound interest from Net APY
   let annualizedYield: number;
-  if (isTurtle && vault.netAPR != null) {
-    annualizedYield = tvl * (vault.netAPR / 100); // netAPR is percentage
+  if (isTurtle && safeNetAPR != null) {
+    annualizedYield = tvl * (safeNetAPR / 100); // netAPR is percentage
   } else {
-    const netApy = latestSnapshot?.avgNetApy || 0;
-    annualizedYield = tvl * netApy; // avgNetApy is decimal
+    annualizedYield = tvl * (safeAvgNetApy ?? 0); // avgNetApy is decimal
   }
   const dailyYield = annualizedYield / 365;
   const weeklyYield = annualizedYield / 52;
@@ -284,12 +294,12 @@ export const fetchVaultDetail = cache(async function fetchVaultDetail(
     protocol: vault.protocol,
     dataSource: vault.dataSource,
     chainName: vault.chainName,
-    estTotalAPR: vault.estTotalAPR,
-    netAPR: vault.netAPR,
+    estTotalAPR: safeEstTotalAPR,
+    netAPR: safeNetAPR,
     dealOpportunityId: vault.dealOpportunityId ?? null,
     dealDepositable: vault.dealDepositable ?? false,
-    dealEstApr: vault.dealEstApr ?? null,
-    aprBreakdown: vault.aprBreakdown,
+    dealEstApr: sanitizeApyPct(vault.dealEstApr),
+    aprBreakdown: aprImplausible ? null : vault.aprBreakdown,
     riskScore: vault.riskScore ?? null,
     grade: vault.grade ?? null,
     gradeFailures: vault.gradeFailures ?? [],

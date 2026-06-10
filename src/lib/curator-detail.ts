@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { resolveCuratorSlug } from "@/lib/curator-aliases";
+import { sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
 import type {
   CuratorProfile,
   CuratorNewsItem,
@@ -213,11 +214,13 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
       listed: vault.listed ?? true,
       creationTimestamp: vault.creationTimestamp ?? null,
       chainName: (vault as Record<string, unknown>).chainName as string | null ?? null,
-      netAPR: vault.netAPR ?? null,
-      estTotalAPR: vault.estTotalAPR ?? null,
+      // Implausible APYs (e.g. a Turtle-reported 5,769%) become null → "—",
+      // and are excluded from yield math, rather than shown or trusted.
+      netAPR: sanitizeApyPct(vault.netAPR),
+      estTotalAPR: sanitizeApyPct(vault.estTotalAPR),
       dealOpportunityId: vault.dealOpportunityId ?? null,
       dealDepositable: vault.dealDepositable ?? false,
-      dealEstApr: vault.dealEstApr ?? null,
+      dealEstApr: sanitizeApyPct(vault.dealEstApr),
       latestSnapshot: snapshot
         ? {
             totalAssets: snapshot.totalAssets,
@@ -226,10 +229,10 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
             sharePrice: snapshot.sharePrice,
             liquidity: snapshot.liquidity,
             liquidityUsd: snapshot.liquidityUsd,
-            apy: snapshot.apy,
-            netApy: snapshot.netApy,
-            avgApy: snapshot.avgApy,
-            avgNetApy: snapshot.avgNetApy,
+            apy: sanitizeApyForStorage(snapshot.apy),
+            netApy: sanitizeApyForStorage(snapshot.netApy),
+            avgApy: sanitizeApyForStorage(snapshot.avgApy),
+            avgNetApy: sanitizeApyForStorage(snapshot.avgNetApy),
             timestamp: snapshot.timestamp.toISOString(),
           }
         : null,

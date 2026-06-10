@@ -69,7 +69,7 @@ function getAddressColor(address: string): string {
 
 export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
   const [showTrackPrompt, setShowTrackPrompt] = useState(false);
-  const [openDeal, setOpenDeal] = useState<DealContext | null>(null);
+  const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
   const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
 
   const isTracked = isVaultTracked(address);
@@ -89,13 +89,12 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
 
   const breadcrumbs = curatorAddress
     ? [
-        { label: "Dashboard", href: "/" },
+        { label: "Curators", href: "/" },
         { label: curatorName || formatAddress(curatorAddress), href: `/curator/${curatorSlug(curatorName, curatorAddress)}` },
         { label: vault.name },
       ]
     : [
-        { label: "Dashboard", href: "/" },
-        { label: "Vaults", href: "/vaults" },
+        { label: "Curators", href: "/" },
         { label: vault.name },
       ];
 
@@ -115,13 +114,15 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
               <button
                 type="button"
                 onClick={() =>
-                  setOpenDeal({
-                    opportunityId: vault.dealOpportunityId as string,
-                    vaultName: vault.name,
-                    curatorName,
-                    assetSymbol: vault.asset.symbol,
-                    estApr: vault.dealEstApr ?? null,
-                  })
+                  setDrawerDeals([
+                    {
+                      opportunityId: vault.dealOpportunityId as string,
+                      vaultName: vault.name,
+                      curatorName,
+                      assetSymbol: vault.asset.symbol,
+                      estApr: vault.dealEstApr ?? null,
+                    },
+                  ])
                 }
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 hover:bg-cyan-500/15"
               >
@@ -634,8 +635,12 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
         onClose={() => setShowTrackPrompt(false)}
       />
 
-      {openDeal && (
-        <DealDepositDrawer deal={openDeal} onClose={() => setOpenDeal(null)} />
+      {drawerDeals && (
+        <DealDepositDrawer
+          deals={drawerDeals}
+          curatorName={curatorName}
+          onClose={() => setDrawerDeals(null)}
+        />
       )}
     </>
   );

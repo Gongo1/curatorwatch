@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { ExternalLink, Plus, Check, Globe, GitCompare } from "lucide-react";
+import { ExternalLink, Plus, Check, Globe, GitCompare, Wallet } from "lucide-react";
 import type { DealContext } from "@/components/deposit/DealDepositDrawer";
 
 // Wallet + deposit code loads only when a deal is first opened.
@@ -40,8 +40,14 @@ type VSortKey = "name" | "asset" | "protocol" | "grade" | "tvl" | "apy" | "fee";
 // Deal links route into /deposit, which 404s unless the flag is on.
 const DEPOSIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TURTLE_DEPOSIT === "true";
 
-const netApyOf = (v: CuratorVaultSummary): number =>
-  v.latestSnapshot?.avgNetApy ?? v.netAPR ?? 0; // fraction
+// Net APY as a fraction. avgNetApy is already a fraction; netAPR is a
+// percentage, so it must be divided. Both are sanitized upstream
+// (curator-detail), so an implausible APY arrives null → 0 here → "—".
+const netApyOf = (v: CuratorVaultSummary): number => {
+  const frac = v.latestSnapshot?.avgNetApy;
+  if (frac != null) return frac;
+  return v.netAPR != null ? v.netAPR / 100 : 0;
+};
 const tvlOf = (v: CuratorVaultSummary): number => v.latestSnapshot?.totalAssetsUsd ?? 0;
 const gradeKey = (g: string | null): "high" | "medium" | "low" | null =>
   g === "high-grade" ? "high" : g === "medium-grade" ? "medium" : g === "low-grade" ? "low" : null;
@@ -63,7 +69,7 @@ interface CuratorProfileViewProps {
 export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
   const [vsort, setVsort] = useState<{ k: VSortKey; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
-  const [openDeal, setOpenDeal] = useState<DealContext | null>(null);
+  const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
 
   const { vaults } = data;
   const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
@@ -111,6 +117,23 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const isTracked = isCuratorTracked(curator.id);
   const name = curator.name || `Curator ${curator.address.slice(0, 6)}`;
   const g = derived.grade;
+
+  // Every depositable deal this curator offers, richest first — feeds both the
+  // header CTA and the per-vault Deal links.
+  const curatorDeals: DealContext[] = DEPOSIT_ENABLED
+    ? vaults
+        .filter((v) => v.dealDepositable && v.dealOpportunityId)
+        .map((v) => ({
+          opportunityId: v.dealOpportunityId as string,
+          vaultName: v.name,
+          curatorName: name,
+          assetSymbol: v.asset.symbol,
+          estApr: v.dealEstApr ?? null,
+          tvl: tvlOf(v),
+        }))
+        .sort((a, b) => (b.tvl ?? 0) - (a.tvl ?? 0))
+    : [];
+  const canDeposit = curatorDeals.length > 0;
 
   const creds: { label: string; muted?: boolean }[] = [];
   if (curator.jurisdiction) creds.push({ label: curator.jurisdiction });
@@ -209,6 +232,18 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
           <div className="font-mono font-semibold text-3xl tracking-tight tabular-nums mt-0.5 mb-3">
             {formatCurrency(derived.totalTVL)} <span className="text-text-tertiary text-sm font-normal">· {vaults.length} vaults</span>
           </div>
+          {canDeposit && (
+            <button
+              type="button"
+              onClick={() => setDrawerDeals(curatorDeals)}
+              className="w-full mb-4 inline-flex items-center justify-center gap-2 text-sm font-semibold rounded-lg px-4 py-2.5 bg-cyan-500 text-[#06120f] hover:opacity-90 transition-opacity active:translate-y-px"
+            >
+              <Wallet className="w-4 h-4" /> Deposit into this curator
+              <span className="font-mono text-xs font-normal opacity-75">
+                · {curatorDeals.length} {curatorDeals.length === 1 ? "deal" : "deals"}
+              </span>
+            </button>
+          )}
           <div className="flex justify-between items-baseline mb-1.5">
             <span className="text-sm text-text-secondary">Vault grade mix</span>
             {g.low === 0 && derived.graded > 0 && (
@@ -312,13 +347,16 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                         <button
                           type="button"
                           onClick={() =>
-                            setOpenDeal({
-                              opportunityId: v.dealOpportunityId as string,
-                              vaultName: v.name,
-                              curatorName: name,
-                              assetSymbol: v.asset.symbol,
-                              estApr: v.dealEstApr,
-                            })
+                            setDrawerDeals([
+                              {
+                                opportunityId: v.dealOpportunityId as string,
+                                vaultName: v.name,
+                                curatorName: name,
+                                assetSymbol: v.asset.symbol,
+                                estApr: v.dealEstApr,
+                                tvl: tvlOf(v),
+                              },
+                            ])
                           }
                           className="font-mono text-xs text-cyan-500 underline underline-offset-2 hover:text-cyan-400 transition-colors whitespace-nowrap"
                         >
@@ -343,6 +381,23 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
 
       {/* ── Economics: where the yield comes from ── */}
       <Section title="Economics" meta="annual yield, by vault">
+        {canDeposit && (
+          <div className="flex flex-wrap items-center justify-between gap-3 mb-6 p-4 rounded-xl border border-cyan-500/25 bg-cyan-500/5">
+            <div className="min-w-0">
+              <div className="text-sm font-medium text-text-primary">Earn this yield yourself</div>
+              <div className="font-mono text-xs text-text-tertiary mt-0.5">
+                Deposit into {name}&rsquo;s vaults on-site — attributed to CuratorWatch.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDrawerDeals(curatorDeals)}
+              className="flex-none inline-flex items-center gap-2 text-sm font-semibold rounded-lg px-4 py-2 bg-cyan-500 text-[#06120f] hover:opacity-90 transition-opacity active:translate-y-px"
+            >
+              <Wallet className="w-4 h-4" /> Deposit into this curator
+            </button>
+          </div>
+        )}
         <div className="grid sm:grid-cols-3 gap-4 mb-6">
           <ECard label="Annual yield to LPs" value={formatCurrency(derived.annualYield)} accent />
           {derived.apyDist && derived.apyDist.count >= 3 ? (
@@ -426,8 +481,12 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
         <CuratorDepositors curatorAddress={curator.address} />
       </Section>
 
-      {openDeal && (
-        <DealDepositDrawer deal={openDeal} onClose={() => setOpenDeal(null)} />
+      {drawerDeals && (
+        <DealDepositDrawer
+          deals={drawerDeals}
+          curatorName={name}
+          onClose={() => setDrawerDeals(null)}
+        />
       )}
     </div>
   );
@@ -446,6 +505,8 @@ function compactUsd(n: number): string {
 
 // Server-data SVG area chart — no chart library, nothing to lazy-load.
 function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
+  const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+
   if (history.length < 2) {
     return (
       <p className="font-mono text-sm text-text-tertiary">
@@ -455,24 +516,58 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
     );
   }
 
-  const W = 640;
-  const H = 150;
+  // viewBox geometry with padding for axis labels.
+  const W = 680;
+  const H = 200;
+  const PAD_L = 52; // room for "$180M" y-labels
+  const PAD_R = 12;
+  const PAD_T = 10;
+  const PAD_B = 24; // room for date ticks
+  const plotW = W - PAD_L - PAD_R;
+  const plotH = H - PAD_T - PAD_B;
+
+  const n = history.length;
   const first = history[0];
-  const last = history[history.length - 1];
+  const last = history[n - 1];
   const max = Math.max(...history.map((p) => p.aumUsd));
   const min = Math.min(...history.map((p) => p.aumUsd));
-  const span = max - min || 1;
-  const x = (i: number) => (i / (history.length - 1)) * W;
-  // 8% padding top and bottom so the line never kisses the frame.
-  const y = (v: number) => H - ((v - min) / span) * (H * 0.84) - H * 0.08;
-  const line = history.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.aumUsd).toFixed(1)}`).join(" ");
-  const area = `${line} L${W},${H} L0,${H} Z`;
+  // Pad the value range 6% each side so the line never kisses the frame, but
+  // keep the real min/max as the labelled gridlines.
+  const pad = (max - min) * 0.06 || max * 0.06 || 1;
+  const lo = min - pad;
+  const span = max - min + pad * 2 || 1;
+
+  const x = (i: number) => PAD_L + (i / (n - 1)) * plotW;
+  const y = (v: number) => PAD_T + (1 - (v - lo) / span) * plotH;
+
+  const line = history
+    .map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.aumUsd).toFixed(1)}`)
+    .join(" ");
+  const area = `${line} L${x(n - 1).toFixed(1)},${(PAD_T + plotH).toFixed(1)} L${PAD_L},${(PAD_T + plotH).toFixed(1)} Z`;
+
+  // 4 horizontal gridlines spanning the real min→max.
+  const yTicks = [0, 1, 2, 3].map((k) => min + ((max - min) * k) / 3);
+  // ~5 evenly-spaced date ticks.
+  const xTickCount = Math.min(5, n);
+  const xTicks = Array.from({ length: xTickCount }, (_, k) =>
+    Math.round((k / (xTickCount - 1)) * (n - 1))
+  );
 
   const changePct = first.aumUsd > 0 ? ((last.aumUsd - first.aumUsd) / first.aumUsd) * 100 : 0;
-  const d30 = history.length > 30 ? history[history.length - 31] : first;
+  const d30 = n > 30 ? history[n - 31] : first;
   const change30Pct = d30.aumUsd > 0 ? ((last.aumUsd - d30.aumUsd) / d30.aumUsd) * 100 : 0;
   const sign = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
   const tone = (v: number) => (v >= 0 ? "text-accent-green" : "text-accent-red");
+
+  const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const frac = (e.clientX - rect.left) / rect.width; // 0..1 across full viewBox width
+    const plotFrac = (frac * W - PAD_L) / plotW; // 0..1 across the plot area
+    const i = Math.max(0, Math.min(n - 1, Math.round(plotFrac * (n - 1))));
+    setHoverIdx(i);
+  };
+
+  const hp = hoverIdx != null ? history[hoverIdx] : null;
 
   return (
     <div>
@@ -489,24 +584,113 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
         <Fact k="Peak" v={compactUsd(max)} />
         <Fact k="Products" v={`${last.vaultCount} vaults`} />
       </div>
-      <div className="border border-border rounded-2xl bg-background-subtle p-4">
+      <div className="relative border border-border rounded-2xl bg-background-subtle p-4">
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          className="w-full h-auto block"
+          className="w-full h-auto block overflow-visible"
           role="img"
           aria-label={`AUM from ${compactUsd(first.aumUsd)} on ${fmtDay(first.date)} to ${compactUsd(last.aumUsd)} on ${fmtDay(last.date)}`}
+          onMouseMove={onMove}
+          onMouseLeave={() => setHoverIdx(null)}
         >
+          {/* Y gridlines + labels */}
+          {yTicks.map((v, k) => (
+            <g key={k}>
+              <line
+                x1={PAD_L}
+                x2={W - PAD_R}
+                y1={y(v)}
+                y2={y(v)}
+                stroke="var(--border)"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+                opacity={0.5}
+              />
+              <text
+                x={PAD_L - 8}
+                y={y(v)}
+                textAnchor="end"
+                dominantBaseline="middle"
+                fill="var(--text-tertiary)"
+                fontSize="11"
+                fontFamily="var(--font-mono, monospace)"
+              >
+                {compactUsd(v)}
+              </text>
+            </g>
+          ))}
+
+          {/* X date ticks */}
+          {xTicks.map((i) => (
+            <text
+              key={i}
+              x={x(i)}
+              y={H - 6}
+              textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
+              fill="var(--text-tertiary)"
+              fontSize="11"
+              fontFamily="var(--font-mono, monospace)"
+            >
+              {fmtDay(history[i].date)}
+            </text>
+          ))}
+
           <path d={area} fill="var(--accent-blue)" opacity="0.12" />
-          <path d={line} fill="none" stroke="var(--accent-blue)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+          <path
+            d={line}
+            fill="none"
+            stroke="var(--accent-blue)"
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+          />
+
+          {/* Hover crosshair + dot */}
+          {hp && (
+            <g pointerEvents="none">
+              <line
+                x1={x(hoverIdx as number)}
+                x2={x(hoverIdx as number)}
+                y1={PAD_T}
+                y2={PAD_T + plotH}
+                stroke="var(--accent-blue)"
+                strokeWidth="1"
+                vectorEffect="non-scaling-stroke"
+                opacity={0.5}
+              />
+              <circle
+                cx={x(hoverIdx as number)}
+                cy={y(hp.aumUsd)}
+                r="3.5"
+                fill="var(--accent-blue)"
+                stroke="var(--background)"
+                strokeWidth="1.5"
+              />
+            </g>
+          )}
         </svg>
-        <div className="flex justify-between font-mono text-[0.62rem] text-text-tertiary mt-2 tabular-nums">
-          <span>{fmtDay(first.date)} · {compactUsd(first.aumUsd)}</span>
-          <span>{fmtDay(last.date)} · {compactUsd(last.aumUsd)}</span>
-        </div>
+
+        {/* HTML tooltip positioned in viewBox-percentage space */}
+        {hp && (
+          <div
+            className="absolute pointer-events-none -translate-x-1/2 -translate-y-full bg-background-elevated border border-border rounded-lg px-2.5 py-1.5 shadow-xl whitespace-nowrap z-10"
+            style={{
+              left: `${(x(hoverIdx as number) / W) * 100}%`,
+              top: `calc(${(y(hp.aumUsd) / H) * 100}% - 8px)`,
+            }}
+          >
+            <div className="font-mono text-[0.62rem] text-text-tertiary">{fmtDay(hp.date)}</div>
+            <div className="font-mono text-sm font-semibold tabular-nums text-text-primary">
+              {compactUsd(hp.aumUsd)}
+            </div>
+            <div className="font-mono text-[0.6rem] text-text-tertiary tabular-nums">
+              {hp.vaultCount} vaults
+            </div>
+          </div>
+        )}
       </div>
       <p className="font-mono text-xs text-text-tertiary mt-3">
-        Daily closing AUM from CuratorWatch snapshots — history begins when
-        tracking began, not at the curator&rsquo;s inception.
+        Daily closing AUM from CuratorWatch snapshots — hover for any day. History
+        begins when tracking began, not at the curator&rsquo;s inception.
       </p>
     </div>
   );
