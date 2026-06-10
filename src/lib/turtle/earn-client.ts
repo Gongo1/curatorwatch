@@ -166,7 +166,15 @@ export async function getDistributorOpportunities(
 
 /** Discover: a single opportunity by UUID. */
 export async function getOpportunity(id: string): Promise<EarnOpportunity> {
-  return earnFetch<EarnOpportunity>(`/opportunities/${id}`);
+  // The single-opportunity endpoint wraps the object in `{ opportunity: {...} }`
+  // (the list endpoints don't — see unwrapList). Without unwrapping, every
+  // field (swapDirectEnabled, depositTokens…) reads undefined and the deposit
+  // panel reports the deal as "not depositable".
+  const data = await earnFetch<unknown>(`/opportunities/${id}`);
+  if (data && typeof data === "object" && "opportunity" in data) {
+    return (data as { opportunity: EarnOpportunity }).opportunity;
+  }
+  return data as EarnOpportunity;
 }
 
 export interface MembershipAgreement {
