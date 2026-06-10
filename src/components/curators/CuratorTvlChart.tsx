@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -51,9 +51,13 @@ function ChartTooltip({
 }) {
   if (!active || !payload?.length) return null;
   const rows = [...payload].sort((a, b) => b.value - a.value);
+  const total = payload.reduce((s, r) => s + (r.value || 0), 0);
   return (
-    <div className="bg-background-elevated border border-border rounded-[9px] px-3 py-2 font-mono text-xs shadow-lg min-w-[160px]">
-      <div className="text-text-tertiary mb-1.5">{label ? fmtDate(label) : ""}</div>
+    <div className="bg-background-elevated border border-border rounded-[9px] px-3 py-2 font-mono text-xs shadow-lg min-w-[170px]">
+      <div className="flex justify-between gap-4 text-text-tertiary mb-1.5">
+        <span>{label ? fmtDate(label) : ""}</span>
+        <span className="text-text-primary font-semibold tabular-nums">{fmtTipUsd(total)} total</span>
+      </div>
       {rows.map((r) => (
         <div key={r.name} className="flex justify-between gap-4 py-0.5 text-text-secondary">
           <span className="flex items-center gap-1.5">
@@ -102,7 +106,15 @@ export function CuratorTvlChart() {
       <div className="h-[270px] w-full">
         {loaded && (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
+            <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
+              <defs>
+                {meta.map((m, i) => (
+                  <linearGradient key={m.id} id={`tvlfill-${m.id}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.85} />
+                    <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.55} />
+                  </linearGradient>
+                ))}
+              </defs>
               <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
               <XAxis
                 dataKey="date"
@@ -123,20 +135,23 @@ export function CuratorTvlChart() {
                 content={<ChartTooltip />}
                 cursor={{ stroke: "var(--border-strong)", strokeWidth: 1 }}
               />
+              {/* Stacked: largest curators form the base, the rest stack on top —
+                  the band area reads as total curated TVL and its composition,
+                  instead of two mega-curators flattening everyone into the floor. */}
               {meta.map((m, i) => (
-                <Line
+                <Area
                   key={m.id}
                   type="monotone"
+                  stackId="tvl"
                   dataKey={m.id}
                   name={m.name}
                   stroke={COLORS[i % COLORS.length]}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 3.5, strokeWidth: 0 }}
+                  strokeWidth={1.25}
+                  fill={`url(#tvlfill-${m.id})`}
                   isAnimationActive={false}
                 />
               ))}
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         )}
       </div>

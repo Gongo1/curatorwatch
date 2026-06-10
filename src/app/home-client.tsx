@@ -183,7 +183,7 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
 
       {/* ── TVL by curator (30d) ── */}
       <section className="mt-2">
-        <SectionHead title="Tracked TVL by curator" meta="top 6 · 30 days · hover to inspect" />
+        <SectionHead title="Tracked TVL by curator" meta="top 6 · stacked · 30 days · hover to inspect" />
         <ChartWhenVisible />
       </section>
 
