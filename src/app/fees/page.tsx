@@ -54,31 +54,34 @@ export default async function FeesPage() {
         </div>
       </header>
 
-      {/* ── Fee-rate distribution ── */}
+      {/* ── Fee-rate distribution (fee-charging vaults only) ── */}
       <section className="border border-border rounded-2xl bg-background-subtle p-6 mb-10 max-w-[640px]">
-        <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary mb-3">
-          Performance-fee distribution · vaults by band · shade = TVL
+        <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary mb-4">
+          Performance-fee distribution · fee-charging vaults · shade = TVL
         </div>
-        <div className="flex items-end gap-2 h-20" aria-hidden="true">
+        <div className="flex gap-3 h-32">
           {o.feeBands.map((b) => (
-            <div key={b.label} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-              <div className="w-full flex items-end justify-center h-full">
+            <div key={b.label} className="flex-1 flex flex-col items-center min-w-0">
+              <span className="font-mono text-xs text-text-secondary tabular-nums mb-1">{b.vaults}</span>
+              <div className="flex-1 w-full flex items-end justify-center">
                 <div
-                  className="w-full max-w-[42px] rounded-t bg-accent-blue"
+                  className="w-full max-w-[44px] rounded-t bg-accent-blue"
                   style={{
-                    height: `${Math.max(4, (b.vaults / maxBand) * 100)}%`,
-                    opacity: 0.25 + 0.75 * (b.tvl / maxBandTvl),
+                    height: `${b.vaults > 0 ? Math.max(3, (b.vaults / maxBand) * 100) : 0}%`,
+                    opacity: 0.3 + 0.7 * (b.tvl / maxBandTvl),
                   }}
                   title={`${b.label}: ${b.vaults} vaults · ${compactUsd(b.tvl)} TVL`}
                 />
               </div>
-              <span className="font-mono text-[0.6rem] text-text-tertiary tabular-nums">{b.label}</span>
+              <span className="font-mono text-[0.62rem] text-text-tertiary tabular-nums mt-2">{b.label}</span>
             </div>
           ))}
         </div>
-        <p className="font-mono text-xs text-text-tertiary mt-4 leading-relaxed">
-          Most curated TVL sits in the standard fee bands; the tail is where
-          allocators pay a premium. A single &ldquo;average fee&rdquo; hides this.
+        <p className="font-mono text-xs text-text-tertiary mt-5 leading-relaxed">
+          Of {o.totalVaults} curated vaults, <span className="text-text-secondary">{o.zeroFeeVaults}</span> charge
+          no performance fee (mostly large passthrough savings vaults); the bands
+          above are the {o.curatorsCharging > 0 ? o.feeBands.reduce((s, b) => s + b.vaults, 0) : 0} that do.
+          A single &ldquo;average fee&rdquo; hides this spread.
         </p>
       </section>
 

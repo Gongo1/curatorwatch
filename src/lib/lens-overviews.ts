@@ -23,8 +23,9 @@ export interface FeesOverview {
   curatorsCharging: number;
   totalVaults: number;
   medianPerfFee: number; // across fee-charging vaults (fraction)
+  zeroFeeVaults: number; // vaults charging no performance fee (the long 0% tail)
   rows: CuratorFeeRow[];
-  // Performance-fee distribution across fee-charging vaults (count + TVL per band).
+  // Performance-fee distribution across fee-CHARGING vaults (count + TVL per band).
   feeBands: { label: string; vaults: number; tvl: number }[];
 }
 
@@ -51,10 +52,13 @@ export async function fetchFeesOverview(): Promise<FeesOverview> {
   });
 
   const byCurator = new Map<string, CuratorFeeRow & { perfWeighted: number }>();
-  const feeBandEdges = [0, 0.0001, 0.05, 0.1, 0.15, 0.2, 1]; // fractions
-  const feeBandLabels = ["0%", "<5%", "5–10%", "10–15%", "15–20%", "20%+"];
+  // Bands cover fee-CHARGING vaults only (perf > 0); the large 0% cohort is
+  // tracked separately as zeroFeeVaults so it can't flatten the distribution.
+  const feeBandEdges = [0.0001, 0.05, 0.1, 0.15, 0.2, 1]; // fractions
+  const feeBandLabels = ["<5%", "5–10%", "10–15%", "15–20%", "20%+"];
   const feeBands = feeBandLabels.map((label) => ({ label, vaults: 0, tvl: 0 }));
   const perfFeeValues: number[] = [];
+  let zeroFeeVaults = 0;
 
   for (const v of vaults) {
     const snap = v.snapshots[0];
@@ -68,15 +72,19 @@ export async function fetchFeesOverview(): Promise<FeesOverview> {
     const grossApy = perf < 1 ? (netApy + mgmt) / (1 - perf) : netApy;
     const annualFee = tvl * mgmt + tvl * grossApy * perf;
 
-    // Fee-rate distribution by performance fee (the headline lever).
-    for (let i = 0; i < feeBandEdges.length - 1; i++) {
-      if (perf >= feeBandEdges[i] && (perf < feeBandEdges[i + 1] || i === feeBandEdges.length - 2)) {
-        feeBands[i].vaults++;
-        feeBands[i].tvl += tvl;
-        break;
+    // Fee-rate distribution — only among vaults that actually charge a fee.
+    if (perf > 0) {
+      perfFeeValues.push(perf);
+      for (let i = 0; i < feeBandEdges.length - 1; i++) {
+        if (perf >= feeBandEdges[i] && (perf < feeBandEdges[i + 1] || i === feeBandEdges.length - 2)) {
+          feeBands[i].vaults++;
+          feeBands[i].tvl += tvl;
+          break;
+        }
       }
+    } else {
+      zeroFeeVaults++;
     }
-    if (perf > 0) perfFeeValues.push(perf);
 
     const key = v.curatorId as string;
     const name = v.curator?.name || `Curator ${v.curator?.address?.slice(0, 6) ?? ""}`;
@@ -113,6 +121,7 @@ export async function fetchFeesOverview(): Promise<FeesOverview> {
     curatorsCharging: rows.length,
     totalVaults: vaults.length,
     medianPerfFee,
+    zeroFeeVaults,
     rows,
     feeBands,
   };
