@@ -1,0 +1,3221 @@
+{
+  "schema_version": "1.0.0",
+  "methodology_version": "v1 (curatorwatch-risk-methodology-v1.md)",
+  "model_git": "adefb8e",
+  "snapshots": [
+    "2026-06-09",
+    "2026-06-09-wide"
+  ],
+  "generated_at": "2026-06-10T21:56:40.169077+00:00",
+  "bands": {
+    "bands": [
+      [
+        0.001,
+        "A+"
+      ],
+      [
+        0.0035,
+        "A"
+      ],
+      [
+        0.0075,
+        "B+"
+      ],
+      [
+        0.015,
+        "B"
+      ],
+      [
+        0.03,
+        "C+"
+      ],
+      [
+        0.06,
+        "C"
+      ],
+      [
+        0.12,
+        "D"
+      ],
+      [
+        null,
+        "E"
+      ]
+    ],
+    "calibrated": true,
+    "method": "spec absolute ladder retained; level check: model TVL-weighted EL 25.1bps vs realized annual loss rate 7.5bps (ratio 3.34, tolerance [0.33, 4.0] \u2014 model>realized expected since realized excludes masked/stuck losses pending REVIEW). Multiplicative rescaling rejected (D15).",
+    "anchor": {
+      "realized_annual_loss_rate": 0.0007510636848164915,
+      "model_twel": 0.0025107467708963545,
+      "ratio": 3.3429212750577983,
+      "events": 6,
+      "loss_usd_weighted": 4052439.115513199,
+      "tvl_months_usd": 64747198365.795105
+    }
+  },
+  "axes_note": "loss axis only; attractiveness (yield/fees/capacity) is a separate surface",
+  "curators": [
+    {
+      "curator": "k3-capital",
+      "name": "K3 Capital",
+      "addresses": [
+        {
+          "address": "0xdD84A24eeddE63F10Ec3e928f1c8302A47538b6B",
+          "chainId": 1
+        },
+        {
+          "address": "0xdD84A24eeddE63F10Ec3e928f1c8302A47538b6B",
+          "chainId": 130
+        }
+      ],
+      "grade": "NR",
+      "el_median": 2.3e-05,
+      "el_ci90": [
+        0.0,
+        0.00089
+      ],
+      "p_loss_annual_median": 4.9e-05,
+      "lgd_median": 0.481045,
+      "channels": {
+        "credit": 0.569,
+        "technical": 0.333,
+        "operational": 0.098
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 1,
+        "tvl_usd": 24848.35,
+        "exposure_months": 18,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": true,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": true,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "pangolins",
+      "name": "Pangolins",
+      "addresses": [
+        {
+          "address": "0x9855475778aa3B492C14E4E12ca0d44c253C9884",
+          "chainId": 1
+        },
+        {
+          "address": "0xF5854811ddccbf9D1767e35f6Cb28A6FEB25f9d9",
+          "chainId": 1
+        },
+        {
+          "address": "0xF5854811ddccbf9D1767e35f6Cb28A6FEB25f9d9",
+          "chainId": 130
+        },
+        {
+          "address": "0x9855475778aa3B492C14E4E12ca0d44c253C9884",
+          "chainId": 8453
+        },
+        {
+          "address": "0xF5854811ddccbf9D1767e35f6Cb28A6FEB25f9d9",
+          "chainId": 8453
+        }
+      ],
+      "grade": "A+",
+      "el_median": 6.3e-05,
+      "el_ci90": [
+        2e-06,
+        0.000828
+      ],
+      "p_loss_annual_median": 0.000153,
+      "lgd_median": 0.408929,
+      "channels": {
+        "credit": 0.0,
+        "technical": 0.389,
+        "operational": 0.611
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 1,
+        "tvl_usd": 27905815.81,
+        "exposure_months": 13,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "felix",
+      "name": "Felix",
+      "addresses": [
+        {
+          "address": "0x18e4961454B3E487B3f47c70b703684D894Ff979",
+          "chainId": 999
+        },
+        {
+          "address": "0x4A827418D632C415E19825fd011283A4ba020B3A",
+          "chainId": 999
+        }
+      ],
+      "grade": "A+",
+      "el_median": 6.6e-05,
+      "el_ci90": [
+        1e-06,
+        0.001777
+      ],
+      "p_loss_annual_median": 0.000123,
+      "lgd_median": 0.441719,
+      "channels": {
+        "credit": 0.219,
+        "technical": 0.379,
+        "operational": 0.402
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 7,
+        "tvl_usd": 54835893.02,
+        "exposure_months": 92,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": true,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "sparkdao",
+      "name": "SparkDAO",
+      "addresses": [
+        {
+          "address": "0x0f963A8A8c01042B69054e787E5763ABbB0646A3",
+          "chainId": 1
+        },
+        {
+          "address": "0x3300f198988e4C9C63F75dF86De36421f06af8c4",
+          "chainId": 1
+        },
+        {
+          "address": "0x0f963A8A8c01042B69054e787E5763ABbB0646A3",
+          "chainId": 8453
+        },
+        {
+          "address": "0xF93B7122450A50AF3e5A76E1d546e95Ac1d0F579",
+          "chainId": 8453
+        }
+      ],
+      "grade": "A+",
+      "el_median": 0.000119,
+      "el_ci90": [
+        4e-06,
+        0.001603
+      ],
+      "p_loss_annual_median": 0.000317,
+      "lgd_median": 0.395628,
+      "channels": {
+        "credit": 0.0,
+        "technical": 0.438,
+        "operational": 0.562
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 2,
+        "tvl_usd": 8734049.56,
+        "exposure_months": 57,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "singularv",
+      "name": "SingularV",
+      "addresses": [
+        {
+          "address": "0x46057881E0B9d190920FB823F840B837f65745d5",
+          "chainId": 1
+        },
+        {
+          "address": "0x46057881E0B9d190920FB823F840B837f65745d5",
+          "chainId": 130
+        },
+        {
+          "address": "0x46057881E0B9d190920FB823F840B837f65745d5",
+          "chainId": 747474
+        }
+      ],
+      "grade": "NR",
+      "el_median": 0.000187,
+      "el_ci90": [
+        5e-06,
+        0.00294
+      ],
+      "p_loss_annual_median": 0.000443,
+      "lgd_median": 0.400575,
+      "channels": {
+        "credit": 0.529,
+        "technical": 0.206,
+        "operational": 0.265
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 2,
+        "tvl_usd": 975276.37,
+        "exposure_months": 22,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "apostro",
+      "name": "Apostro",
+      "addresses": [
+        {
+          "address": "0xC91578e51BCE35844E345CC7F733b4bBf6721734",
+          "chainId": 1
+        },
+        {
+          "address": "0xf726311F85D45a7fECfFbC94bD8508a0A39958c6",
+          "chainId": 1
+        },
+        {
+          "address": "0xC91578e51BCE35844E345CC7F733b4bBf6721734",
+          "chainId": 8453
+        },
+        {
+          "address": "0xf726311F85D45a7fECfFbC94bD8508a0A39958c6",
+          "chainId": 8453
+        }
+      ],
+      "grade": "NR",
+      "el_median": 0.000204,
+      "el_ci90": [
+        8e-06,
+        0.00306
+      ],
+      "p_loss_annual_median": 0.000682,
+      "lgd_median": 0.311276,
+      "channels": {
+        "credit": 0.523,
+        "technical": 0.186,
+        "operational": 0.291
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 1,
+        "tvl_usd": 262586.37,
+        "exposure_months": 79,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "august-digital",
+      "name": "August Digital",
+      "addresses": [
+        {
+          "address": "0x2a155ed454Dc5861a755F9C6bc7334a23B80cdAF",
+          "chainId": 1
+        },
+        {
+          "address": "0x7AE0c0A7800466A6738e8a41DFC0CDd854aBF017",
+          "chainId": 1
+        },
+        {
+          "address": "0xA81AE7d57D68Fd6eF76a3082134BD2F3019aec24",
+          "chainId": 1
+        },
+        {
+          "address": "0xB392a71Ce96ecA72CA3B135071038B56553b18f6",
+          "chainId": 1
+        },
+        {
+          "address": "0xc68733779a1738fDd743667f8714ad33d4a92453",
+          "chainId": 1
+        },
+        {
+          "address": "0x2a155ed454Dc5861a755F9C6bc7334a23B80cdAF",
+          "chainId": 143
+        },
+        {
+          "address": "0x7AE0c0A7800466A6738e8a41DFC0CDd854aBF017",
+          "chainId": 143
+        },
+        {
+          "address": "0xA81AE7d57D68Fd6eF76a3082134BD2F3019aec24",
+          "chainId": 143
+        },
+        {
+          "address": "0xB392a71Ce96ecA72CA3B135071038B56553b18f6",
+          "chainId": 143
+        }
+      ],
+      "grade": "NR",
+      "el_median": 0.000323,
+      "el_ci90": [
+        1e-05,
+        0.005438
+      ],
+      "p_loss_annual_median": 0.0007,
+      "lgd_median": 0.481045,
+      "channels": {
+        "credit": 0.359,
+        "technical": 0.406,
+        "operational": 0.236
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 2,
+        "tvl_usd": 263.5,
+        "exposure_months": 17,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "hakutora",
+      "name": "Hakutora",
+      "addresses": [
+        {
+          "address": "0x2413A57FBD695f6B13C1D8d7D30EE10fa61b1b02",
+          "chainId": 1
+        },
+        {
+          "address": "0x345023d92f3051bB2B68DF79dFf760EccFEE80ED",
+          "chainId": 1
+        }
+      ],
+      "grade": "A+",
+      "el_median": 0.000336,
+      "el_ci90": [
+        2.6e-05,
+        0.002807
+      ],
+      "p_loss_annual_median": 0.001061,
+      "lgd_median": 0.358227,
+      "channels": {
+        "credit": 0.0,
+        "technical": 0.389,
+        "operational": 0.611
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 2,
+        "tvl_usd": 27623966.9,
+        "exposure_months": 76,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "alphaping",
+      "name": "AlphaPing",
+      "addresses": [
+        {
+          "address": "0x6788c8ad65E85CCa7224a0B46D061EF7D81F9Da5",
+          "chainId": 1
+        },
+        {
+          "address": "0xD50B9Bbf136D1BD5CD5AC6ed9b3F26c458a6d4A6",
+          "chainId": 1
+        },
+        {
+          "address": "0xEB4Af6fA3AFA08B10d593EC8fF87efB03BC04645",
+          "chainId": 1
+        },
+        {
+          "address": "0x6788c8ad65E85CCa7224a0B46D061EF7D81F9Da5",
+          "chainId": 999
+        },
+        {
+          "address": "0xEB4Af6fA3AFA08B10d593EC8fF87efB03BC04645",
+          "chainId": 999
+        },
+        {
+          "address": "0x6788c8ad65E85CCa7224a0B46D061EF7D81F9Da5",
+          "chainId": 8453
+        },
+        {
+          "address": "0xEB4Af6fA3AFA08B10d593EC8fF87efB03BC04645",
+          "chainId": 8453
+        },
+        {
+          "address": "0x6788c8ad65E85CCa7224a0B46D061EF7D81F9Da5",
+          "chainId": 42161
+        },
+        {
+          "address": "0xEB4Af6fA3AFA08B10d593EC8fF87efB03BC04645",
+          "chainId": 42161
+        }
+      ],
+      "grade": "A+",
+      "el_median": 0.000433,
+      "el_ci90": [
+        1.9e-05,
+        0.006126
+      ],
+      "p_loss_annual_median": 0.000949,
+      "lgd_median": 0.481045,
+      "channels": {
+        "credit": 0.341,
+        "technical": 0.386,
+        "operational": 0.274
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 2,
+        "tvl_usd": 3194770.81,
+        "exposure_months": 88,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "ultrayield",
+      "name": "UltraYield",
+      "addresses": [
+        {
+          "address": "0x1280e86Cd7787FfA55d37759C0342F8CD3c7594a",
+          "chainId": 1
+        },
+        {
+          "address": "0xCC217D03d9Ad82C80101B9F0579Fd5A0b141EDcc",
+          "chainId": 1
+        },
+        {
+          "address": "0x1280e86Cd7787FfA55d37759C0342F8CD3c7594a",
+          "chainId": 10
+        },
+        {
+          "address": "0x1280e86Cd7787FfA55d37759C0342F8CD3c7594a",
+          "chainId": 143
+        },
+        {
+          "address": "0x1280e86Cd7787FfA55d37759C0342F8CD3c7594a",
+          "chainId": 8453
+        },
+        {
+          "address": "0x1280e86Cd7787FfA55d37759C0342F8CD3c7594a",
+          "chainId": 42161
+        }
+      ],
+      "grade": "NR",
+      "el_median": 0.000512,
+      "el_ci90": [
+        4.1e-05,
+        0.00558
+      ],
+      "p_loss_annual_median": 0.001211,
+      "lgd_median": 0.362394,
+      "channels": {
+        "credit": 0.428,
+        "technical": 0.287,
+        "operational": 0.285
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 4,
+        "tvl_usd": 868339.95,
+        "exposure_months": 37,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "steakhouse-financial",
+      "name": "Steakhouse Financial",
+      "addresses": [
+        {
+          "address": "0x043a816DcE5478eff35d665f985dc4540E9fFD03",
+          "chainId": 1
+        },
+        {
+          "address": "0x0A0e559bc3b0950a7e448F0d4894db195b9cf8DD",
+          "chainId": 1
+        },
+        {
+          "address": "0x255c7705e8BB334DfCae438197f7C4297988085a",
+          "chainId": 1
+        },
+        {
+          "address": "0x29a08239ca7D303F02D219119a024e9773CB1486",
+          "chainId": 1
+        },
+        {
+          "address": "0x2Ab528040534e121e6AA300a99F5941396150BcD",
+          "chainId": 1
+        },
+        {
+          "address": "0x433d49211C6D5121669D643b674d4B22b0185c12",
+          "chainId": 1
+        },
+        {
+          "address": "0x4D7bd498Bb24098Ca281C05519629c605407f71d",
+          "chainId": 1
+        },
+        {
+          "address": "0x51B6FBE8Ab2501BeedB767eb1852E179D29f7a58",
+          "chainId": 1
+        },
+        {
+          "address": "0x827e86072B06674a077f592A531dcE4590aDeCdB",
+          "chainId": 1
+        },
+        {
+          "address": "0x9b359EF8133bDCa81c3a815Fd5348c8d7b41dDce",
+          "chainId": 1
+        },
+        {
+          "address": "0xa18315d7E05220795562c67964034800995eB786",
+          "chainId": 1
+        },
+        {
+          "address": "0xbC309ccda84C4Af31F40aBc06c1E87E5482192ab",
+          "chainId": 1
+        },
+        {
+          "address": "0xc01Ba42d4Bd241892B813FA8bD4589EAA4C60672",
+          "chainId": 1
+        },
+        {
+          "address": "0xD700038b3f8d2F1a8193F35d7dD25c02e7155427",
+          "chainId": 1
+        },
+        {
+          "address": "0xe3Acb3A0cC24C7b176101900715e38E8e789DAd4",
+          "chainId": 1
+        },
+        {
+          "address": "0xE67d850dE6E6Fc913fb613573dc00d3Ba863C099",
+          "chainId": 1
+        },
+        {
+          "address": "0xEB4FC6AB5323Dd245EbF26B0EcD9030c68Cb39a2",
+          "chainId": 1
+        },
+        {
+          "address": "0xFb345Ae28cCe3C55481190771e8c6D18c0f3D279",
+          "chainId": 1
+        },
+        {
+          "address": "0x0000aeB716a0DF7A9A1AAd119b772644Bc089dA8",
+          "chainId": 130
+        },
+        {
+          "address": "0x0A0e559bc3b0950a7e448F0d4894db195b9cf8DD",
+          "chainId": 130
+        },
+        {
+          "address": "0x827e86072B06674a077f592A531dcE4590aDeCdB",
+          "chainId": 130
+        },
+        {
+          "address": "0x0000aeB716a0DF7A9A1AAd119b772644Bc089dA8",
+          "chainId": 137
+        },
+        {
+          "address": "0x0A0e559bc3b0950a7e448F0d4894db195b9cf8DD",
+          "chainId": 137
+        },
+        {
+          "address": "0x827e86072B06674a077f592A531dcE4590aDeCdB",
+          "chainId": 137
+        },
+        {
+          "address": "0x975941D89F3b5ca3fA01aa91fFD325611Da59773",
+          "chainId": 137
+        },
+        {
+          "address": "0x0A0e559bc3b0950a7e448F0d4894db195b9cf8DD",
+          "chainId": 143
+        },
+        {
+          "address": "0x827e86072B06674a077f592A531dcE4590aDeCdB",
+          "chainId": 143
+        },
+        {
+          "address": "0x0000aeB716a0DF7A9A1AAd119b772644Bc089dA8",
+          "chainId": 8453
+        },
+        {
+          "address": "0x0A0e559bc3b0950a7e448F0d4894db195b9cf8DD",
+          "chainId": 8453
+        },
+        {
+          "address": "0x2f06934AfC376f41d4CCFe1D000496107bCf6e21",
+          "chainId": 8453
+        },
+        {
+          "address": "0x4e3e778bE779Cd55484A4A405f35C7d66b748e4e",
+          "chainId": 8453
+        },
+        {
+          "address": "0x59f7d7D34dB803961ce5882BbA168fD711292392",
+          "chainId": 8453
+        },
+        {
+          "address": "0x639bfA26472906Ccd40513408284a8aD292bC5D6",
+          "chainId": 8453
+        },
+        {
+          "address": "0x74E9c67ddB0Ef85D6EcC8dD03A3Cf8Ed1e0c827B",
+          "chainId": 8453
+        },
+        {
+          "address": "0x827e86072B06674a077f592A531dcE4590aDeCdB",
+          "chainId": 8453
+        },
+        {
+          "address": "0xC8661595aD2bA61B3223e053EE20F3cAb2468659",
+          "chainId": 8453
+        },
+        {
+          "address": "0xDE40458958799E8b955cc3cDDfe551a6E72DBF63",
+          "chainId": 8453
+        },
+        {
+          "address": "0x0A0e559bc3b0950a7e448F0d4894db195b9cf8DD",
+          "chainId": 42161
+        },
+        {
+          "address": "0x218fD0dfdeBB594b00bB7380843125Cc012E572a",
+          "chainId": 42161
+        },
+        {
+          "address": "0x827e86072B06674a077f592A531dcE4590aDeCdB",
+          "chainId": 42161
+        },
+        {
+          "address": "0xca9f621aAFD28d0F2decFb69Db0d9e6393A9f5ee",
+          "chainId": 42161
+        },
+        {
+          "address": "0xdb580693b031f50dEbE541371Db92490f33463b2",
+          "chainId": 42161
+        },
+        {
+          "address": "0x0A0e559bc3b0950a7e448F0d4894db195b9cf8DD",
+          "chainId": 747474
+        },
+        {
+          "address": "0x827e86072B06674a077f592A531dcE4590aDeCdB",
+          "chainId": 747474
+        },
+        {
+          "address": "0xcd849A2D15BAa0B3A85C455d527018A9a5671017",
+          "chainId": 747474
+        },
+        {
+          "address": "0xe6FC2a011153DD5a230725a9F0c89a9c81aB4887",
+          "chainId": 747474
+        }
+      ],
+      "grade": "A+",
+      "el_median": 0.000621,
+      "el_ci90": [
+        0.000104,
+        0.002673
+      ],
+      "p_loss_annual_median": 0.001324,
+      "lgd_median": 0.380736,
+      "channels": {
+        "credit": 0.0,
+        "technical": 0.61,
+        "operational": 0.39
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 38,
+        "tvl_usd": 1067572420.27,
+        "exposure_months": 737,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": true,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": true,
+        "any_rating_input_missing": true
+      }
+    },
+    {
+      "curator": "clearstar",
+      "name": "Clearstar",
+      "addresses": [
+        {
+          "address": "0x30988479C2E6a03E7fB65138b94762D41a733458",
+          "chainId": 1
+        },
+        {
+          "address": "0x72882eb5D27C7088DFA6DDE941DD42e5d184F0ef",
+          "chainId": 1
+        },
+        {
+          "address": "0xb3CF59A5f12cA319861376C5e63Eef4790a42B44",
+          "chainId": 1
+        },
+        {
+          "address": "0x30988479C2E6a03E7fB65138b94762D41a733458",
+          "chainId": 130
+        },
+        {
+          "address": "0x72882eb5D27C7088DFA6DDE941DD42e5d184F0ef",
+          "chainId": 130
+        },
+        {
+          "address": "0x30988479C2E6a03E7fB65138b94762D41a733458",
+          "chainId": 137
+        },
+        {
+          "address": "0x72882eb5D27C7088DFA6DDE941DD42e5d184F0ef",
+          "chainId": 137
+        },
+        {
+          "address": "0xb3CF59A5f12cA319861376C5e63Eef4790a42B44",
+          "chainId": 143
+        },
+        {
+          "address": "0x30988479C2E6a03E7fB65138b94762D41a733458",
+          "chainId": 8453
+        },
+        {
+          "address": "0x72882eb5D27C7088DFA6DDE941DD42e5d184F0ef",
+          "chainId": 8453
+        },
+        {
+          "address": "0x30988479C2E6a03E7fB65138b94762D41a733458",
+          "chainId": 42161
+        },
+        {
+          "address": "0x72882eb5D27C7088DFA6DDE941DD42e5d184F0ef",
+          "chainId": 42161
+        },
+        {
+          "address": "0x30988479C2E6a03E7fB65138b94762D41a733458",
+          "chainId": 747474
+        },
+        {
+          "address": "0x72882eb5D27C7088DFA6DDE941DD42e5d184F0ef",
+          "chainId": 747474
+        }
+      ],
+      "grade": "A",
+      "el_median": 0.001113,
+      "el_ci90": [
+        7.6e-05,
+        0.009088
+      ],
+      "p_loss_annual_median": 0.002749,
+      "lgd_median": 0.359742,
+      "channels": {
+        "credit": 0.548,
+        "technical": 0.394,
+        "operational": 0.058
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 10,
+        "tvl_usd": 10182091.14,
+        "exposure_months": 85,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": true,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": true,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "keyrock",
+      "name": "Keyrock",
+      "addresses": [
+        {
+          "address": "0x9ea3709E1A3f0B9501DD4a66163861D9BcCe7A08",
+          "chainId": 1
+        },
+        {
+          "address": "0xbA75546ACD56b3a9142f94F179b03970eE4283Fd",
+          "chainId": 1
+        }
+      ],
+      "grade": "NR",
+      "el_median": 0.0012,
+      "el_ci90": [
+        3.2e-05,
+        0.026306
+      ],
+      "p_loss_annual_median": 0.002664,
+      "lgd_median": 0.481045,
+      "channels": {
+        "credit": 0.359,
+        "technical": 0.406,
+        "operational": 0.236
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 1,
+        "tvl_usd": 95941.53,
+        "exposure_months": 8,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": true
+      }
+    },
+    {
+      "curator": "anthias-labs",
+      "name": "Anthias Labs",
+      "addresses": [
+        {
+          "address": "0x08eDEbFFaE68970DCf751baa826182b3a4aCFC05",
+          "chainId": 8453
+        }
+      ],
+      "grade": "A",
+      "el_median": 0.001248,
+      "el_ci90": [
+        5.6e-05,
+        0.012249
+      ],
+      "p_loss_annual_median": 0.00349,
+      "lgd_median": 0.334024,
+      "channels": {
+        "credit": 0.426,
+        "technical": 0.143,
+        "operational": 0.431
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 5,
+        "tvl_usd": 18774016.47,
+        "exposure_months": 88,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": true,
+        "repeat_offender": true,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "yearn",
+      "name": "Yearn",
+      "addresses": [
+        {
+          "address": "0x90D0f26025571295D18a6c041E47450B81886B51",
+          "chainId": 1
+        },
+        {
+          "address": "0xe5e2Baf96198c56380dDD5E992D7d1ADa0e989c0",
+          "chainId": 1
+        },
+        {
+          "address": "0x90D0f26025571295D18a6c041E47450B81886B51",
+          "chainId": 8453
+        },
+        {
+          "address": "0xFEaE2F855250c36A77b8C68dB07C4dD9711fE36F",
+          "chainId": 8453
+        },
+        {
+          "address": "0x90D0f26025571295D18a6c041E47450B81886B51",
+          "chainId": 42161
+        },
+        {
+          "address": "0xfd99a19Fcf577Be92fDAB4ef162c1644BB056885",
+          "chainId": 42161
+        },
+        {
+          "address": "0x518C21DC88D9780c0A1Be566433c571461A70149",
+          "chainId": 747474
+        },
+        {
+          "address": "0x90D0f26025571295D18a6c041E47450B81886B51",
+          "chainId": 747474
+        }
+      ],
+      "grade": "A",
+      "el_median": 0.001961,
+      "el_ci90": [
+        0.000266,
+        0.010456
+      ],
+      "p_loss_annual_median": 0.004445,
+      "lgd_median": 0.348065,
+      "channels": {
+        "credit": 0.784,
+        "technical": 0.105,
+        "operational": 0.111
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 11,
+        "tvl_usd": 30305191.6,
+        "exposure_months": 140,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "b-protocol",
+      "name": "B.Protocol",
+      "addresses": [
+        {
+          "address": "0x2566f66f68ed438726AD904524FB306A03FdB80B",
+          "chainId": 1
+        },
+        {
+          "address": "0x2a933dbd0D9e32593e62702028Edcab437CE3cBA",
+          "chainId": 1
+        },
+        {
+          "address": "0xD6D14E60c0DAFcB3B77B296fe718623Ec84e5eb3",
+          "chainId": 1
+        },
+        {
+          "address": "0x970d5ce29730b8e5792da0f0f0a544721B0E0b4F",
+          "chainId": 10
+        },
+        {
+          "address": "0x32f75c3ee6aD872Eb3138020885E94E2842b8433",
+          "chainId": 8453
+        },
+        {
+          "address": "0x4b8f6CADb8A2B222e8840E8aDDc32E031794A4D6",
+          "chainId": 8453
+        }
+      ],
+      "grade": "NR",
+      "el_median": 0.002062,
+      "el_ci90": [
+        0.000108,
+        0.037157
+      ],
+      "p_loss_annual_median": 0.004223,
+      "lgd_median": 0.481045,
+      "channels": {
+        "credit": 0.341,
+        "technical": 0.386,
+        "operational": 0.274
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 1,
+        "tvl_usd": 506950.59,
+        "exposure_months": 57,
+        "events": 1
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": true,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": true
+      }
+    },
+    {
+      "curator": "gauntlet",
+      "name": "Gauntlet",
+      "addresses": [
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 1
+        },
+        {
+          "address": "0xC684c6587712e5E7BDf9fD64415F23Bd2b05fAec",
+          "chainId": 1
+        },
+        {
+          "address": "0x5a4E19842e09000a582c20A4f524C26Fb48Dd4D0",
+          "chainId": 10
+        },
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 10
+        },
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 130
+        },
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 137
+        },
+        {
+          "address": "0x5a4E19842e09000a582c20A4f524C26Fb48Dd4D0",
+          "chainId": 988
+        },
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 988
+        },
+        {
+          "address": "0x09346F40e324458A8E211C5317981C78FAcDEc57",
+          "chainId": 999
+        },
+        {
+          "address": "0xe3ea927a0f41B4a84fA9900812E52F8BcB84f396",
+          "chainId": 999
+        },
+        {
+          "address": "0x5a4E19842e09000a582c20A4f524C26Fb48Dd4D0",
+          "chainId": 4217
+        },
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 4217
+        },
+        {
+          "address": "0x5a4E19842e09000a582c20A4f524C26Fb48Dd4D0",
+          "chainId": 8453
+        },
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 8453
+        },
+        {
+          "address": "0xCe3b5E1f18951054FA0A7e48aDb3A18A5E957F30",
+          "chainId": 8453
+        },
+        {
+          "address": "0x5a4E19842e09000a582c20A4f524C26Fb48Dd4D0",
+          "chainId": 42161
+        },
+        {
+          "address": "0x9E33faAE38ff641094fa68c65c2cE600b3410585",
+          "chainId": 42161
+        },
+        {
+          "address": "0x5D8C96b76A342c640d9605187daB780f8365F69f",
+          "chainId": 747474
+        },
+        {
+          "address": "0xb5c5b5D7a64d43bb91Dab63Ff3095F7FcB869b4e",
+          "chainId": 747474
+        }
+      ],
+      "grade": "A",
+      "el_median": 0.002111,
+      "el_ci90": [
+        0.000495,
+        0.00691
+      ],
+      "p_loss_annual_median": 0.003971,
+      "lgd_median": 0.378938,
+      "channels": {
+        "credit": 0.0,
+        "technical": 0.297,
+        "operational": 0.703
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 43,
+        "tvl_usd": 698475756.04,
+        "exposure_months": 955,
+        "events": 1
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": true,
+        "repeat_offender": true,
+        "diligence_conflict": false,
+        "declined_credit": true,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "hyperithm",
+      "name": "Hyperithm",
+      "addresses": [
+        {
+          "address": "0x75178137D3B4B9A0F771E0e149b00fB8167BA325",
+          "chainId": 1
+        },
+        {
+          "address": "0xEe7E9bb21D5589BF657b94083dB2fA349a3918C8",
+          "chainId": 1
+        },
+        {
+          "address": "0x75178137D3B4B9A0F771E0e149b00fB8167BA325",
+          "chainId": 143
+        },
+        {
+          "address": "0xEe7E9bb21D5589BF657b94083dB2fA349a3918C8",
+          "chainId": 143
+        },
+        {
+          "address": "0x75178137D3B4B9A0F771E0e149b00fB8167BA325",
+          "chainId": 988
+        },
+        {
+          "address": "0xEe7E9bb21D5589BF657b94083dB2fA349a3918C8",
+          "chainId": 988
+        },
+        {
+          "address": "0x35e42A5cA87A4E4Fb235585B36d7c978eA72B290",
+          "chainId": 999
+        },
+        {
+          "address": "0x75178137D3B4B9A0F771E0e149b00fB8167BA325",
+          "chainId": 999
+        },
+        {
+          "address": "0x75178137D3B4B9A0F771E0e149b00fB8167BA325",
+          "chainId": 42161
+        },
+        {
+          "address": "0xEe7E9bb21D5589BF657b94083dB2fA349a3918C8",
+          "chainId": 42161
+        },
+        {
+          "address": "0x75178137D3B4B9A0F771E0e149b00fB8167BA325",
+          "chainId": 747474
+        },
+        {
+          "address": "0xEe7E9bb21D5589BF657b94083dB2fA349a3918C8",
+          "chainId": 747474
+        }
+      ],
+      "grade": "B+",
+      "el_median": 0.005466,
+      "el_ci90": [
+        0.000457,
+        0.041143
+      ],
+      "p_loss_annual_median": 0.011095,
+      "lgd_median": 0.35421,
+      "channels": {
+        "credit": 0.745,
+        "technical": 0.223,
+        "operational": 0.032
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 6,
+        "tvl_usd": 3735136.33,
+        "exposure_months": 78,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": false,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": true,
+        "any_rating_input_missing": true
+      }
+    },
+    {
+      "curator": "sentora",
+      "name": "Sentora",
+      "addresses": [
+        {
+          "address": "0x9e396dE3312D373b87F9BD8763fb48184b42aac0",
+          "chainId": 1
+        },
+        {
+          "address": "0xe8C9C99EcaD0686A14A00d8521c572281E938008",
+          "chainId": 1
+        },
+        {
+          "address": "0x9e396dE3312D373b87F9BD8763fb48184b42aac0",
+          "chainId": 4217
+        },
+        {
+          "address": "0xe8C9C99EcaD0686A14A00d8521c572281E938008",
+          "chainId": 4217
+        }
+      ],
+      "grade": "B",
+      "el_median": 0.010045,
+      "el_ci90": [
+        0.000506,
+        0.103391
+      ],
+      "p_loss_annual_median": 0.033983,
+      "lgd_median": 0.283386,
+      "channels": {
+        "credit": 0.748,
+        "technical": 0.156,
+        "operational": 0.096
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 3,
+        "tvl_usd": 289765058.58,
+        "exposure_months": 11,
+        "events": 0
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": true,
+        "repeat_offender": false,
+        "diligence_conflict": false,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    },
+    {
+      "curator": "re7-labs",
+      "name": "RE7 Labs",
+      "addresses": [
+        {
+          "address": "0xE86399fE6d7007FdEcb08A2ee1434Ee677a04433",
+          "chainId": 1
+        },
+        {
+          "address": "0xD8B0F4e54a8dac04E0A57392f5A630cEdb99C940",
+          "chainId": 10
+        },
+        {
+          "address": "0xD8B0F4e54a8dac04E0A57392f5A630cEdb99C940",
+          "chainId": 130
+        },
+        {
+          "address": "0xD8B0F4e54a8dac04E0A57392f5A630cEdb99C940",
+          "chainId": 137
+        },
+        {
+          "address": "0xD8B0F4e54a8dac04E0A57392f5A630cEdb99C940",
+          "chainId": 480
+        },
+        {
+          "address": "0x036845F9BE6DF938Da01Abe33e056D3CcaA836a2",
+          "chainId": 999
+        },
+        {
+          "address": "0xD8B0F4e54a8dac04E0A57392f5A630cEdb99C940",
+          "chainId": 8453
+        },
+        {
+          "address": "0x8fafb5243f3787c67cAe318983a5Cc7E2E81F5bB",
+          "chainId": 42161
+        },
+        {
+          "address": "0xD8B0F4e54a8dac04E0A57392f5A630cEdb99C940",
+          "chainId": 747474
+        }
+      ],
+      "grade": "B",
+      "el_median": 0.01021,
+      "el_ci90": [
+        0.001744,
+        0.05666
+      ],
+      "p_loss_annual_median": 0.019464,
+      "lgd_median": 0.404657,
+      "channels": {
+        "credit": 0.212,
+        "technical": 0.103,
+        "operational": 0.685
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 10,
+        "tvl_usd": 1248737.53,
+        "exposure_months": 474,
+        "events": 3
+      },
+      "flags": {
+        "multisig_verified": true,
+        "framework_published": true,
+        "repeat_offender": true,
+        "diligence_conflict": true,
+        "declined_credit": false,
+        "any_rating_input_missing": true
+      }
+    },
+    {
+      "curator": "mev-capital",
+      "name": "MEV Capital",
+      "addresses": [
+        {
+          "address": "0x06590Fef209Ebc1f8eEF83dA05984cD4eFf0d0E3",
+          "chainId": 1
+        },
+        {
+          "address": "0x38afC3aA2c76b4cA1F8e1DabA68e998e1F4782DB",
+          "chainId": 1
+        },
+        {
+          "address": "0x6fA5d361Ab8165347F636217001E22a7cEF09B48",
+          "chainId": 1
+        },
+        {
+          "address": "0xeEAa598C011A29b6713251dD0CE24DB8D80E60Eb",
+          "chainId": 130
+        },
+        {
+          "address": "0xB672Ea44A1EC692A9Baf851dC90a1Ee3DB25F1C4",
+          "chainId": 137
+        },
+        {
+          "address": "0x6293e97900aA987Cf3Cbd419e0D5Ba43ebfA91c1",
+          "chainId": 999
+        },
+        {
+          "address": "0xb830B8B1A41c38603dBC6E4b562Ff599eDB415C4",
+          "chainId": 999
+        },
+        {
+          "address": "0xB672Ea44A1EC692A9Baf851dC90a1Ee3DB25F1C4",
+          "chainId": 8453
+        },
+        {
+          "address": "0xBB4B5BdC1a77971B6C35D87D30BB30F79543a2EF",
+          "chainId": 42161
+        },
+        {
+          "address": "0x3D9403F9bC4615D6986EC31fC287cD5131Eaf9c7",
+          "chainId": 747474
+        }
+      ],
+      "grade": "C",
+      "el_median": 0.051587,
+      "el_ci90": [
+        0.011988,
+        0.136006
+      ],
+      "p_loss_annual_median": 0.176983,
+      "lgd_median": 0.35262,
+      "channels": {
+        "credit": 0.538,
+        "technical": 0.103,
+        "operational": 0.359
+      },
+      "confidence": "Wide",
+      "supporting": {
+        "n_vaults": 6,
+        "tvl_usd": 9012955.23,
+        "exposure_months": 223,
+        "events": 1
+      },
+      "flags": {
+        "multisig_verified": false,
+        "framework_published": true,
+        "repeat_offender": true,
+        "diligence_conflict": true,
+        "declined_credit": false,
+        "any_rating_input_missing": false
+      }
+    }
+  ],
+  "vaults": [
+    {
+      "vault": "1:0xb0f05E4De970A1aaf77f8C2F823953a367504BA9",
+      "curator": "alphaping",
+      "el_med": 0.000433,
+      "el_lo": 1.8848276868609267e-05,
+      "el_hi": 0.0061255471788165886,
+      "pd_ann_med": 0.0009487259818596883,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.6404966049412693,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x47fe8Ab9eE47DD65c24df52324181790b9F47EfC",
+      "curator": "alphaping",
+      "el_med": 0.000433,
+      "el_lo": 1.8847836728239247e-05,
+      "el_hi": 0.006125440981231064,
+      "pd_ann_med": 0.0009487085302016252,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.35950339505873075,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xc1256Ae5FF1cf2719D4937adb3bbCCab2E00A2Ca",
+      "curator": "anthias-labs",
+      "el_med": 0.000956,
+      "el_lo": 3.593859585792977e-05,
+      "el_hi": 0.011320447554796408,
+      "pd_ann_med": 0.003176176541634268,
+      "lgd_med": 0.30835387117902646,
+      "weight": 0.49316136375400166,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xa0E430870c4604CcfC7B38Ca7845B1FF653D0ff1",
+      "curator": "anthias-labs",
+      "el_med": 0.001068,
+      "el_lo": 3.7226508576544504e-05,
+      "el_hi": 0.011557992648322114,
+      "pd_ann_med": 0.003053087359168427,
+      "lgd_med": 0.35658497061995276,
+      "weight": 0.3735009489096278,
+      "grade": "A"
+    },
+    {
+      "vault": "8453:0xf24608E0CCb972b0b0f4A6446a0BBf58c701a026",
+      "curator": "anthias-labs",
+      "el_med": 0.002551,
+      "el_lo": 0.0001086781423504451,
+      "el_hi": 0.026960706527712815,
+      "pd_ann_med": 0.009589628326465593,
+      "lgd_med": 0.2736327906509317,
+      "weight": 0.07333362875899489,
+      "grade": "A"
+    },
+    {
+      "vault": "8453:0x543257eF2161176D7C8cD90BA65C2d4CaEF5a796",
+      "curator": "anthias-labs",
+      "el_med": 0.000646,
+      "el_lo": 1.2455536974763416e-05,
+      "el_hi": 0.011534334935979747,
+      "pd_ann_med": 0.0014017503702172807,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.05616895498955681,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xE1bA476304255353aEF290e6474A417D06e7b773",
+      "curator": "anthias-labs",
+      "el_med": 0.000147,
+      "el_lo": 7.581507049413969e-07,
+      "el_hi": 0.008050771236317355,
+      "pd_ann_med": 0.00033109967221600645,
+      "lgd_med": 0.43918541403402894,
+      "weight": 0.0038351035878187905,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x6e6fcac197ee06d0164c0fBA218c7BcB878f9B5C",
+      "curator": "apostro",
+      "el_med": 0.000204,
+      "el_lo": 7.76736837627835e-06,
+      "el_hi": 0.003059705455649988,
+      "pd_ann_med": 0.0006818781569798427,
+      "lgd_med": 0.3112758839140148,
+      "weight": 1.0,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x711a68a82dd80cB0435b281aF76B0B80804eFab9",
+      "curator": "august-digital",
+      "el_med": 0.000323,
+      "el_lo": 9.74667211480732e-06,
+      "el_hi": 0.005438133166252931,
+      "pd_ann_med": 0.0006995743324377801,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.9999999924115376,
+      "grade": "A+"
+    },
+    {
+      "vault": "143:0x21649703fe63265058e9f22582552561Af4AfA3f",
+      "curator": "august-digital",
+      "el_med": 4.3e-05,
+      "el_lo": 5.945591794457043e-07,
+      "el_hi": 0.0014853809413052819,
+      "pd_ann_med": 9.850233469466119e-05,
+      "lgd_med": 0.4810448747375794,
+      "weight": 7.588462472820167e-09,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x2C25f6C25770fFEC5959D34B94Bf898865e5D6b1",
+      "curator": "b-protocol",
+      "el_med": 0.002062,
+      "el_lo": 0.0001079416263776114,
+      "el_hi": 0.03715678294468621,
+      "pd_ann_med": 0.004222526956823236,
+      "lgd_med": 0.4810448747375794,
+      "weight": 1.0,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0x62fE596d59fB077c2Df736dF212E0AFfb522dC78",
+      "curator": "clearstar",
+      "el_med": 0.00097,
+      "el_lo": 5.852898929471801e-05,
+      "el_hi": 0.009397939588067705,
+      "pd_ann_med": 0.0026163070126723476,
+      "lgd_med": 0.3924927850974517,
+      "weight": 0.6651461212924196,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x1D3b1Cd0a0f242d598834b3F2d126dC6bd774657",
+      "curator": "clearstar",
+      "el_med": 0.00089,
+      "el_lo": 5.543807456523088e-05,
+      "el_hi": 0.008514537682156665,
+      "pd_ann_med": 0.003030480430075866,
+      "lgd_med": 0.285949956447205,
+      "weight": 0.23027182536672655,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xE74c499fA461AF1844fCa84204490877787cED56",
+      "curator": "clearstar",
+      "el_med": 0.000946,
+      "el_lo": 1.946202044882196e-05,
+      "el_hi": 0.018152270457242048,
+      "pd_ann_med": 0.003409799227600263,
+      "lgd_med": 0.29503449966297346,
+      "weight": 0.05273092499008167,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x09832347586E238841F49149C84d121Bc2191C53",
+      "curator": "clearstar",
+      "el_med": 0.00091,
+      "el_lo": 4.8798251184511554e-05,
+      "el_hi": 0.00919955848075413,
+      "pd_ann_med": 0.0029179181108773267,
+      "lgd_med": 0.3105795016946573,
+      "weight": 0.044934389121503715,
+      "grade": "A+"
+    },
+    {
+      "vault": "42161:0x64CA76e2525fc6Ab2179300c15e343d73e42f958",
+      "curator": "clearstar",
+      "el_med": 2.4e-05,
+      "el_lo": 2.7928236699291987e-07,
+      "el_hi": 0.000826099832453418,
+      "pd_ann_med": 5.2007908884210696e-05,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.005921624724896371,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0x116D4d0932082FB564509EFf6E1708d5ac2c5EA4",
+      "curator": "clearstar",
+      "el_med": 1.5e-05,
+      "el_lo": 1.7124057268033043e-07,
+      "el_hi": 0.0004909784314743187,
+      "pd_ann_med": 3.0395010792994004e-05,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.000730648850030073,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0x9aF031182fCe8BF0b296145f2e1f1Df5C3feCDE7",
+      "curator": "clearstar",
+      "el_med": 1.5e-05,
+      "el_lo": 1.7292154420506192e-07,
+      "el_hi": 0.0004927337426047065,
+      "pd_ann_med": 3.0612264705465186e-05,
+      "lgd_med": 0.48072926493797574,
+      "weight": 0.00020858702844875405,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x43e623Ff7D14d5b105F7bE9c488F36dbF11D1F46",
+      "curator": "clearstar",
+      "el_med": 0.000254,
+      "el_lo": 1.0449187347523946e-05,
+      "el_hi": 0.0031411554773072554,
+      "pd_ann_med": 0.0008568022090514882,
+      "lgd_med": 0.2950081652901002,
+      "weight": 5.293833932755516e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xa3fC33543bEee52bC60bAbC80aF3d29789637B6D",
+      "curator": "clearstar",
+      "el_med": 6.2e-05,
+      "el_lo": 1.3241200445858607e-06,
+      "el_hi": 0.001343100361685181,
+      "pd_ann_med": 0.00015931696463505896,
+      "lgd_med": 0.40892899963096807,
+      "weight": 2.8383180266464017e-06,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xA1FF9C28Ebc160c1Dcde4b9aA9551f617880c6fb",
+      "curator": "clearstar",
+      "el_med": 0.000176,
+      "el_lo": 4.530614536836665e-06,
+      "el_hi": 0.00339171718956049,
+      "pd_ann_med": 0.0003862437468655222,
+      "lgd_med": 0.4810448747375794,
+      "weight": 1.0196853904478137e-07,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0x2900ABd73631b2f60747e687095537B673c06A76",
+      "curator": "felix",
+      "el_med": 4e-05,
+      "el_lo": 5.99967838635655e-07,
+      "el_hi": 0.0012297433499309817,
+      "pd_ann_med": 8.902860166121185e-05,
+      "lgd_med": 0.46209660340062486,
+      "weight": 0.6123242170482671,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0x8A862fD6c12f9ad34C9c2ff45AB2b6712e8CEa27",
+      "curator": "felix",
+      "el_med": 4e-06,
+      "el_lo": 1.5229404458380608e-08,
+      "el_hi": 0.0005085314750090814,
+      "pd_ann_med": 9.18415485134938e-06,
+      "lgd_med": 0.46756535027526924,
+      "weight": 0.21356147767013664,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0xFc5126377F0efc0041C0969Ef9BA903Ce67d151e",
+      "curator": "felix",
+      "el_med": 5.8e-05,
+      "el_lo": 4.4595734318188275e-07,
+      "el_hi": 0.003431719186183582,
+      "pd_ann_med": 0.00017369675017231412,
+      "lgd_med": 0.34130178061477856,
+      "weight": 0.14481101466869295,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0x9896a8605763106e57A51aa0a97Fe8099E806bb3",
+      "curator": "felix",
+      "el_med": 0.000632,
+      "el_lo": 1.1459419938745573e-05,
+      "el_hi": 0.013153736780148468,
+      "pd_ann_med": 0.0021686838951805454,
+      "lgd_med": 0.30464909117377004,
+      "weight": 0.017924403508892777,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0x207ccaE51Ad2E1C240C4Ab4c94b670D438d2201C",
+      "curator": "felix",
+      "el_med": 0.000108,
+      "el_lo": 1.2188989636780431e-06,
+      "el_hi": 0.004062255117420695,
+      "pd_ann_med": 0.00031598917259756387,
+      "lgd_med": 0.3396239057841899,
+      "weight": 0.006390136842938452,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0x9c59a9389D8f72DE2CdAf1126F36EA4790E2275e",
+      "curator": "felix",
+      "el_med": 2.2e-05,
+      "el_lo": 1.1598032235520235e-07,
+      "el_hi": 0.0016927063987642798,
+      "pd_ann_med": 5.7012658456201404e-05,
+      "lgd_med": 0.38240147193384655,
+      "weight": 0.0031378787565064245,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0x66c71204B70aE27BE6dC3eb41F9aF5868E68fDb6",
+      "curator": "felix",
+      "el_med": 0.000145,
+      "el_lo": 2.4771949692532324e-06,
+      "el_hi": 0.00425063499382231,
+      "pd_ann_med": 0.00043132695543368627,
+      "lgd_med": 0.35493207798620946,
+      "weight": 0.0018508715045656586,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xeE8F4eC5672F09119b96Ab6fB59C27E1b7e44b61",
+      "curator": "gauntlet",
+      "el_med": 0.000141,
+      "el_lo": 7.450677228543922e-06,
+      "el_hi": 0.0015112503466303457,
+      "pd_ann_med": 0.00038574569652405355,
+      "lgd_med": 0.38141159782291073,
+      "weight": 0.62991363216178,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x812B2C6Ab3f4471c0E43D4BB61098a9211017427",
+      "curator": "gauntlet",
+      "el_med": 0.004847,
+      "el_lo": 0.0006732834112424781,
+      "el_hi": 0.02574285258969263,
+      "pd_ann_med": 0.011507719042251785,
+      "lgd_med": 0.4357183143443777,
+      "weight": 0.06860433290675107,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0xdd0f28e19C1780eb6396170735D45153D261490d",
+      "curator": "gauntlet",
+      "el_med": 0.001064,
+      "el_lo": 0.00010938529805819211,
+      "el_hi": 0.006743729107021114,
+      "pd_ann_med": 0.003761917788728142,
+      "lgd_med": 0.28960803083376874,
+      "weight": 0.04778423333340175,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0x31A5684983EeE865d943A696AAC155363bA024f9",
+      "curator": "gauntlet",
+      "el_med": 0.002556,
+      "el_lo": 0.00034131635928936636,
+      "el_hi": 0.01181400708737714,
+      "pd_ann_med": 0.007708508096131328,
+      "lgd_med": 0.3268345068750033,
+      "weight": 0.03318821106046452,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0x6859B34a9379122d25A9FA46f0882d434fee36c3",
+      "curator": "gauntlet",
+      "el_med": 0.000742,
+      "el_lo": 4.195541696591103e-05,
+      "el_hi": 0.008875755502867223,
+      "pd_ann_med": 0.0016696748281547213,
+      "lgd_med": 0.4705212174177125,
+      "weight": 0.029821480436727502,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x2371e134e3455e0593363cBF89d3b6cf53740618",
+      "curator": "gauntlet",
+      "el_med": 0.007521,
+      "el_lo": 0.0011031587601019618,
+      "el_hi": 0.03774115119801629,
+      "pd_ann_med": 0.027194490779110514,
+      "lgd_med": 0.2878756371680234,
+      "weight": 0.024254352891023883,
+      "grade": "B"
+    },
+    {
+      "vault": "1:0xA8875aaeBc4f830524e35d57F9772FfAcbdD6C45",
+      "curator": "gauntlet",
+      "el_med": 0.000175,
+      "el_lo": 3.4049813742728776e-06,
+      "el_hi": 0.003337097938520187,
+      "pd_ann_med": 0.0003776842778485112,
+      "lgd_med": 0.4809775130344046,
+      "weight": 0.01870177453548615,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x4Ff4186188f8406917293A9e01A1ca16d3cf9E59",
+      "curator": "gauntlet",
+      "el_med": 0.002117,
+      "el_lo": 0.00022508924592000296,
+      "el_hi": 0.01395106366669129,
+      "pd_ann_med": 0.008029112516140469,
+      "lgd_med": 0.26010125650569615,
+      "weight": 0.014885957367276346,
+      "grade": "A"
+    },
+    {
+      "vault": "747474:0xC5e7AB07030305fc925175b25B93b285d40dCdFf",
+      "curator": "gauntlet",
+      "el_med": 5.1e-05,
+      "el_lo": 5.446215986668157e-07,
+      "el_hi": 0.0015463071204707337,
+      "pd_ann_med": 0.00010580345710636818,
+      "lgd_med": 0.4810433235298093,
+      "weight": 0.014571986934967382,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x79FD640000F8563A866322483524a4b48f1Ed702",
+      "curator": "gauntlet",
+      "el_med": 0.005161,
+      "el_lo": 0.0008638317004312424,
+      "el_hi": 0.02618766832435063,
+      "pd_ann_med": 0.019553143538482864,
+      "lgd_med": 0.2651121361586704,
+      "weight": 0.013099508550458128,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0x8eB67A509616cd6A7c1B3c8C21D48FF57df3d458",
+      "curator": "gauntlet",
+      "el_med": 0.011074,
+      "el_lo": 0.0017578481423019935,
+      "el_hi": 0.06452353445338242,
+      "pd_ann_med": 0.040590240699200475,
+      "lgd_med": 0.2801139206576982,
+      "weight": 0.01284831933417287,
+      "grade": "B"
+    },
+    {
+      "vault": "1:0xc54b4E08C1Dcc199fdd35c6b5Ab589ffD3428a8d",
+      "curator": "gauntlet",
+      "el_med": 0.000453,
+      "el_lo": 4.167876412878447e-05,
+      "el_hi": 0.00320293098449094,
+      "pd_ann_med": 0.0014489487350968222,
+      "lgd_med": 0.3261115747182147,
+      "weight": 0.009968628860255742,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x43Cd00De63485618A5CEEBE0de364cD6cBeB26E7",
+      "curator": "gauntlet",
+      "el_med": 0.003783,
+      "el_lo": 0.0005381174658340821,
+      "el_hi": 0.020998731891404637,
+      "pd_ann_med": 0.01053787035329845,
+      "lgd_med": 0.36182482834170127,
+      "weight": 0.0076504190827652255,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0x8CB3649114051cA5119141a34C200D65dc0Faa73",
+      "curator": "gauntlet",
+      "el_med": 0.000494,
+      "el_lo": 4.576050007214218e-05,
+      "el_hi": 0.0034015549356332642,
+      "pd_ann_med": 0.001590796753021373,
+      "lgd_med": 0.3225695329592728,
+      "weight": 0.007409702632929284,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x78B18E07dc43017fcEaabaD0751d6464c0F56b25",
+      "curator": "gauntlet",
+      "el_med": 0.012828,
+      "el_lo": 0.001887178379046204,
+      "el_hi": 0.06584521280255622,
+      "pd_ann_med": 0.03950267593901946,
+      "lgd_med": 0.3220983454285735,
+      "weight": 0.0067915062767370535,
+      "grade": "B"
+    },
+    {
+      "vault": "999:0x08C00F8279dFF5B0CB5a04d349E7d79708Ceadf3",
+      "curator": "gauntlet",
+      "el_med": 7.7e-05,
+      "el_lo": 5.302396012630423e-07,
+      "el_hi": 0.005941156702383636,
+      "pd_ann_med": 0.00022461153460540118,
+      "lgd_med": 0.3422343763725748,
+      "weight": 0.006624902421586773,
+      "grade": "A+"
+    },
+    {
+      "vault": "10:0xC30ce6A5758786e0F640cC5f881Dd96e9a1C5C59",
+      "curator": "gauntlet",
+      "el_med": 1.7e-05,
+      "el_lo": 2.5791292442768285e-07,
+      "el_hi": 0.0006067021070766966,
+      "pd_ann_med": 4.386445694370966e-05,
+      "lgd_med": 0.39654837919814917,
+      "weight": 0.006177324636679671,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x443df5eEE3196e9b2Dd77CaBd3eA76C3dee8f9b2",
+      "curator": "gauntlet",
+      "el_med": 0.038372,
+      "el_lo": 0.0016346032102755377,
+      "el_hi": 0.29473939285321094,
+      "pd_ann_med": 0.05728972184693082,
+      "lgd_med": 0.7114374749285696,
+      "weight": 0.006076093062311819,
+      "grade": "C"
+    },
+    {
+      "vault": "747474:0xE4248e2105508FcBad3fe95691551d1AF14015f7",
+      "curator": "gauntlet",
+      "el_med": 0.000913,
+      "el_lo": 2.185917201178066e-05,
+      "el_hi": 0.01469437472533863,
+      "pd_ann_med": 0.002900510799621947,
+      "lgd_med": 0.3202903029246288,
+      "weight": 0.00583582923818623,
+      "grade": "A+"
+    },
+    {
+      "vault": "42161:0x7e97fa6893871A2751B5fE961978DCCb2c201E65",
+      "curator": "gauntlet",
+      "el_med": 0.005888,
+      "el_lo": 6.539471218005681e-05,
+      "el_hi": 0.15357685230013635,
+      "pd_ann_med": 0.008232102411153297,
+      "lgd_med": 0.7076358790811932,
+      "weight": 0.004540800964292092,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0x4881Ef0BF6d2365D3dd6499ccd7532bcdBCE0658",
+      "curator": "gauntlet",
+      "el_med": 0.004045,
+      "el_lo": 0.0006117457543847984,
+      "el_hi": 0.018729498979086642,
+      "pd_ann_med": 0.013040902960862966,
+      "lgd_med": 0.318780687830899,
+      "weight": 0.004359270005171057,
+      "grade": "B+"
+    },
+    {
+      "vault": "137:0x3F33F9f7e2D7cfBCBDf8ea8b870a6E3d449664c2",
+      "curator": "gauntlet",
+      "el_med": 0.000192,
+      "el_lo": 4.128411167062441e-06,
+      "el_hi": 0.00355186699768262,
+      "pd_ann_med": 0.0005593073555894557,
+      "lgd_med": 0.3627457808162987,
+      "weight": 0.003960804117344015,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x701907283a57FF77E255C3f1aAD790466B8CE4ef",
+      "curator": "gauntlet",
+      "el_med": 0.000229,
+      "el_lo": 9.565913971464173e-06,
+      "el_hi": 0.002728064398329311,
+      "pd_ann_med": 0.0005818856304865005,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.0035333141240498933,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xc0c5689e6f4D256E861F65465b691aeEcC0dEb12",
+      "curator": "gauntlet",
+      "el_med": 0.000774,
+      "el_lo": 8.316682924647461e-05,
+      "el_hi": 0.004926799502660833,
+      "pd_ann_med": 0.002622972053321848,
+      "lgd_med": 0.30575862448934643,
+      "weight": 0.0027405575938339853,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0x1ecDC3F2B5E90bfB55fF45a7476FF98A8957388E",
+      "curator": "gauntlet",
+      "el_med": 0.000297,
+      "el_lo": 6.5108155346151825e-06,
+      "el_hi": 0.005312116611579402,
+      "pd_ann_med": 0.0008071175664864927,
+      "lgd_med": 0.3715715183120118,
+      "weight": 0.0027298146606957036,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x500331c9fF24D9d11aee6B07734Aa72343EA74a5",
+      "curator": "gauntlet",
+      "el_med": 0.00138,
+      "el_lo": 0.00015159358228469832,
+      "el_hi": 0.010983893917971695,
+      "pd_ann_med": 0.0035609191846316945,
+      "lgd_med": 0.4031476451711083,
+      "weight": 0.0025555482137069735,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0x2ed10624315b74a78f11FAbedAa1A228c198aEfB",
+      "curator": "gauntlet",
+      "el_med": 8.4e-05,
+      "el_lo": 3.184350496490263e-06,
+      "el_hi": 0.001122492885964715,
+      "pd_ann_med": 0.0002160630854664558,
+      "lgd_med": 0.40884079003389295,
+      "weight": 0.0024421766702465075,
+      "grade": "A+"
+    },
+    {
+      "vault": "137:0x781FB7F6d845E3bE129289833b04d43Aa8558c42",
+      "curator": "gauntlet",
+      "el_med": 1.4e-05,
+      "el_lo": 1.7781311075624132e-07,
+      "el_hi": 0.00044515991670933283,
+      "pd_ann_med": 3.841840342078129e-05,
+      "lgd_med": 0.38879189415340376,
+      "weight": 0.001798327573798166,
+      "grade": "A+"
+    },
+    {
+      "vault": "42161:0x7c574174DA4b2be3f705c6244B4BfA0815a8B3Ed",
+      "curator": "gauntlet",
+      "el_med": 0.000109,
+      "el_lo": 2.9913913651687114e-06,
+      "el_hi": 0.0027375444663362185,
+      "pd_ann_med": 0.00036696154774584766,
+      "lgd_med": 0.30110495005413235,
+      "weight": 0.001435907173106725,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x6b13c060F13Af1fdB319F52315BbbF3fb1D88844",
+      "curator": "gauntlet",
+      "el_med": 0.003307,
+      "el_lo": 0.00033920105443306246,
+      "el_hi": 0.017801667863867658,
+      "pd_ann_med": 0.0123229421972757,
+      "lgd_med": 0.2745883345169666,
+      "weight": 0.0009264007277226823,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0xc080f56504e0278828A403269DB945F6c6D6E014",
+      "curator": "gauntlet",
+      "el_med": 0.000104,
+      "el_lo": 4.529113725463371e-06,
+      "el_hi": 0.0012981861123749802,
+      "pd_ann_med": 0.0002752284364669344,
+      "lgd_med": 0.3998030174373507,
+      "weight": 0.0008238420678480816,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0x9540441C503D763094921dbE4f13268E6d1d3B56",
+      "curator": "gauntlet",
+      "el_med": 4.2e-05,
+      "el_lo": 5.37723123575911e-07,
+      "el_hi": 0.001490100949554805,
+      "pd_ann_med": 9.250530455251482e-05,
+      "lgd_med": 0.4756565735048805,
+      "weight": 0.0008162974130264507,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x5A32099837D89E3a794a44fb131CBbAD41f87a8C",
+      "curator": "gauntlet",
+      "el_med": 0.004936,
+      "el_lo": 0.0005186816593583845,
+      "el_hi": 0.02898470037856438,
+      "pd_ann_med": 0.020104441999612865,
+      "lgd_med": 0.2555577173160132,
+      "weight": 0.0006628877746973562,
+      "grade": "B+"
+    },
+    {
+      "vault": "999:0x53A333e51E96FE288bC9aDd7cdC4B1EAD2CD2FfA",
+      "curator": "gauntlet",
+      "el_med": 6.4e-05,
+      "el_lo": 5.758380468882984e-07,
+      "el_hi": 0.00347846576899928,
+      "pd_ann_med": 0.00017437538149195353,
+      "lgd_med": 0.3688223500259852,
+      "weight": 0.00038997485699626336,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x6770216aC60F634483Ec073cBABC4011c94307Cb",
+      "curator": "gauntlet",
+      "el_med": 0.000597,
+      "el_lo": 3.6314451546210896e-05,
+      "el_hi": 0.0067669905978733295,
+      "pd_ann_med": 0.0012674514105875945,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.0003228078058937142,
+      "grade": "A+"
+    },
+    {
+      "vault": "137:0xfD06859A671C21497a2EB8C5E3fEA48De924D6c8",
+      "curator": "gauntlet",
+      "el_med": 0.000135,
+      "el_lo": 2.7077891065169038e-06,
+      "el_hi": 0.0027995832032646274,
+      "pd_ann_med": 0.0004082532594361643,
+      "lgd_med": 0.3462581910243917,
+      "weight": 0.00029006616896428767,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0xf243523996ADbb273F0B237B53f30017C4364bBC",
+      "curator": "gauntlet",
+      "el_med": 5.1e-05,
+      "el_lo": 5.446105820639187e-07,
+      "el_hi": 0.0015462508811365872,
+      "pd_ann_med": 0.00010580059493292548,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.0002850728587123623,
+      "grade": "A+"
+    },
+    {
+      "vault": "137:0xF5C81d25ee174d83f1FD202cA94AE6070d073cCF",
+      "curator": "gauntlet",
+      "el_med": 1.6e-05,
+      "el_lo": 1.5193835756035657e-07,
+      "el_hi": 0.00045004402080617615,
+      "pd_ann_med": 3.822216703081027e-05,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.00028087081407628236,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x1c155be6bC51F2c37d472d4C2Eba7a637806e122",
+      "curator": "gauntlet",
+      "el_med": 0.001333,
+      "el_lo": 0.00013466423069300333,
+      "el_hi": 0.008566279118195503,
+      "pd_ann_med": 0.004805293952703127,
+      "lgd_med": 0.28054358312478644,
+      "weight": 0.0002532520335749814,
+      "grade": "A"
+    },
+    {
+      "vault": "8453:0x236919F11ff9eA9550A4287696C2FC9e18E6e890",
+      "curator": "gauntlet",
+      "el_med": 0.000274,
+      "el_lo": 2.0185309691654713e-05,
+      "el_hi": 0.002326096352533518,
+      "pd_ann_med": 0.000817931327532051,
+      "lgd_med": 0.3447844432665044,
+      "weight": 0.00020769797861922866,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0x0571362ba5EA9784a97605f57483f865A37dBEAA",
+      "curator": "gauntlet",
+      "el_med": 6.4e-05,
+      "el_lo": 6.907485719540053e-07,
+      "el_hi": 0.002180225137977037,
+      "pd_ann_med": 0.0001364035680057607,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.00019586990250275918,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x0B2d98BBF3E38Df1D1B7Be7343732E32e8B1F818",
+      "curator": "gauntlet",
+      "el_med": 0.000614,
+      "el_lo": 2.9120829204500188e-05,
+      "el_hi": 0.007920161731646762,
+      "pd_ann_med": 0.0013100559690935598,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.0001470254252419303,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xdC94785959B73F7A168452b3654E44fEc6A750e4",
+      "curator": "gauntlet",
+      "el_med": 0.000182,
+      "el_lo": 7.989083757526867e-06,
+      "el_hi": 0.0021425739211581793,
+      "pd_ann_med": 0.00047106760712523066,
+      "lgd_med": 0.40892897602470085,
+      "weight": 9.321735191727765e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x974c8FBf4fd795F66B85B73ebC988A51F1A040a9",
+      "curator": "hakutora",
+      "el_med": 6.2e-05,
+      "el_lo": 2.261993761915105e-06,
+      "el_hi": 0.0008936565645345495,
+      "pd_ann_med": 0.00015888395715885073,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.5491841863308435,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xa71D08A159258553a5Ac190d60Fa919425Ff02EA",
+      "curator": "hakutora",
+      "el_med": 0.000638,
+      "el_lo": 5.1059994178050336e-05,
+      "el_hi": 0.005509083953184504,
+      "pd_ann_med": 0.002160704911604694,
+      "lgd_med": 0.296461336914504,
+      "weight": 0.4508158136691564,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x777791C4d6DC2CE140D00D2828a7C93503c67777",
+      "curator": "hyperithm",
+      "el_med": 0.003393,
+      "el_lo": 0.00022187623001893326,
+      "el_hi": 0.032468052929382325,
+      "pd_ann_med": 0.011416584645505379,
+      "lgd_med": 0.32249823080007545,
+      "weight": 0.7731515453293815,
+      "grade": "A"
+    },
+    {
+      "vault": "42161:0x4B6F1C9E5d470b97181786b26da0d0945A7cf027",
+      "curator": "hyperithm",
+      "el_med": 0.006097,
+      "el_lo": 0.00010453379943195584,
+      "el_hi": 0.13084481188819813,
+      "pd_ann_med": 0.012261178641963688,
+      "lgd_med": 0.4915277697254036,
+      "weight": 0.1766007935701037,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0x888883f0eDDF69Ca4BfD00Af93714Ff97F188888",
+      "curator": "hyperithm",
+      "el_med": 0.000985,
+      "el_lo": 5.837027592775758e-05,
+      "el_hi": 0.011373131060662383,
+      "pd_ann_med": 0.003410226402865202,
+      "lgd_med": 0.2944343919514706,
+      "weight": 0.029828213638279123,
+      "grade": "A+"
+    },
+    {
+      "vault": "999:0xe5ADd96840F0B908ddeB3Bd144C0283Ac5ca7cA0",
+      "curator": "hyperithm",
+      "el_med": 6e-06,
+      "el_lo": 5.9247274071208944e-08,
+      "el_hi": 0.0003068113422940487,
+      "pd_ann_med": 1.371009156725389e-05,
+      "lgd_med": 0.47924147305182524,
+      "weight": 0.015933635037891556,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xCdaea3dde6cE5969aA1414A82A3A681cEd51Ce72",
+      "curator": "hyperithm",
+      "el_med": 8e-05,
+      "el_lo": 2.70441469553971e-06,
+      "el_hi": 0.001096319062459562,
+      "pd_ann_med": 0.0002248742249827962,
+      "lgd_med": 0.3660221959619173,
+      "weight": 0.00443517712793199,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x6D6D386C4855d9b604D7E14c70526407F6272394",
+      "curator": "hyperithm",
+      "el_med": 0.000596,
+      "el_lo": 1.3737383204921905e-05,
+      "el_hi": 0.014721741148217612,
+      "pd_ann_med": 0.0013390351060153516,
+      "lgd_med": 0.4810448747375794,
+      "weight": 5.063529641220427e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "130:0xfA355999c12C63c465c591daf9C462e14ACf470b",
+      "curator": "k3-capital",
+      "el_med": 2.3e-05,
+      "el_lo": 2.2681660614928372e-07,
+      "el_hi": 0.000889968370314575,
+      "pd_ann_med": 4.9261968216030017e-05,
+      "lgd_med": 0.4810448747375794,
+      "weight": 1.0,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x6C26793c7F1e2785c09b460676e797b716f0Bc8E",
+      "curator": "keyrock",
+      "el_med": 0.0012,
+      "el_lo": 3.174887237631168e-05,
+      "el_hi": 0.026306172291106555,
+      "pd_ann_med": 0.0026641982183450708,
+      "lgd_med": 0.4810448747375794,
+      "weight": 1.0,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0xd63070114470f685b75B74D60EEc7c1113d33a3D",
+      "curator": "mev-capital",
+      "el_med": 0.098251,
+      "el_lo": 0.020769077051480938,
+      "el_hi": 0.2662091804070781,
+      "pd_ann_med": 0.3478475466202681,
+      "lgd_med": 0.29076837215793366,
+      "weight": 0.49711098624533506,
+      "grade": "D"
+    },
+    {
+      "vault": "1:0x9a8bC3B04b7f3D87cfC09ba407dCED575f2d61D8",
+      "curator": "mev-capital",
+      "el_med": 0.001431,
+      "el_lo": 7.748594761303849e-05,
+      "el_hi": 0.0160433082773462,
+      "pd_ann_med": 0.0036486750488908815,
+      "lgd_med": 0.40882871042659086,
+      "weight": 0.3570752121827244,
+      "grade": "A"
+    },
+    {
+      "vault": "999:0xd19e3d00f8547f7d108abFD4bbb015486437B487",
+      "curator": "mev-capital",
+      "el_med": 0.000402,
+      "el_lo": 4.690341055835201e-06,
+      "el_hi": 0.012858536093956005,
+      "pd_ann_med": 0.000853700658803136,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.09288056163364186,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x34eCe536d2ae03192B06c0A67030D1Faf4c0Ba43",
+      "curator": "mev-capital",
+      "el_med": 0.011739,
+      "el_lo": 0.0015156051540355087,
+      "el_hi": 0.06277461677712333,
+      "pd_ann_med": 0.03503951389431825,
+      "lgd_med": 0.3275055137099656,
+      "weight": 0.04748778665516662,
+      "grade": "B"
+    },
+    {
+      "vault": "1:0xd41830d88dfD08678b0B886E0122193d54b02Acc",
+      "curator": "mev-capital",
+      "el_med": 0.062357,
+      "el_lo": 0.011548659073935636,
+      "el_hi": 0.2072972297218412,
+      "pd_ann_med": 0.19619226184356142,
+      "lgd_med": 0.334524549593263,
+      "weight": 0.0051778636969189665,
+      "grade": "D"
+    },
+    {
+      "vault": "1:0x2f1aBb81ed86Be95bcf8178bA62C8e72D6834775",
+      "curator": "mev-capital",
+      "el_med": 0.003809,
+      "el_lo": 0.0002496227746419912,
+      "el_hi": 0.04421188965534316,
+      "pd_ann_med": 0.008316174041051339,
+      "lgd_med": 0.48092080637371015,
+      "weight": 0.00026758958621307465,
+      "grade": "B+"
+    },
+    {
+      "vault": "8453:0x1401d1271C47648AC70cBcdfA3776D4A87CE006B",
+      "curator": "pangolins",
+      "el_med": 6.3e-05,
+      "el_lo": 2.4500598811419734e-06,
+      "el_hi": 0.0008281557279540072,
+      "pd_ann_med": 0.00015299322579787056,
+      "lgd_med": 0.40892899963096807,
+      "weight": 1.0,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x78Fc2c2eD1A4cDb5402365934aE5648aDAd094d0",
+      "curator": "re7-labs",
+      "el_med": 0.004363,
+      "el_lo": 0.0004174296178846573,
+      "el_hi": 0.02590547661337886,
+      "pd_ann_med": 0.011986102254018083,
+      "lgd_med": 0.37836544529659333,
+      "weight": 0.45258726457165943,
+      "grade": "B+"
+    },
+    {
+      "vault": "8453:0xbb819D845b573B5D7C538F5b85057160cfb5f313",
+      "curator": "re7-labs",
+      "el_med": 0.000934,
+      "el_lo": 5.404664808428915e-05,
+      "el_hi": 0.009833089449208089,
+      "pd_ann_med": 0.002397237026171284,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.20291349506758452,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x4F460bb11cf958606C69A963B4A17f9DaEEea8b6",
+      "curator": "re7-labs",
+      "el_med": 0.023097,
+      "el_lo": 0.0013363513779629107,
+      "el_hi": 0.25128023723723486,
+      "pd_ann_med": 0.04873492973415433,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.10262260840893184,
+      "grade": "C+"
+    },
+    {
+      "vault": "1:0xE0C98605f279e4D7946d25B75869c69802823763",
+      "curator": "re7-labs",
+      "el_med": 0.001593,
+      "el_lo": 0.00010035705417235074,
+      "el_hi": 0.012866880301361355,
+      "pd_ann_med": 0.003932473177618967,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.09397906444571531,
+      "grade": "A"
+    },
+    {
+      "vault": "8453:0xB7890CEE6CF4792cdCC13489D36D9d42726ab863",
+      "curator": "re7-labs",
+      "el_med": 0.023097,
+      "el_lo": 0.0013363513779629107,
+      "el_hi": 0.25128023723723486,
+      "pd_ann_med": 0.04873492973415433,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.07948929657885331,
+      "grade": "C+"
+    },
+    {
+      "vault": "8453:0xA2Cac0023a4797b4729Db94783405189a4203AFc",
+      "curator": "re7-labs",
+      "el_med": 0.024723,
+      "el_lo": 0.003305536881427338,
+      "el_hi": 0.09968911249167922,
+      "pd_ann_med": 0.08534951435270521,
+      "lgd_med": 0.293764467300924,
+      "weight": 0.04536225062236899,
+      "grade": "C+"
+    },
+    {
+      "vault": "1:0x95EeF579155cd2C5510F312c8fA39208c3Be01a8",
+      "curator": "re7-labs",
+      "el_med": 0.005061,
+      "el_lo": 0.00033897839326019744,
+      "el_hi": 0.049463517825239355,
+      "pd_ann_med": 0.010677638042028481,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.017891531811677356,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0x4d52545235A3dF246a8928c583E47AE7eeC4aCfE",
+      "curator": "re7-labs",
+      "el_med": 0.023098,
+      "el_lo": 0.0013364167571641022,
+      "el_hi": 0.2512815604721905,
+      "pd_ann_med": 0.04873663348377,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.004864291570736921,
+      "grade": "C+"
+    },
+    {
+      "vault": "1:0xA02F5E93f783baF150Aa1F8b341Ae90fe0a772f7",
+      "curator": "re7-labs",
+      "el_med": 0.023098,
+      "el_lo": 0.001336414871186416,
+      "el_hi": 0.2512815223020023,
+      "pd_ann_med": 0.048736584336307676,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.00015319455220583902,
+      "grade": "C+"
+    },
+    {
+      "vault": "1:0x64964E162Aa18d32f91eA5B24a09529f811AEB8e",
+      "curator": "re7-labs",
+      "el_med": 0.000934,
+      "el_lo": 5.4044208904442776e-05,
+      "el_hi": 0.009832911007016158,
+      "pd_ann_med": 0.0023971861628673263,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.00013700237026630956,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x19b3cD7032B8C062E8d44EaCad661a0970DD8c55",
+      "curator": "sentora",
+      "el_med": 0.010045,
+      "el_lo": 0.0005058093196902897,
+      "el_hi": 0.10339777821034424,
+      "pd_ann_med": 0.033985745699579795,
+      "lgd_med": 0.28337711713233615,
+      "weight": 0.9999195605425933,
+      "grade": "B"
+    },
+    {
+      "vault": "1:0x71cb2F8038B2C5D65ddc740B2F3268890CD2A89C",
+      "curator": "sentora",
+      "el_med": 0.000703,
+      "el_lo": 2.9448657789795313e-05,
+      "el_hi": 0.009919611693102697,
+      "pd_ann_med": 0.0018637800140320349,
+      "lgd_med": 0.3956586290553581,
+      "weight": 7.986860006744182e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x2C793f5cB25B35A99648783c01E6cCCC200D2096",
+      "curator": "sentora",
+      "el_med": 4.3e-05,
+      "el_lo": 1.1321904415802772e-06,
+      "el_hi": 0.0009341910516272103,
+      "pd_ann_med": 0.00011068513477774378,
+      "lgd_med": 0.40892899963096807,
+      "weight": 5.708573392723304e-07,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x739d8a60ED4b14E4cB6DCAEAF79d2ec0Ca092237",
+      "curator": "singularv",
+      "el_med": 0.000175,
+      "el_lo": 3.6046214879314087e-06,
+      "el_hi": 0.0030018035107758564,
+      "pd_ann_med": 0.0004399359529514979,
+      "lgd_med": 0.397785513746904,
+      "weight": 0.9664992261317675,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xbdd4859050468fBc11Dec07113a6e633608A1372",
+      "curator": "singularv",
+      "el_med": 0.000247,
+      "el_lo": 5.0225649012639935e-06,
+      "el_hi": 0.0050504448545104315,
+      "pd_ann_med": 0.0005228022264161525,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.03350077386823253,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A",
+      "curator": "sparkdao",
+      "el_med": 4.5e-05,
+      "el_lo": 9.954326061466633e-07,
+      "el_hi": 0.0010082105498532615,
+      "pd_ann_med": 0.0001125876788949931,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.8855269730222819,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x56A76b428244a50513ec81e225a293d128fd581D",
+      "curator": "sparkdao",
+      "el_med": 0.000543,
+      "el_lo": 2.079943123417067e-05,
+      "el_hi": 0.0067388564336526326,
+      "pd_ann_med": 0.0019013379590726576,
+      "lgd_med": 0.29273317797567866,
+      "weight": 0.1144730269777182,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2",
+      "curator": "steakhouse-financial",
+      "el_med": 4.8e-05,
+      "el_lo": 2.1624781061476794e-06,
+      "el_hi": 0.0005730076279412236,
+      "pd_ann_med": 0.0001308615868904628,
+      "lgd_med": 0.3802651672968657,
+      "weight": 0.31361379329594463,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183",
+      "curator": "steakhouse-financial",
+      "el_med": 3.3e-05,
+      "el_lo": 1.2775138911757125e-06,
+      "el_hi": 0.00047205410237206684,
+      "pd_ann_med": 8.756250234198681e-05,
+      "lgd_med": 0.4002307128543522,
+      "weight": 0.2685372161295269,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xBeEFC1CDAfc5b4a649b54D07AFc6bF0f75C6F4E2",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000147,
+      "el_lo": 7.062670572624502e-06,
+      "el_hi": 0.0019878228801203245,
+      "pd_ann_med": 0.0003116165678704319,
+      "lgd_med": 0.48104484661775115,
+      "weight": 0.10338615297132402,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xBEEF01735c132Ada46AA9aA4c54623cAA92A64CB",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000254,
+      "el_lo": 1.9360814582629063e-05,
+      "el_hi": 0.002165522625184862,
+      "pd_ann_med": 0.0008512224876842667,
+      "lgd_med": 0.3052131684723878,
+      "weight": 0.09576229222025237,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xbEef047a543E45807105E51A8BBEFCc5950fcfBa",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000265,
+      "el_lo": 1.9898220208565593e-05,
+      "el_hi": 0.0023070295493081545,
+      "pd_ann_med": 0.0008651585248080074,
+      "lgd_med": 0.3192627566259155,
+      "weight": 0.09176441361975993,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xA0804346780b4c2e3bE118ac957D1DB82F9d7484",
+      "curator": "steakhouse-financial",
+      "el_med": 0.006154,
+      "el_lo": 0.0008564231387745211,
+      "el_hi": 0.03483610497603486,
+      "pd_ann_med": 0.02230984242678896,
+      "lgd_med": 0.2810278314340959,
+      "weight": 0.023832535176445364,
+      "grade": "B+"
+    },
+    {
+      "vault": "747474:0x61D4F9D3797BA4dA152238c53a6f93Fb665C3c1d",
+      "curator": "steakhouse-financial",
+      "el_med": 2.7e-05,
+      "el_lo": 4.1404268064736415e-07,
+      "el_hi": 0.0007120589276226459,
+      "pd_ann_med": 6.112392631901775e-05,
+      "lgd_med": 0.439478899126195,
+      "weight": 0.023410116394180655,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xBEefb9f61CC44895d8AEc381373555a64191A9c4",
+      "curator": "steakhouse-financial",
+      "el_med": 4.7e-05,
+      "el_lo": 2.1057446357752874e-06,
+      "el_hi": 0.000565408331402152,
+      "pd_ann_med": 0.00012865185985733163,
+      "lgd_med": 0.38106770272581153,
+      "weight": 0.018843218138768887,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xBEEf050ecd6a16c4e7bfFbB52Ebba7846C4b8cD4",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000383,
+      "el_lo": 2.889760313345223e-05,
+      "el_hi": 0.0027996184869475624,
+      "pd_ann_med": 0.001233039910927769,
+      "lgd_med": 0.32365170129222043,
+      "weight": 0.018361685137066073,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xBEeFFF209270748ddd194831b3fa287a5386f5bC",
+      "curator": "steakhouse-financial",
+      "el_med": 0.006542,
+      "el_lo": 0.0007436495025955332,
+      "el_hi": 0.03827970703613346,
+      "pd_ann_med": 0.022169350665528276,
+      "lgd_med": 0.2911006935019405,
+      "weight": 0.017477534879203217,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0x833AdaeF212c5cD3f78906B44bBfb18258F238F0",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000185,
+      "el_lo": 9.54098437223824e-06,
+      "el_hi": 0.0023520236274248993,
+      "pd_ann_med": 0.0004028749461385539,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.003752155594040633,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+      "curator": "steakhouse-financial",
+      "el_med": 0.002218,
+      "el_lo": 5.2908949023750694e-05,
+      "el_hi": 0.04515588619058037,
+      "pd_ann_med": 0.007446353523299809,
+      "lgd_med": 0.30716954615187253,
+      "weight": 0.003623994329916951,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0xBEeF1f5Bd88285E5B239B6AAcb991d38ccA23Ac9",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000185,
+      "el_lo": 9.541232065116082e-06,
+      "el_hi": 0.0023520432267275376,
+      "pd_ann_med": 0.0004028798661660504,
+      "lgd_med": 0.4810446011283619,
+      "weight": 0.0034300471522899015,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x75741A12B36D181f44F389E0c6B1E0210311e3Ff",
+      "curator": "steakhouse-financial",
+      "el_med": 0.002093,
+      "el_lo": 0.0002973228643258068,
+      "el_hi": 0.011949063375334322,
+      "pd_ann_med": 0.007608973711799305,
+      "lgd_med": 0.27353721627314365,
+      "weight": 0.003131151876749959,
+      "grade": "A"
+    },
+    {
+      "vault": "42161:0x5c0C306Aaa9F877de636f4d5822cA9F2E81563BA",
+      "curator": "steakhouse-financial",
+      "el_med": 0.001638,
+      "el_lo": 4.0084208342555194e-05,
+      "el_hi": 0.0438716235897414,
+      "pd_ann_med": 0.003619408700791249,
+      "lgd_med": 0.4679313353061375,
+      "weight": 0.0024713207617421853,
+      "grade": "A"
+    },
+    {
+      "vault": "143:0x32841A8511D5c2c5b253f45668780B99139e476D",
+      "curator": "steakhouse-financial",
+      "el_med": 1e-05,
+      "el_lo": 1.266319105402891e-07,
+      "el_hi": 0.0002910837028438643,
+      "pd_ann_med": 2.942146811180102e-05,
+      "lgd_med": 0.35028916553253076,
+      "weight": 0.002399468995042572,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xbeEF346d7099865208Ff331e4f648f4154DDAa05",
+      "curator": "steakhouse-financial",
+      "el_med": 0.015885,
+      "el_lo": 0.0007484805100105441,
+      "el_hi": 0.15852084312599135,
+      "pd_ann_med": 0.023051117703517088,
+      "lgd_med": 0.711437454916718,
+      "weight": 0.0023275326038780177,
+      "grade": "C+"
+    },
+    {
+      "vault": "1:0xbeEf96B330ef1Fe7Ebe41eCe0Bd4a41A94Bc03DC",
+      "curator": "steakhouse-financial",
+      "el_med": 2.7e-05,
+      "el_lo": 9.505185456709813e-07,
+      "el_hi": 0.00040794032818378486,
+      "pd_ann_med": 6.798906668720184e-05,
+      "lgd_med": 0.40892899963096807,
+      "weight": 0.0014267557244512763,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0x82c4C641CCc38719ae1f0FBd16A64808d838fDfD",
+      "curator": "steakhouse-financial",
+      "el_med": 1.9e-05,
+      "el_lo": 2.6277229641926604e-07,
+      "el_hi": 0.0005851148109432943,
+      "pd_ann_med": 4.322950468121922e-05,
+      "lgd_med": 0.4537036416666446,
+      "weight": 0.0005065224288261048,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xbeeFfF68CC520D68f82641EFF84330C631E2490E",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000675,
+      "el_lo": 5.137096194152662e-05,
+      "el_hi": 0.006670216570037843,
+      "pd_ann_med": 0.0017082411941337083,
+      "lgd_med": 0.398157254036736,
+      "weight": 0.0004999616615364683,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xBeEF086b8807Dc5E5A1740C5E3a7C4c366eA6ab5",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000628,
+      "el_lo": 5.15181591945919e-05,
+      "el_hi": 0.005487071776728567,
+      "pd_ann_med": 0.002395012650177719,
+      "lgd_med": 0.26199377298031734,
+      "weight": 0.00045442678682008165,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xbEEf050a7485865A7a8d8Ca0CC5f7536b7a3443e",
+      "curator": "steakhouse-financial",
+      "el_med": 0.00134,
+      "el_lo": 0.00013318128401382026,
+      "el_hi": 0.01053599565447932,
+      "pd_ann_med": 0.00538895983698745,
+      "lgd_med": 0.2578014095542586,
+      "weight": 0.0003033680201403571,
+      "grade": "A"
+    },
+    {
+      "vault": "137:0xB7c9988D3922F25a336a469F3bB26CA61FE79e24",
+      "curator": "steakhouse-financial",
+      "el_med": 1.2e-05,
+      "el_lo": 1.5593149523876958e-07,
+      "el_hi": 0.0004339436186432938,
+      "pd_ann_med": 2.999975130496546e-05,
+      "lgd_med": 0.4262701868132358,
+      "weight": 0.0001972435813461229,
+      "grade": "A+"
+    },
+    {
+      "vault": "42161:0x250CF7c82bAc7cB6cf899b6052979d4B5BA1f9ca",
+      "curator": "steakhouse-financial",
+      "el_med": 8.1e-05,
+      "el_lo": 1.5453053736423038e-06,
+      "el_hi": 0.0025353650522886946,
+      "pd_ann_med": 0.00031770668377345546,
+      "lgd_med": 0.26520478125705,
+      "weight": 0.00018191614418920844,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xbEEF02e5E13584ab96848af90261f0C8Ee04722a",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000729,
+      "el_lo": 3.581149579250425e-05,
+      "el_hi": 0.011325370858507653,
+      "pd_ann_med": 0.0015034778254716663,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.0001470930684516496,
+      "grade": "A+"
+    },
+    {
+      "vault": "137:0xAcB0DCe4b0FF400AD8F6917f3ca13E434C9ed6bC",
+      "curator": "steakhouse-financial",
+      "el_med": 8e-06,
+      "el_lo": 9.743689554377898e-08,
+      "el_hi": 0.00026569022407089754,
+      "pd_ann_med": 2.4069297845374926e-05,
+      "lgd_med": 0.3672856936806944,
+      "weight": 6.818955527092944e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xCBeeF01994E24a60f7DCB8De98e75AD8BD4Ad60d",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000178,
+      "el_lo": 1.3140374601120385e-05,
+      "el_hi": 0.0017710597716291093,
+      "pd_ann_med": 0.0005761825370572682,
+      "lgd_med": 0.3192568274611864,
+      "weight": 5.462645149699691e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "143:0xBC03E505EE65f9fAa68a2D7e5A74452858C16D29",
+      "curator": "steakhouse-financial",
+      "el_med": 1.4e-05,
+      "el_lo": 1.7968158435226738e-07,
+      "el_hi": 0.0004741843628864531,
+      "pd_ann_med": 3.222231295629818e-05,
+      "lgd_med": 0.4697941151020007,
+      "weight": 1.212163662975447e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "143:0x802c91d807A8DaCA257c4708ab264B6520964e44",
+      "curator": "steakhouse-financial",
+      "el_med": 4e-06,
+      "el_lo": 3.682459814573706e-08,
+      "el_hi": 0.0001412489414331079,
+      "pd_ann_med": 9.075939364833197e-06,
+      "lgd_med": 0.40204740464926836,
+      "weight": 1.1063912443023251e-05,
+      "grade": "A+"
+    },
+    {
+      "vault": "143:0xba8424EBBEd6C51bEa6d6D903B8815838E6a0322",
+      "curator": "steakhouse-financial",
+      "el_med": 6e-06,
+      "el_lo": 5.929472055991198e-08,
+      "el_hi": 0.00024405978888468935,
+      "pd_ann_med": 1.4724352673023411e-05,
+      "lgd_med": 0.40892899963096807,
+      "weight": 9.036512313494404e-06,
+      "grade": "A+"
+    },
+    {
+      "vault": "143:0x961a59Fe249b9795FAE7fA35f9E89629689D5278",
+      "curator": "steakhouse-financial",
+      "el_med": 7.5e-05,
+      "el_lo": 7.066730579480932e-07,
+      "el_hi": 0.002784022552328975,
+      "pd_ann_med": 0.00015759471078746756,
+      "lgd_med": 0.4810448747375794,
+      "weight": 2.3779916104097367e-06,
+      "grade": "A+"
+    },
+    {
+      "vault": "143:0x8699bfe5c6D74DF561555Bc708dacF165d8E0D73",
+      "curator": "steakhouse-financial",
+      "el_med": 7.5e-05,
+      "el_lo": 7.066730579480932e-07,
+      "el_hi": 0.002784022552328975,
+      "pd_ann_med": 0.00015759471078746756,
+      "lgd_med": 0.4810448747375794,
+      "weight": 6.461730764619418e-07,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xBEEf2B5FD3D94469b7782aeBe6364E6e6FB1B709",
+      "curator": "steakhouse-financial",
+      "el_med": 9e-05,
+      "el_lo": 3.934436274194692e-06,
+      "el_hi": 0.0012688972803339723,
+      "pd_ann_med": 0.00019530742455964312,
+      "lgd_med": 0.4810448747375794,
+      "weight": 1.0514798343596844e-08,
+      "grade": "A+"
+    },
+    {
+      "vault": "137:0xb151A21bb6a13B3b09DE4C599c6265882fb33742",
+      "curator": "steakhouse-financial",
+      "el_med": 0.000185,
+      "el_lo": 1.0982479568380087e-06,
+      "el_hi": 0.010275399053203016,
+      "pd_ann_med": 0.000295201719438698,
+      "lgd_med": 0.6459654501065305,
+      "weight": 6.041516870985653e-09,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xBeeF0c8333b3De8F0450565834db4EB05dEf7A5F",
+      "curator": "steakhouse-financial",
+      "el_med": 0.001787,
+      "el_lo": 3.0696600828323304e-05,
+      "el_hi": 0.04392316120106681,
+      "pd_ann_med": 0.0029177673760313882,
+      "lgd_med": 0.6459654501065306,
+      "weight": 1.6130093569419365e-09,
+      "grade": "A"
+    },
+    {
+      "vault": "143:0x4f28CC08305E8585f8dD2A329BA41e77a9a54f97",
+      "curator": "steakhouse-financial",
+      "el_med": 6e-06,
+      "el_lo": 5.929472055991198e-08,
+      "el_hi": 0.00024405978888625824,
+      "pd_ann_med": 1.4724352673023411e-05,
+      "lgd_med": 0.40892899963096807,
+      "weight": 9.943808968184966e-10,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xbeEffff0629438aD198c47F80d66FA4Be5C0caF6",
+      "curator": "steakhouse-financial",
+      "el_med": 6.5e-05,
+      "el_lo": 3.3427386179769534e-06,
+      "el_hi": 0.0007084366891937713,
+      "pd_ann_med": 0.000170274375635604,
+      "lgd_med": 0.3918158689023065,
+      "weight": 9.563093335689027e-10,
+      "grade": "A+"
+    },
+    {
+      "vault": "143:0x0f6F5A8272A4Da23e458aABCBCe6382C5cdc6b77",
+      "curator": "steakhouse-financial",
+      "el_med": 7.5e-05,
+      "el_lo": 7.066805307384374e-07,
+      "el_hi": 0.0027840142713528968,
+      "pd_ann_med": 0.00015759862761810517,
+      "lgd_med": 0.4810448747375794,
+      "weight": 9.552507731273084e-10,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x5435BC53f2C61298167cdB11Cdf0Db2BFa259ca0",
+      "curator": "ultrayield",
+      "el_med": 0.000552,
+      "el_lo": 3.3341033914887335e-05,
+      "el_hi": 0.006883103187286892,
+      "pd_ann_med": 0.0015253878754594719,
+      "lgd_med": 0.3705332509050675,
+      "weight": 0.7291451559454245,
+      "grade": "A+"
+    },
+    {
+      "vault": "42161:0x2D91466BCC6946B58869fE2ae521A856737C3f6e",
+      "curator": "ultrayield",
+      "el_med": 0.000156,
+      "el_lo": 3.891929641606869e-06,
+      "el_hi": 0.0040799594970726,
+      "pd_ann_med": 0.0005391499620527873,
+      "lgd_med": 0.29401231673781786,
+      "weight": 0.11765901990797628,
+      "grade": "A+"
+    },
+    {
+      "vault": "10:0x48921e52f70CEC7D3425Cf5103Caace27Fc0b2Fe",
+      "curator": "ultrayield",
+      "el_med": 3.3e-05,
+      "el_lo": 5.673514101621633e-07,
+      "el_hi": 0.0009066866077727926,
+      "pd_ann_med": 9.070839496833072e-05,
+      "lgd_med": 0.3442731872731839,
+      "weight": 0.1174648531723347,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0x965Ec3552427B8258BD0a0c7baA234618fc98D01",
+      "curator": "ultrayield",
+      "el_med": 0.000327,
+      "el_lo": 1.7984508746297276e-05,
+      "el_hi": 0.004247166650266976,
+      "pd_ann_med": 0.0006900710448913827,
+      "lgd_med": 0.4810414735588195,
+      "weight": 0.03573097097426458,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0xCE2b8e464Fc7b5E58710C24b7e5EBFB6027f29D7",
+      "curator": "yearn",
+      "el_med": 0.000704,
+      "el_lo": 1.2959183378091757e-05,
+      "el_hi": 0.014683266670318688,
+      "pd_ann_med": 0.0023143761621096104,
+      "lgd_med": 0.29865140313013183,
+      "weight": 0.2320887243742587,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0xFaDe0C546f44e33C134c4036207B314AC643dc2E",
+      "curator": "yearn",
+      "el_med": 3.9e-05,
+      "el_lo": 4.0715678269276424e-07,
+      "el_hi": 0.001166289880571813,
+      "pd_ann_med": 8.27368204350254e-05,
+      "lgd_med": 0.4745454726041714,
+      "weight": 0.1806698575811224,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0x8ED68f91AfbE5871dCE31ae007a936ebE8511d47",
+      "curator": "yearn",
+      "el_med": 0.000615,
+      "el_lo": 1.181321760013405e-05,
+      "el_hi": 0.011151713709277108,
+      "pd_ann_med": 0.002014355342602303,
+      "lgd_med": 0.32230414110555405,
+      "weight": 0.16320391683901705,
+      "grade": "A+"
+    },
+    {
+      "vault": "1:0xF9bdDd4A9b3A45f980e11fDDE96e16364dDBEc49",
+      "curator": "yearn",
+      "el_med": 0.004829,
+      "el_lo": 0.0005412195045764003,
+      "el_hi": 0.02843687266140622,
+      "pd_ann_med": 0.01479789195214104,
+      "lgd_med": 0.3315101065040641,
+      "weight": 0.13825753129494053,
+      "grade": "B+"
+    },
+    {
+      "vault": "1:0xE89371eAaAC6D46d4C3ED23453241987916224FC",
+      "curator": "yearn",
+      "el_med": 0.003224,
+      "el_lo": 0.0002879350473289504,
+      "el_hi": 0.020776269466496664,
+      "pd_ann_med": 0.011533283892021517,
+      "lgd_med": 0.28951840123474754,
+      "weight": 0.1130666025535464,
+      "grade": "A"
+    },
+    {
+      "vault": "1:0x68Aea7b82Df6CcdF76235D46445Ed83f85F845A3",
+      "curator": "yearn",
+      "el_med": 0.000524,
+      "el_lo": 3.6519935258009426e-05,
+      "el_hi": 0.0039573059615693315,
+      "pd_ann_med": 0.0018234841933219559,
+      "lgd_med": 0.30240219264138946,
+      "weight": 0.0868840019572148,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0xef417a2512C5a41f69AE4e021648b69a7CdE5D03",
+      "curator": "yearn",
+      "el_med": 0.000106,
+      "el_lo": 9.824116830758916e-07,
+      "el_hi": 0.004479674153869934,
+      "pd_ann_med": 0.0002652258647858341,
+      "lgd_med": 0.41721180656682566,
+      "weight": 0.06990014464718097,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0x4fd2FDDC8973077B95D614980Fd298B120f3148B",
+      "curator": "yearn",
+      "el_med": 3.6e-05,
+      "el_lo": 6.17977273299028e-07,
+      "el_hi": 0.001037487265825667,
+      "pd_ann_med": 8.328919569705606e-05,
+      "lgd_med": 0.45785940469016106,
+      "weight": 0.006604406803354641,
+      "grade": "A+"
+    },
+    {
+      "vault": "747474:0xe107cCdeb8e20E499545C813f98Cc90619b29859",
+      "curator": "yearn",
+      "el_med": 0.000188,
+      "el_lo": 3.61003484095155e-06,
+      "el_hi": 0.004176001248454014,
+      "pd_ann_med": 0.0004894371522222163,
+      "lgd_med": 0.37731267182809747,
+      "weight": 0.006124934286831792,
+      "grade": "A+"
+    },
+    {
+      "vault": "8453:0x1D795E29044A62Da42D927c4b179269139A28A6B",
+      "curator": "yearn",
+      "el_med": 0.004019,
+      "el_lo": 0.0003406321249848023,
+      "el_hi": 0.02675048061633663,
+      "pd_ann_med": 0.015695236065653928,
+      "lgd_med": 0.2631655869410312,
+      "weight": 0.0021367942235771074,
+      "grade": "B+"
+    },
+    {
+      "vault": "42161:0x36b69949d60d06ECcC14DE0Ae63f4E00cc2cd8B9",
+      "curator": "yearn",
+      "el_med": 5.6e-05,
+      "el_lo": 7.906485915349851e-07,
+      "el_hi": 0.0019224816319003454,
+      "pd_ann_med": 0.00011874087430607805,
+      "lgd_med": 0.4810448747375794,
+      "weight": 0.0010630854389557763,
+      "grade": "A+"
+    }
+  ]
+}

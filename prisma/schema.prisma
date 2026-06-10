@@ -457,3 +457,63 @@ model TrackedCurator {
   @@unique([userId, curatorAddress])
   @@index([userId])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Risk-engine ratings (external, loss-anchored Expected-Loss model).
+// Denormalized read models populated by scripts/import-risk-engine-ratings.ts from
+// the engine's versioned ratings JSON (engine runs offline; JSON is the contract).
+// Standalone tables (no FK to Curator/Vault) so the import never blocks on identity
+// resolution and the existing on-the-fly 7-factor system is untouched. Every row is
+// traceable to the model that produced it (methodologyVersion/schemaVersion/modelGit).
+// ─────────────────────────────────────────────────────────────────────────────
+model CuratorRating {
+  id                 String   @id @default(cuid())
+  curatorAddress     String   @unique   // site-curator address this rating joins to (lowercased)
+  curatorKey         String              // engine curator id, e.g. "steakhouse-financial"
+  name               String?
+  grade              String              // A+ | A | B+ | B | C+ | C | D | E | NR
+  elMedian           Float               // expected loss, annualized fraction
+  elCiLow            Float               // 90% credible interval
+  elCiHigh           Float
+  pLossAnnual        Float?
+  lgdMedian          Float?
+  channels           Json                // {credit, technical, operational} shares
+  confidence         String              // Tight | Moderate | Wide
+  flags              Json                // {repeat_offender, diligence_conflict, declined_credit, ...}
+  nVaults            Int?
+  tvlUsd             Float?
+  exposureMonths     Int?
+  events             Int?
+  addresses          Json                // all engine addresses [{address, chainId}]
+  methodologyVersion String
+  schemaVersion      String
+  modelGit           String?
+  generatedAt        DateTime
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([curatorAddress])
+  @@index([grade])
+}
+
+model VaultRating {
+  id                 String   @id @default(cuid())
+  vaultKey           String   @unique   // "<chainId>:<address>" from the engine
+  chainId            Int
+  vaultAddress       String
+  curatorKey         String?
+  grade              String
+  elMedian           Float
+  elCiLow            Float
+  elCiHigh           Float
+  pdAnnualMedian     Float?
+  lgdMedian          Float?
+  schemaVersion      String
+  modelGit           String?
+  generatedAt        DateTime
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([vaultAddress])
+  @@index([chainId, vaultAddress])
+}

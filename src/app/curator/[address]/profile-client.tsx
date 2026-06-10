@@ -15,6 +15,8 @@ const DealDepositDrawer = dynamic(
   { ssr: false }
 );
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
+import { CuratorEngineGrade } from "@/components/CuratorEngineGrade";
+import type { CuratorEngineRating } from "@/lib/curator-engine-rating";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { ApyDistViz, buildApyDistribution } from "@/components/ApyDistViz";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -64,9 +66,10 @@ const GRADE_TEXT: Record<string, string> = {
 
 interface CuratorProfileViewProps {
   data: CuratorDetailResponse["data"];
+  engineRating?: CuratorEngineRating | null;
 }
 
-export function CuratorProfileView({ data }: CuratorProfileViewProps) {
+export function CuratorProfileView({ data, engineRating }: CuratorProfileViewProps) {
   const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
   const [vsort, setVsort] = useState<{ k: VSortKey; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
   const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
@@ -292,6 +295,14 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
       >
         <TrackRecord history={data.aumHistory ?? []} />
       </Section>
+
+      {/* ── CuratorWatch Rating: loss-anchored EL grade (flagged beta), the durable
+           headline; the peer-percentile profile below is the supporting detail. ── */}
+      {engineRating ? (
+        <Section title="CuratorWatch Rating" meta="expected-loss grade · loss axis only">
+          <CuratorEngineGrade rating={engineRating} />
+        </Section>
+      ) : null}
 
       {/* ── Risk profile (inline, above the fold) ── */}
       <Section title="Risk profile" meta="peer-ranked among tracked curators">
