@@ -1,9 +1,15 @@
 # Applying the loss-anchored EL curator grades (beta)
 
-Built on branch `feat/risk-engine-grades`. **Nothing is live or deployed.** The grade
-renders only when `NEXT_PUBLIC_FEATURE_RISK_GRADES=true` AND a `CuratorRating` row
-exists for that curator. It coexists above the existing 7-factor profile (nothing
-removed). These are the explicit, operator-run steps to ship it.
+Built on branch `feat/risk-engine-grades`. **Nothing is live or deployed.** Two
+surfaces, both gated on `NEXT_PUBLIC_FEATURE_RISK_GRADES=true` AND a matching rating
+row, both coexisting with the existing systems (nothing removed):
+- **Curator page header** — the loss-anchored EL grade panel (needs a `CuratorRating`).
+- **Curator "Vaults managed" table** — a per-vault "EL grade" column with the
+  position-specific grade + EL tooltip (needs `VaultRating` rows). This is the
+  methodology's "both truths": the durable curator grade up top, the spicy-vault
+  grade in the list.
+
+These are the explicit, operator-run steps to ship it.
 
 ## 1. Create the tables (additive, 0 destructive ops)
 

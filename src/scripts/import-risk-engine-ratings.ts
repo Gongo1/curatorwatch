@@ -96,6 +96,9 @@ export async function importRiskEngineRatings(
 
   for (const v of data.vaults) {
     const [chainStr, vaultAddress] = v.vault.split(":");
+    // normalize the key to lowercased address so render-time lookup matches regardless
+    // of checksum case (engine emits checksummed; site addresses vary).
+    const vaultKey = `${Number(chainStr)}:${(vaultAddress ?? "").toLowerCase()}`;
     const payload = {
       chainId: Number(chainStr),
       vaultAddress: (vaultAddress ?? "").toLowerCase(),
@@ -111,9 +114,9 @@ export async function importRiskEngineRatings(
       generatedAt,
     };
     await prisma.vaultRating.upsert({
-      where: { vaultKey: v.vault },
+      where: { vaultKey },
       update: payload,
-      create: { vaultKey: v.vault, ...payload },
+      create: { vaultKey, ...payload },
     });
   }
 

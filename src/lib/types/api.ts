@@ -249,6 +249,7 @@ export interface CuratorNewsItem {
 export interface CuratorVaultSummary {
   id: string;
   address: string;
+  chainId: number;
   name: string;
   symbol: string;
   asset: VaultAsset;

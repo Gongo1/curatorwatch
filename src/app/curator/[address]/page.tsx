@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { fetchCuratorDetail } from "@/lib/curator-detail";
-import { getCuratorEngineRating } from "@/lib/curator-engine-rating";
+import { getCuratorEngineRating, getVaultEngineRatings } from "@/lib/curator-engine-rating";
 import { CuratorProfileView } from "./profile-client";
 
 // ISR aligned to the ingestion cadence: the cron revalidates curator pages on
@@ -56,9 +56,12 @@ export default async function CuratorProfile({ params }: PageProps) {
     );
   }
 
-  // Loss-anchored grade is server-rendered from precomputed DB (flag-gated; returns
-  // null when the flag is off or no rating exists). Coexists with the 7-factor profile.
-  const engineRating = await getCuratorEngineRating(data.curator.address);
+  // Loss-anchored grades are server-rendered from precomputed DB (flag-gated; empty
+  // when the flag is off or no rating exists). Coexist with the 7-factor profile.
+  const [engineRating, vaultRatings] = await Promise.all([
+    getCuratorEngineRating(data.curator.address),
+    getVaultEngineRatings(data.vaults.map((v) => ({ chainId: v.chainId, address: v.address }))),
+  ]);
 
-  return <CuratorProfileView data={data} engineRating={engineRating} />;
+  return <CuratorProfileView data={data} engineRating={engineRating} vaultRatings={vaultRatings} />;
 }

@@ -199,6 +199,7 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
     return {
       id: vault.id,
       address: vault.address,
+      chainId: vault.chainId,
       name: vault.name,
       symbol: vault.symbol,
       asset: {

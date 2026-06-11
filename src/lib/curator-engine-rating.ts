@@ -31,6 +31,38 @@ export interface CuratorEngineRating {
   generatedAt: string;
 }
 
+export interface VaultEngineRating {
+  grade: string;
+  elMedian: number;
+  elCi: [number, number];
+  pdAnnualMedian: number | null;
+  lgdMedian: number | null;
+}
+
+/**
+ * Per-vault loss-anchored grades for a set of vaults, keyed "<chainId>:<address>"
+ * (the engine's vault key). Returns an empty map when the flag is off. One batched
+ * query; render-time lookup is O(1).
+ */
+export const getVaultEngineRatings = cache(
+  async (vaults: { chainId: number; address: string }[]): Promise<Record<string, VaultEngineRating>> => {
+    if (!RISK_GRADES_ENABLED || vaults.length === 0) return {};
+    const keys = vaults.map((v) => `${v.chainId}:${v.address.toLowerCase()}`);
+    const rows = await prisma.vaultRating.findMany({ where: { vaultKey: { in: keys } } });
+    const out: Record<string, VaultEngineRating> = {};
+    for (const r of rows) {
+      out[r.vaultKey] = {
+        grade: r.grade,
+        elMedian: r.elMedian,
+        elCi: [r.elCiLow, r.elCiHigh],
+        pdAnnualMedian: r.pdAnnualMedian,
+        lgdMedian: r.lgdMedian,
+      };
+    }
+    return out;
+  },
+);
+
 export const getCuratorEngineRating = cache(
   async (curatorAddress: string): Promise<CuratorEngineRating | null> => {
     if (!RISK_GRADES_ENABLED) return null;

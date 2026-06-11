@@ -16,7 +16,8 @@ const DealDepositDrawer = dynamic(
 );
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 import { CuratorEngineGrade } from "@/components/CuratorEngineGrade";
-import type { CuratorEngineRating } from "@/lib/curator-engine-rating";
+import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
+import type { CuratorEngineRating, VaultEngineRating } from "@/lib/curator-engine-rating";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { ApyDistViz, buildApyDistribution } from "@/components/ApyDistViz";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -67,14 +68,19 @@ const GRADE_TEXT: Record<string, string> = {
 interface CuratorProfileViewProps {
   data: CuratorDetailResponse["data"];
   engineRating?: CuratorEngineRating | null;
+  vaultRatings?: Record<string, VaultEngineRating>;
 }
 
-export function CuratorProfileView({ data, engineRating }: CuratorProfileViewProps) {
+export function CuratorProfileView({ data, engineRating, vaultRatings }: CuratorProfileViewProps) {
   const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
   const [vsort, setVsort] = useState<{ k: VSortKey; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
   const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
 
   const { vaults } = data;
+  // EL-grade column shows only when the flag is on AND ratings exist for this curator.
+  const showElGrade = !!vaultRatings && Object.keys(vaultRatings).length > 0;
+  const elRatingOf = (v: CuratorVaultSummary) =>
+    vaultRatings?.[`${v.chainId}:${v.address.toLowerCase()}`] ?? null;
   const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
   const grade = { high: 0, medium: 0, low: 0 };
   const assetMap: Record<string, number> = {};
@@ -319,6 +325,11 @@ export function CuratorProfileView({ data, engineRating }: CuratorProfileViewPro
                 <VTh k="asset" sort={vsort} onSort={onVSort} className="text-left">Asset</VTh>
                 <VTh k="protocol" sort={vsort} onSort={onVSort} className="text-left">Protocol</VTh>
                 <VTh k="grade" sort={vsort} onSort={onVSort} className="text-left">Grade</VTh>
+                {showElGrade ? (
+                  <th className="font-mono text-[0.62rem] uppercase tracking-[0.1em] font-medium pb-3 px-3 text-left text-text-tertiary">
+                    EL grade
+                  </th>
+                ) : null}
                 <VTh k="tvl" sort={vsort} onSort={onVSort} className="text-right">TVL</VTh>
                 <VTh k="apy" sort={vsort} onSort={onVSort} className="text-right">Net APY</VTh>
                 <VTh k="fee" sort={vsort} onSort={onVSort} className="text-right">Perf fee</VTh>
@@ -349,6 +360,9 @@ export function CuratorProfileView({ data, engineRating }: CuratorProfileViewPro
                         <span className="font-mono text-xs text-text-tertiary">—</span>
                       )}
                     </td>
+                    {showElGrade ? (
+                      <td className="py-3 px-3"><VaultEngineGradeBadge rating={elRatingOf(v)} /></td>
+                    ) : null}
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{formatCurrency(tvlOf(v))}</td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{netApyOf(v) > 0 ? `${(netApyOf(v) * 100).toFixed(2)}%` : "—"}</td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums text-text-secondary">
