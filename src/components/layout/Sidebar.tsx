@@ -15,6 +15,7 @@ import {
   Calculator,
   FileText,
   GitCompare,
+  ShieldCheck,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -50,6 +51,7 @@ export function Sidebar() {
     {
       title: "Lenses",
       items: [
+        { href: "/ratings", icon: <ShieldCheck className="w-5 h-5" />, label: "Ratings" },
         { href: "/yields", icon: <TrendingUp className="w-5 h-5" />, label: "Yields" },
         { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees" },
         { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations" },

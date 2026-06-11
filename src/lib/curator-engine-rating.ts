@@ -63,6 +63,35 @@ export const getVaultEngineRatings = cache(
   },
 );
 
+export interface CuratorRatingRow {
+  curatorAddress: string;
+  name: string;
+  grade: string;
+  elMedian: number;
+  elCi: [number, number];
+  confidence: string;
+  flags: Record<string, boolean>;
+  nVaults: number | null;
+  tvlUsd: number | null;
+}
+
+/** All curator ratings, safest-first, for the /ratings executive-summary table. */
+export const getAllCuratorRatings = cache(async (): Promise<CuratorRatingRow[]> => {
+  if (!RISK_GRADES_ENABLED) return [];
+  const rows = await prisma.curatorRating.findMany({ orderBy: { elMedian: "asc" } });
+  return rows.map((r) => ({
+    curatorAddress: r.curatorAddress,
+    name: r.name ?? r.curatorKey,
+    grade: r.grade,
+    elMedian: r.elMedian,
+    elCi: [r.elCiLow, r.elCiHigh],
+    confidence: r.confidence,
+    flags: (r.flags as Record<string, boolean>) ?? {},
+    nVaults: r.nVaults,
+    tvlUsd: r.tvlUsd,
+  }));
+});
+
 /** Single-vault EL grade (for the vault detail page + deposit drawer). */
 export const getVaultEngineRating = cache(
   async (chainId: number, address: string): Promise<VaultEngineRating | null> => {

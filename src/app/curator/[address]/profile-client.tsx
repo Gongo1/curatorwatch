@@ -15,7 +15,7 @@ const DealDepositDrawer = dynamic(
   { ssr: false }
 );
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
-import { CuratorEngineGrade } from "@/components/CuratorEngineGrade";
+import { CuratorRatingCard } from "@/components/CuratorRatingCard";
 import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
 import type { CuratorEngineRating, VaultEngineRating } from "@/lib/curator-engine-rating";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
@@ -241,7 +241,8 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
           </div>
         </div>
 
-        {/* verdict */}
+        {/* verdict (TVL) + CuratorWatch Rating, side by side at the top */}
+        <div className={engineRating ? "grid lg:grid-cols-2 gap-4" : ""}>
         <div className="border border-border rounded-2xl bg-background-subtle p-5">
           <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">Total value locked</div>
           <div className="font-mono font-semibold text-3xl tracking-tight tabular-nums mt-0.5 mb-3">
@@ -285,6 +286,8 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
             <Fact k="Annual yield" v={formatCurrency(derived.annualYield)} />
           </div>
         </div>
+        {engineRating ? <CuratorRatingCard rating={engineRating} /> : null}
+        </div>
       </header>
 
       <p className="font-mono text-xs text-text-tertiary leading-relaxed max-w-[720px] mb-2">
@@ -306,14 +309,6 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
       >
         <TrackRecord history={data.aumHistory ?? []} />
       </Section>
-
-      {/* ── CuratorWatch Rating: loss-anchored EL grade (flagged beta), the durable
-           headline; the peer-percentile profile below is the supporting detail. ── */}
-      {engineRating ? (
-        <Section title="CuratorWatch Rating" meta="expected-loss grade · loss axis only">
-          <CuratorEngineGrade rating={engineRating} />
-        </Section>
-      ) : null}
 
       {/* ── Risk profile (inline, above the fold) ── */}
       <Section title="Risk profile" meta="peer-ranked among tracked curators">
