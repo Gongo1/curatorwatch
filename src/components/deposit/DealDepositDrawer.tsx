@@ -17,6 +17,7 @@ import { formatCurrency } from "@/lib/utils/format";
 
 export interface DealContext {
   opportunityId: string;
+  vaultId?: string;
   vaultName: string;
   curatorName?: string | null;
   assetSymbol?: string | null;

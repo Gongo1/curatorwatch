@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { ExternalLink, Plus, Check, Globe, GitCompare, Wallet } from "lucide-react";
@@ -131,24 +131,60 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
   const name = curator.name || `Curator ${curator.address.slice(0, 6)}`;
   const g = derived.grade;
 
-  // Every depositable deal this curator offers, richest first — feeds both the
-  // header CTA and the per-vault Deal links.
-  const curatorDeals: DealContext[] = DEPOSIT_ENABLED
-    ? vaults
-        .filter((v) => v.dealDepositable && v.dealOpportunityId)
-        .map((v) => ({
-          opportunityId: v.dealOpportunityId as string,
-          vaultName: v.name,
-          curatorName: name,
-          assetSymbol: v.asset.symbol,
-          chainName: v.chainName,
-          estApr: v.dealEstApr ?? null,
-          tvl: tvlOf(v),
-          elGrade: elDealGrade(v),
-        }))
-        .sort((a, b) => (b.tvl ?? 0) - (a.tvl ?? 0))
-    : [];
+  const vaultById = new Map(vaults.map((v) => [v.id, v]));
+
+  // Depositable deals, fetched LIVE from Turtle's distributor opportunities
+  // (not the 12h-synced DB), so removing a deal on the dashboard removes it here
+  // in real time, and TVL/APR come from the opportunity itself. null = loading.
+  const [liveDeals, setLiveDeals] = useState<DealContext[] | null>(null);
+  useEffect(() => {
+    if (!DEPOSIT_ENABLED) {
+      setLiveDeals([]);
+      return;
+    }
+    let active = true;
+    setLiveDeals(null);
+    fetch(`/api/curators/${encodeURIComponent(curator.address)}/deals`)
+      .then((r) => r.json())
+      .then((j) => {
+        if (!active) return;
+        const deals: DealContext[] = (j.deals ?? []).map(
+          (d: {
+            opportunityId: string;
+            vaultId: string;
+            vaultName: string;
+            assetSymbol: string | null;
+            chainName: string | null;
+            estApr: number | null;
+            tvl: number | null;
+          }) => ({
+            opportunityId: d.opportunityId,
+            vaultId: d.vaultId,
+            vaultName: d.vaultName,
+            curatorName: name,
+            assetSymbol: d.assetSymbol,
+            chainName: d.chainName,
+            estApr: d.estApr,
+            tvl: d.tvl,
+            elGrade: vaultById.get(d.vaultId)
+              ? elDealGrade(vaultById.get(d.vaultId) as CuratorVaultSummary)
+              : null,
+          })
+        );
+        setLiveDeals(deals);
+      })
+      .catch(() => active && setLiveDeals([]));
+    return () => {
+      active = false;
+    };
+    // curator.address is the stable identity; deals refresh on profile load.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [curator.address]);
+
+  const curatorDeals = liveDeals ?? [];
   const canDeposit = curatorDeals.length > 0;
+  const dealForVault = (v: CuratorVaultSummary): DealContext | null =>
+    liveDeals?.find((d) => d.vaultId === v.id) ?? null;
 
   const creds: { label: string; muted?: boolean }[] = [];
   if (curator.jurisdiction) creds.push({ label: curator.jurisdiction });
@@ -369,30 +405,20 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
                       {v.performanceFee != null ? `${(v.performanceFee * 100).toFixed(0)}%` : "—"}
                     </td>
                     <td className="py-3 px-3 text-right">
-                      {DEPOSIT_ENABLED && v.dealDepositable && v.dealOpportunityId ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setDrawerDeals([
-                              {
-                                opportunityId: v.dealOpportunityId as string,
-                                vaultName: v.name,
-                                curatorName: name,
-                                assetSymbol: v.asset.symbol,
-                                chainName: v.chainName,
-                                estApr: v.dealEstApr,
-                                tvl: tvlOf(v),
-                                elGrade: elDealGrade(v),
-                              },
-                            ])
-                          }
-                          className="font-mono text-xs text-cyan-500 underline underline-offset-2 hover:text-cyan-400 transition-colors whitespace-nowrap"
-                        >
-                          Deposit{v.dealEstApr != null ? ` · ${v.dealEstApr.toFixed(1)}%` : ""}
-                        </button>
-                      ) : (
-                        <span className="font-mono text-xs text-text-tertiary" title="Not available as a distributor deal">—</span>
-                      )}
+                      {(() => {
+                        const deal = dealForVault(v);
+                        return deal ? (
+                          <button
+                            type="button"
+                            onClick={() => setDrawerDeals([deal])}
+                            className="font-mono text-xs text-cyan-500 underline underline-offset-2 hover:text-cyan-400 transition-colors whitespace-nowrap"
+                          >
+                            Deposit{deal.estApr != null ? ` · ${deal.estApr.toFixed(1)}%` : ""}
+                          </button>
+                        ) : (
+                          <span className="font-mono text-xs text-text-tertiary" title="Not currently a distributor deal">—</span>
+                        );
+                      })()}
                     </td>
                   </tr>
                 );
@@ -402,8 +428,8 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
         </div>
         <p className="font-mono text-xs text-text-tertiary mt-4">
           Grade is source-derived per vault (10-requirement model). Click a vault for its full breakdown.
-          Deal links open the deposit flow for vaults available through CuratorWatch; rates shown are the
-          deal&rsquo;s estimated APR from the latest sync.
+          Deal links open the deposit flow for vaults this curator currently offers through Turtle; TVL
+          and APR are pulled live from the opportunity.
         </p>
       </Section>
 
