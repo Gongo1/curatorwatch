@@ -65,7 +65,7 @@ jobs:
           git config user.name "curatorwatch-ratings-bot"
           git config user.email "ratings-bot@users.noreply.github.com"
           git checkout -b "$BR"
-          git add data/risk-engine/ratings.json data/risk-engine/backtest.json
+          git add data/risk-engine/
           git commit -m "Weekly ratings refresh $DATE"
           git push origin "$BR"
           gh pr create --base main --head "$BR" \
