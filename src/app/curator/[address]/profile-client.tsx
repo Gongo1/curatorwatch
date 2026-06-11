@@ -279,7 +279,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
       </header>
 
       {/* ── Verdict: TVL + CuratorWatch Rating, breathing side by side at full width ── */}
-      <div className={engineRating ? "grid lg:grid-cols-2 gap-5 items-start mb-8" : "max-w-md mb-8"}>
+      <div className={engineRating ? "grid lg:grid-cols-2 gap-5 items-stretch mb-8" : "max-w-md mb-8"}>
         <div className="border border-border rounded-2xl bg-background-subtle p-5">
           <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">Total value locked</div>
           <div className="font-mono font-semibold text-3xl tracking-tight tabular-nums mt-0.5 mb-3">
@@ -320,19 +320,18 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
               v={derived.assets[0] ? `${derived.assets[0].symbol} · ${Math.round(derived.assets[0].pct)}%` : "—"}
             />
             <Fact k="Avg net APY" v={`${(derived.weightedApy * 100).toFixed(1)}%`} />
-            <Fact k="Annual yield" v={formatCurrency(derived.annualYield)} />
+            <div>
+              <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">Bad debt</div>
+              <div className={`font-mono text-sm text-text-primary mt-0.5 tabular-nums ${data.liquidationSummary && data.liquidationSummary.totalBadDebtUsd > 0 ? "text-accent-red" : "text-accent-green"}`}>
+                {data.liquidationSummary && data.liquidationSummary.totalBadDebtUsd > 0
+                  ? formatCurrency(data.liquidationSummary.totalBadDebtUsd)
+                  : "None"}
+              </div>
+            </div>
           </div>
         </div>
         {engineRating ? <CuratorEngineGrade rating={engineRating} /> : null}
       </div>
-
-      <p className="font-mono text-xs text-text-tertiary leading-relaxed max-w-[720px] mb-2">
-        A curator is the risk team behind these vaults — they choose markets, set exposure caps,
-        and rebalance deposits on LPs&rsquo; behalf. This page is their track record:
-        what they manage, how it&rsquo;s{" "}
-        <Link href="/docs" className="text-accent-blue underline underline-offset-2">graded</Link>, and what has
-        changed.
-      </p>
 
       {/* ── Track record: AUM under management over time ── */}
       <Section
@@ -352,7 +351,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
       </Section>
 
       {/* ── Vaults managed ── */}
-      <Section title="Vaults managed" meta={`${vaults.length} vaults · ${formatCurrency(derived.totalTVL)}`}>
+      <Section title="Vaults managed" meta="sortable — grade · fees · live deals">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[520px]">
             <thead>
@@ -433,35 +432,34 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
         </p>
       </Section>
 
+      {/* ── Asset distribution (concentration of the holdings above) ── */}
+      <Section title="Asset distribution" meta="concentration across vaults">
+        <div className="flex flex-col gap-3">
+          {derived.assets.slice(0, 8).map((a) => (
+            <div key={a.symbol} className="grid grid-cols-[84px_1fr_150px] gap-4 items-center">
+              <span className="font-mono text-sm text-text-primary">{a.symbol}</span>
+              <div className="h-2 rounded bg-background-elevated overflow-hidden">
+                <span className="block h-full" style={{ width: `${a.pct}%`, background: "var(--accent-blue)", opacity: 0.85 }} />
+              </div>
+              <span className="font-mono text-xs text-text-secondary text-right tabular-nums">
+                <b className="text-text-primary font-semibold">{formatCurrency(a.amount)}</b> · {a.pct.toFixed(1)}%
+              </span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
       {/* ── Economics: where the yield comes from ── */}
       <Section title="Economics" meta="annual yield, by vault">
-        {canDeposit && (
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-6 p-4 rounded-xl border border-cyan-500/25 bg-cyan-500/5">
-            <div className="min-w-0">
-              <div className="text-sm font-medium text-text-primary">Earn this yield yourself</div>
-              <div className="font-mono text-xs text-text-tertiary mt-0.5">
-                Deposit into {name}&rsquo;s vaults on-site — attributed to CuratorWatch.
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setDrawerDeals(curatorDeals)}
-              className="flex-none inline-flex items-center gap-2 text-sm font-semibold rounded-lg px-4 py-2 bg-cyan-500 text-[#06120f] hover:opacity-90 transition-opacity active:translate-y-px"
-            >
-              <Wallet className="w-4 h-4" /> Deposit into this curator
-            </button>
-          </div>
-        )}
-        <div className="grid sm:grid-cols-3 gap-4 mb-6">
-          <ECard label="Annual yield to LPs" value={formatCurrency(derived.annualYield)} accent />
+        <div className="grid sm:grid-cols-2 gap-4 mb-6 items-stretch">
+          <ECard label="Annual yield to LPs" value={formatCurrency(derived.annualYield)} sub="TVL-weighted across vaults" accent />
           {derived.apyDist && derived.apyDist.count >= 3 ? (
-            <div className="border border-border rounded-xl bg-background-subtle p-5">
+            <div className="border border-border rounded-xl bg-background-subtle p-5 flex flex-col justify-center">
               <ApyDistViz d={derived.apyDist} label={`Net APY · ${derived.apyDist.count} vaults`} />
             </div>
           ) : (
             <ECard label="Avg net APY" value={`${(derived.weightedApy * 100).toFixed(2)}%`} sub="TVL-weighted" />
           )}
-          <ECard label="Vaults" value={String(vaults.length)} sub={`${derived.assets.length} assets`} />
         </div>
         <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary mb-3">Annual yield ($) by vault — bar = $ paid, figure = APY</div>
         <div className="flex flex-col gap-3">
@@ -473,23 +471,6 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
               </div>
               <span className="font-mono text-xs text-text-secondary text-right tabular-nums">
                 <b className="text-text-primary font-semibold">{formatCurrency(y.dollars)}</b> <span className="text-accent-green">{(y.apy * 100).toFixed(1)}%</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* ── Asset distribution ── */}
-      <Section title="Asset distribution" meta="concentration across vaults">
-        <div className="flex flex-col gap-3">
-          {derived.assets.slice(0, 8).map((a) => (
-            <div key={a.symbol} className="grid grid-cols-[84px_1fr_150px] gap-4 items-center">
-              <span className="font-mono text-sm text-text-primary">{a.symbol}</span>
-              <div className="h-2 rounded bg-background-elevated overflow-hidden">
-                <span className="block h-full" style={{ width: `${a.pct}%`, background: "var(--accent-blue)", opacity: 0.85 }} />
-              </div>
-              <span className="font-mono text-xs text-text-secondary text-right tabular-nums">
-                <b className="text-text-primary font-semibold">{formatCurrency(a.amount)}</b> · {a.pct.toFixed(1)}%
               </span>
             </div>
           ))}
