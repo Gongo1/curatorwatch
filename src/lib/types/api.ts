@@ -297,6 +297,7 @@ export interface CuratorDetailResponse {
     liquidationSummary?: LiquidationSummary;
     aumHistory?: CuratorAumPoint[];
     timeline?: CuratorTimelineEntry[];
+    dataAsOf?: string | null; // ISO — latest snapshot the page reflects
   };
   error?: string;
 }

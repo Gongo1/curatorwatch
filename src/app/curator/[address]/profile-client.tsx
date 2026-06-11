@@ -43,6 +43,20 @@ type VSortKey = "name" | "asset" | "protocol" | "grade" | "tvl" | "apy" | "fee";
 // Deal links route into /deposit, which 404s unless the flag is on.
 const DEPOSIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TURTLE_DEPOSIT === "true";
 
+// Absolute UTC freshness stamp, e.g. "Jun 11, 12:04 UTC".
+function fmtAsOf(iso: string): string {
+  return (
+    new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "UTC",
+    }) + " UTC"
+  );
+}
+
 // Net APY as a fraction. avgNetApy is already a fraction; netAPR is a
 // percentage, so it must be divided. Both are sanitized upstream
 // (curator-detail), so an implausible APY arrives null → 0 here → "—".
@@ -219,6 +233,12 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
         <Link href="/" className="hover:text-text-primary transition-colors">Curators</Link>
         <span className="text-text-muted">/</span>
         <span className="text-text-secondary">{name}</span>
+        {data.dataAsOf && (
+          <span className="ml-auto inline-flex items-center gap-1.5 text-text-tertiary" title="When the on-chain data on this page was last collected">
+            <span className="w-1.5 h-1.5 rounded-full bg-accent-green flex-none" />
+            Data as of {fmtAsOf(data.dataAsOf)}
+          </span>
+        )}
       </div>
 
       {/* ── Trust masthead: identity (full width) ── */}
@@ -347,7 +367,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
 
       {/* ── Risk profile (inline, above the fold) ── */}
       <Section title="Risk profile" meta="peer-ranked among tracked curators">
-        <CuratorRiskProfile curatorAddress={curator.address} />
+        <CuratorRiskProfile curatorAddress={curator.address} dataAsOf={data.dataAsOf} />
       </Section>
 
       {/* ── Vaults managed ── */}

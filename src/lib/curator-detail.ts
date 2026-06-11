@@ -116,6 +116,7 @@ export interface CuratorDetail {
   liquidationSummary: LiquidationSummary;
   aumHistory: CuratorAumPoint[];
   timeline: CuratorTimelineEntry[];
+  dataAsOf: string | null;
 }
 
 /**
@@ -387,6 +388,15 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
     createdAt: item.createdAt.toISOString(),
   }));
 
+  // Freshness: the most recent snapshot any of this curator's vaults carries —
+  // i.e. when the data on this page was last collected by the cron.
+  const dataAsOf =
+    vaults
+      .map((v) => v.latestSnapshot?.timestamp)
+      .filter((t): t is string => !!t)
+      .sort()
+      .at(-1) ?? null;
+
   return {
     curator: curatorData,
     vaults,
@@ -394,5 +404,6 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
     liquidationSummary,
     aumHistory,
     timeline,
+    dataAsOf,
   };
 });

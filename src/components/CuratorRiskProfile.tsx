@@ -3,37 +3,20 @@
 import { useState, useEffect } from "react";
 import type { CuratorRiskProfile as CuratorRiskProfileType, RiskFactor } from "@/lib/curator-risk-profile";
 
-// USR exposure data by curator address (lowercase)
-interface UsrExposure {
-  vaultsAffected: number;
-  totalVaults: number;
-  exposureUsd: number;
-  percentile: number;
-  tier: "bottom" | "below-avg";
-}
-
-const USR_CURATOR_EXPOSURE: Record<string, UsrExposure> = {
-  // Gauntlet
-  "0x9e33faae38ff641094fa68c65c2ce600b3410585": { vaultsAffected: 2, totalVaults: 12, exposureUsd: 5_000_000, percentile: 10, tier: "bottom" },
-  // Re7 Labs
-  "0x72882eb5d27c7088dfa6dde941dd42e5d184f0ef": { vaultsAffected: 1, totalVaults: 8, exposureUsd: 450_000, percentile: 20, tier: "below-avg" },
-  // KPK
-  "0xc266b1181a80e84edc2c6596718e88e8115c1eaa": { vaultsAffected: 1, totalVaults: 6, exposureUsd: 221_000, percentile: 30, tier: "below-avg" },
-  // MEV Capital
-  "0x38989bba00bdf8181f4082995b3deae96163ac5d": { vaultsAffected: 1, totalVaults: 14, exposureUsd: 52_000, percentile: 35, tier: "below-avg" },
-  // Keyrock
-  "0xba75546acd56b3a9142f94f179b03970ee4283fd": { vaultsAffected: 1, totalVaults: 2, exposureUsd: 36_000, percentile: 40, tier: "below-avg" },
-};
-
-function getUsrExposure(curatorAddress: string): UsrExposure | null {
-  return USR_CURATOR_EXPOSURE[curatorAddress.toLowerCase()] ?? null;
+function compactUsd(n: number): string {
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}K`;
+  return `$${Math.round(n)}`;
 }
 
 interface CuratorRiskProfileProps {
   curatorAddress: string;
+  /** ISO timestamp the page's underlying data was last collected. */
+  dataAsOf?: string | null;
 }
 
-export function CuratorRiskProfile({ curatorAddress }: CuratorRiskProfileProps) {
+export function CuratorRiskProfile({ curatorAddress, dataAsOf }: CuratorRiskProfileProps) {
   const [profile, setProfile] = useState<CuratorRiskProfileType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -79,12 +62,6 @@ export function CuratorRiskProfile({ curatorAddress }: CuratorRiskProfileProps) 
     );
   }
 
-  const usrExposure = getUsrExposure(curatorAddress);
-
-  // Get founded year from the time-in-operation factor if available
-  const timeInOpFactor = profile.factors.find((f) => f.id === "time-in-operation");
-  const foundedYear = timeInOpFactor && "foundedYear" in timeInOpFactor ? timeInOpFactor.foundedYear : null;
-
   return (
     <div className="space-y-4">
       {/* Dense factor table — one row per peer-ranked factor */}
@@ -93,140 +70,91 @@ export function CuratorRiskProfile({ curatorAddress }: CuratorRiskProfileProps) 
           <FactorRow key={factor.id} factor={factor} />
         ))}
       </div>
-      <p className="font-mono text-xs text-text-tertiary">
-        Bars rank this curator against {profile.peerCount} tracked curators — relative,
-        not absolute. Green = better than most peers, red = worse.
-      </p>
+      <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <p className="font-mono text-xs text-text-tertiary max-w-[560px]">
+          Bars rank this curator against {profile.peerCount} tracked curators — relative,
+          not absolute. Green = better than most peers, red = worse.
+        </p>
+        {dataAsOf && (
+          <span className="font-mono text-[0.62rem] text-text-tertiary whitespace-nowrap">
+            ratings computed from data as of {fmtAsOf(dataAsOf)}
+          </span>
+        )}
+      </div>
 
-      {/* Risk Management Track Record */}
-      <RiskTrackRecord
-        usrExposure={usrExposure}
-        foundedYear={foundedYear}
-        peerCount={profile.peerCount}
-      />
+      {/* Live incident record (sourced) — only renders when events exist */}
+      <IncidentRecord factors={profile.factors} />
     </div>
   );
 }
 
-// ============================================================================
-// RISK MANAGEMENT TRACK RECORD
-// ============================================================================
-
-function RiskTrackRecord({
-  usrExposure,
-  foundedYear,
-  peerCount,
-}: {
-  usrExposure: UsrExposure | null;
-  foundedYear: number | null;
-  peerCount: number;
-}) {
-  if (usrExposure) {
-    const exposureStr = usrExposure.exposureUsd >= 1_000_000
-      ? `$${(usrExposure.exposureUsd / 1e6).toFixed(1)}M`
-      : `$${(usrExposure.exposureUsd / 1e3).toFixed(0)}K`;
-    const affectedPct = Math.round((usrExposure.vaultsAffected / usrExposure.totalVaults) * 100);
-    const tierLabel = usrExposure.tier === "bottom" ? "Bottom tier" : "Below avg";
-    const tierTextColor = usrExposure.tier === "bottom" ? "text-accent-red" : "text-orange-400";
-    const tierBorderColor = usrExposure.tier === "bottom" ? "border-l-accent-red" : "border-l-orange-400";
-    const tierBarColor = usrExposure.tier === "bottom" ? "bg-accent-red" : "bg-orange-400";
-    const tierBadgeBg = usrExposure.tier === "bottom" ? "bg-accent-red/15 border-accent-red/30" : "bg-orange-400/15 border-orange-400/30";
-
-    return (
-      <div className={`bg-background-subtle rounded-lg border border-border border-l-4 ${tierBorderColor} p-5`}>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${tierBarColor}`} />
-            <span className="text-sm font-semibold text-text-primary">Risk Management Track Record</span>
-          </div>
-          <span className={`px-2 py-0.5 rounded text-xs font-medium border ${tierBadgeBg} ${tierTextColor}`}>
-            {tierLabel}
-          </span>
-        </div>
-
-        {/* Recent Events */}
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Recent Events</p>
-          <div className="bg-background-elevated/50 rounded-lg p-3 border border-border-subtle">
-            <p className="text-sm font-medium text-accent-red mb-1.5">
-              &#x26A0;&#xFE0F; Resolv USR Exposure (Mar 2026)
-            </p>
-            <ul className="space-y-1 text-sm text-text-secondary">
-              <li>Allocated {exposureStr} to unstable markets</li>
-              <li>{usrExposure.vaultsAffected} of {usrExposure.totalVaults} vaults affected ({affectedPct}%)</li>
-              <li>Response time: 48+ hours</li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Historical Performance */}
-        <div className="mb-4">
-          <p className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-2">Historical Performance</p>
-          <ul className="space-y-1 text-sm">
-            <li className="text-accent-green">&#x2713; Zero bad debt (2018&ndash;2025)</li>
-            <li className="text-accent-green">&#x2713; Clean liquidation history</li>
-            <li className="text-accent-red">&#x2717; USR incident (2026)</li>
-          </ul>
-        </div>
-
-        {/* Percentile bar */}
-        <div>
-          <div className="h-1.5 bg-background-elevated rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full ${tierBarColor}`}
-              style={{ width: `${usrExposure.percentile}%` }}
-            />
-          </div>
-          <div className="flex justify-between mt-1">
-            <span className="text-[10px] text-text-tertiary">
-              {ordinal(usrExposure.percentile)} percentile
-            </span>
-            <span className="text-[10px] text-text-tertiary">
-              among {peerCount} curators
-            </span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Clean curator — no USR exposure
+// Absolute UTC stamp, e.g. "Jun 11, 12:04 UTC".
+function fmtAsOf(iso: string): string {
   return (
-    <div className="bg-background-subtle rounded-lg border border-border border-l-4 border-l-accent-green p-5">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-accent-green" />
-          <span className="text-sm font-semibold text-text-primary">Risk Management Track Record</span>
-        </div>
-        <span className="px-2 py-0.5 rounded text-xs font-medium border bg-accent-green/15 border-accent-green/30 text-accent-green">
-          Top tier
+    new Date(iso).toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: "UTC",
+    }) + " UTC"
+  );
+}
+
+// ============================================================================
+// LIVE INCIDENT RECORD (sourced)
+// ============================================================================
+
+function IncidentRecord({ factors }: { factors: RiskFactor[] }) {
+  const badDebt = factors.find((f) => f.id === "bad-debt");
+  const incidents = badDebt && "incidents" in badDebt ? badDebt.incidents : [];
+
+  // Clean curator: the Bad-Debt factor row already reads "None on record" —
+  // no separate card needed, and nothing is asserted that we can't source.
+  if (incidents.length === 0) return null;
+
+  return (
+    <div className="border border-border rounded-xl bg-background-subtle overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-border-subtle flex items-center justify-between gap-3">
+        <span className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
+          Loss &amp; incident record · sourced
+        </span>
+        <span className="font-mono text-[0.62rem] text-text-tertiary">
+          {incidents.length} on record
         </span>
       </div>
-
-      {/* Clean record */}
-      <div className="mb-4">
-        <p className="text-sm text-text-secondary mb-2">No recent risk events</p>
-        <ul className="space-y-1 text-sm">
-          <li className="text-accent-green">&#x2713; Zero bad debt history</li>
-          <li className="text-accent-green">&#x2713; No exposure to failed markets</li>
-          <li className="text-accent-green">
-            &#x2713; Consistent risk management{foundedYear ? ` since ${foundedYear}` : ""}
+      <ul className="divide-y divide-border-subtle">
+        {incidents.map((inc, i) => (
+          <li key={i} className="px-4 py-3 flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <div className="text-sm text-text-primary">{inc.event}</div>
+              {inc.note && (
+                <div className="font-mono text-[0.65rem] text-text-tertiary mt-0.5 leading-snug">
+                  {inc.note}
+                </div>
+              )}
+            </div>
+            <div className="flex-none text-right">
+              <div className="font-mono text-sm tabular-nums text-accent-red">
+                {inc.exposureUsd != null ? compactUsd(inc.exposureUsd) : "—"}
+              </div>
+              <a
+                href={inc.sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-[0.62rem] text-accent-blue hover:underline"
+              >
+                {inc.date} ↗
+              </a>
+            </div>
           </li>
-        </ul>
-      </div>
-
-      {/* Percentile bar */}
-      <div>
-        <div className="h-1.5 bg-background-elevated rounded-full overflow-hidden">
-          <div className="h-full rounded-full bg-accent-green" style={{ width: "100%" }} />
-        </div>
-        <div className="flex justify-between mt-1">
-          <span className="text-[10px] text-text-tertiary">100th percentile</span>
-          <span className="text-[10px] text-text-tertiary">among {peerCount} curators</span>
-        </div>
-      </div>
+        ))}
+      </ul>
+      <p className="px-4 py-2.5 border-t border-border-subtle font-mono text-[0.6rem] text-text-tertiary leading-relaxed">
+        Figures are third-party exposure estimates (at-risk amounts), not confirmed
+        realized losses. Each entry is dated and linked to its source.
+      </p>
     </div>
   );
 }
