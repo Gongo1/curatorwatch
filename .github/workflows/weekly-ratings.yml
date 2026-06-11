@@ -37,7 +37,7 @@ jobs:
             git@github.com:Gongo1/curatorwatch-risk-engine.git engine
 
       - name: Install Python deps (PyMC stack)
-        run: pip install pymc arviz pandas numpy scipy pyarrow requests
+        run: pip install pymc arviz pandas numpy scipy pyarrow requests netcdf4 h5netcdf
 
       - name: Install site deps + Prisma client (for universe export)
         run: |
