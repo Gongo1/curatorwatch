@@ -57,7 +57,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           cd "$GITHUB_WORKSPACE"
-          if git diff --quiet -- data/risk-engine/ratings.json; then
+          if git diff --quiet -- data/risk-engine/; then
             echo "No rating changes this week."; exit 0
           fi
           DATE=$(date -u +%Y-%m-%d)
@@ -65,7 +65,7 @@ jobs:
           git config user.name "curatorwatch-ratings-bot"
           git config user.email "ratings-bot@users.noreply.github.com"
           git checkout -b "$BR"
-          git add data/risk-engine/ratings.json
+          git add data/risk-engine/ratings.json data/risk-engine/backtest.json
           git commit -m "Weekly ratings refresh $DATE"
           git push origin "$BR"
           gh pr create --base main --head "$BR" \
