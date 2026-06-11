@@ -58,19 +58,24 @@ export async function importRatingsData(
 ): Promise<{ curators: number; vaults: number; matched: number; unmatched: string[] }> {
   const generatedAt = new Date(data.generated_at);
 
-  // site curator addresses for the join
-  const siteCurators = await prisma.curator.findMany({ select: { address: true } });
+  // site curators for the join: by address, then by normalized name (the engine and
+  // site ingest Morpho independently, so a curator can match on name when its stored
+  // address differs). Store the SITE curator's address so the page lookup resolves.
+  const siteCurators = await prisma.curator.findMany({ select: { address: true, name: true } });
+  const norm = (s: string | null) => (s ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
   const siteAddrs = new Set(siteCurators.map((c) => c.address.toLowerCase()));
+  const siteByName = new Map(siteCurators.filter((c) => c.name).map((c) => [norm(c.name), c.address.toLowerCase()]));
 
   let matched = 0;
   const unmatched: string[] = [];
 
   for (const c of data.curators) {
     const addrs = c.addresses.map((a) => a.address.toLowerCase());
-    const hit = addrs.find((a) => siteAddrs.has(a));
-    if (hit) matched++;
+    let resolved = addrs.find((a) => siteAddrs.has(a)) ?? null;
+    if (!resolved) resolved = siteByName.get(norm(c.name ?? c.curator)) ?? null;
+    if (resolved) matched++;
     else unmatched.push(c.curator);
-    const curatorAddress = hit ?? addrs[0] ?? c.curator;
+    const curatorAddress = resolved ?? addrs[0] ?? c.curator;
 
     const payload = {
       curatorKey: c.curator,
