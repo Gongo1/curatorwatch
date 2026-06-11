@@ -1,3 +1,4 @@
+import { Sprout } from "lucide-react";
 import type { CuratorEngineRating } from "@/lib/curator-engine-rating";
 import { GRADE_BLURB } from "@/lib/grade-style";
 
@@ -50,6 +51,11 @@ export function CuratorEngineGrade({ rating }: { rating: CuratorEngineRating }) 
             <span className="rounded-full border border-border px-2 py-0.5 text-[10px] font-medium text-text-tertiary">
               {rating.confidence} confidence
             </span>
+            {rating.flags?.provisional ? (
+              <span className="inline-flex items-center gap-1 rounded-full border border-orange-500/30 bg-orange-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-orange-400">
+                <Sprout className="h-3 w-3" /> Infant rating
+              </span>
+            ) : null}
           </div>
           {rating.grade === "NR" ? (
             <p className="mt-1.5 text-xs text-text-secondary">
@@ -58,6 +64,12 @@ export function CuratorEngineGrade({ rating }: { rating: CuratorEngineRating }) 
           ) : (
             <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">{GRADE_BLURB[rating.grade]}</p>
           )}
+          {rating.flags?.provisional ? (
+            <p className="mt-1.5 text-xs leading-relaxed text-orange-400/90">
+              New curator — short on-chain track record. This grade leans on structure and peers
+              more than realized history, so expect it to be volatile and move as the book seasons.
+            </p>
+          ) : null}
           <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
             <Metric label="Expected loss / yr" value={bps(rating.elMedian)}
               sub={`90% CI ${bps(rating.elCi[0])}–${bps(rating.elCi[1])}`} />
