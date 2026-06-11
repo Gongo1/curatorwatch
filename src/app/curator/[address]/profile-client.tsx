@@ -15,6 +15,7 @@ const DealDepositDrawer = dynamic(
   { ssr: false }
 );
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
+import { Newswire } from "@/components/news/Newswire";
 import { CuratorEngineGrade } from "@/components/CuratorEngineGrade";
 import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
 import type { CuratorEngineRating, VaultEngineRating } from "@/lib/curator-engine-rating";
@@ -228,7 +229,8 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
     setVsort((s) => (s.k === k ? { k, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { k, dir: k === "name" || k === "asset" || k === "protocol" ? 1 : -1 }));
 
   return (
-    <div className="max-w-[1000px]">
+    <div className="max-w-[1340px] xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 xl:items-start">
+      <div className="max-w-[1000px] min-w-0">
       <div className="font-mono text-xs text-text-tertiary flex items-center gap-2 mb-5">
         <Link href="/" className="hover:text-text-primary transition-colors">Curators</Link>
         <span className="text-text-muted">/</span>
@@ -535,6 +537,17 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
       <Section title="Top depositors" meta="across this curator’s vaults">
         <CuratorDepositors curatorAddress={curator.address} />
       </Section>
+      </div>
+
+      {/* ── Newswire rail: press naming this curator ── */}
+      <aside className="mt-10 xl:mt-0 xl:sticky xl:top-6">
+        <Newswire
+          variant="rail"
+          items={data.news}
+          title="Newswire"
+          emptyHint={`No headlines naming ${name} yet. We scan major crypto desks every few hours.`}
+        />
+      </aside>
 
       {drawerDeals && (
         <DealDepositDrawer

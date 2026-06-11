@@ -1,4 +1,5 @@
 import { fetchAllDashboardData } from "@/lib/dashboard-queries";
+import { fetchRecentNews } from "@/lib/news/queries";
 import { CuratorsHome } from "./home-client";
 
 // ISR aligned to the ingestion cadence: the cron revalidates this page on
@@ -6,18 +7,22 @@ import { CuratorsHome } from "./home-client";
 export const revalidate = 21600;
 
 export default async function Page() {
-  const data = await fetchAllDashboardData({
-    page: 1,
-    pageSize: 100,
-    sortBy: "aum",
-    sortOrder: "desc",
-  });
+  const [data, news] = await Promise.all([
+    fetchAllDashboardData({
+      page: 1,
+      pageSize: 100,
+      sortBy: "aum",
+      sortOrder: "desc",
+    }),
+    fetchRecentNews(12),
+  ]);
 
   return (
     <CuratorsHome
       curators={data.curators.data.curators}
       stats={data.curators.data.stats}
       apyDist={data.apyDistribution ?? null}
+      news={news}
     />
   );
 }
