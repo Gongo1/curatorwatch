@@ -87,37 +87,23 @@ export function CuratorRiskProfile({ curatorAddress }: CuratorRiskProfileProps) 
 
   return (
     <div className="space-y-4">
-      {/* Disclaimer */}
-      <div className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-5 py-4">
-        <p className="text-sm text-text-secondary">
-          Colors show how this curator compares to{" "}
-          <span className="font-semibold text-text-primary">{profile.peerCount}</span> tracked
-          curators. Green = better than most peers, red = worse. This is relative, not absolute.
-        </p>
-      </div>
-
-      {/* Factor Cards — first 2 always visible */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {profile.factors.slice(0, 2).map((factor) => (
-          <FactorCard key={factor.id} factor={factor} />
+      {/* Dense factor table — one row per peer-ranked factor */}
+      <div className="border border-border rounded-xl bg-background-subtle divide-y divide-border-subtle overflow-hidden">
+        {profile.factors.map((factor) => (
+          <FactorRow key={factor.id} factor={factor} />
         ))}
       </div>
-
-      {/* Remaining cards */}
-      {profile.factors.length > 2 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {profile.factors.slice(2).map((factor) => (
-            <FactorCard key={factor.id} factor={factor} />
-          ))}
-        </div>
-      )}
+      <p className="font-mono text-xs text-text-tertiary">
+        Bars rank this curator against {profile.peerCount} tracked curators — relative,
+        not absolute. Green = better than most peers, red = worse.
+      </p>
 
       {/* Risk Management Track Record */}
       <RiskTrackRecord
-          usrExposure={usrExposure}
-          foundedYear={foundedYear}
-          peerCount={profile.peerCount}
-        />
+        usrExposure={usrExposure}
+        foundedYear={foundedYear}
+        peerCount={profile.peerCount}
+      />
     </div>
   );
 }
@@ -249,14 +235,6 @@ function RiskTrackRecord({
 // FACTOR CARD
 // ============================================================================
 
-const TIER_BORDER_COLOR: Record<string, string> = {
-  top: "border-l-accent-green",
-  "above-avg": "border-l-accent-green",
-  average: "border-l-accent-yellow",
-  "below-avg": "border-l-accent-red",
-  bottom: "border-l-accent-red",
-};
-
 const TIER_TEXT_COLOR: Record<string, string> = {
   top: "text-accent-green",
   "above-avg": "text-accent-green",
@@ -281,59 +259,47 @@ const TIER_LABEL: Record<string, string> = {
   bottom: "Bottom tier",
 };
 
-function FactorCard({ factor }: { factor: RiskFactor }) {
+function FactorRow({ factor }: { factor: RiskFactor }) {
   const { primary, secondary } = getFactorDisplay(factor);
   const tier = factor.peer.tier;
+  const isBadDebtIncident =
+    factor.id === "bad-debt" && factor.incidents.length > 0;
 
   return (
-    <div
-      className={`bg-background-subtle rounded-lg border border-border border-l-4 ${TIER_BORDER_COLOR[tier]} p-5`}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${TIER_BAR_COLOR[tier]}`} />
-          <span className="text-sm font-semibold text-text-primary">{factor.label}</span>
+    <div className="flex items-center gap-4 px-4 py-3 hover:bg-background-hover/40 transition-colors">
+      <span className={`w-1.5 h-1.5 rounded-sm flex-none ${TIER_BAR_COLOR[tier]}`} />
+      <div className="min-w-0 flex-1">
+        <div className="text-sm truncate">
+          <span className="font-medium text-text-primary">{factor.label}</span>
+          <span className="text-text-secondary"> · {primary}</span>
         </div>
-        <span className={`text-xs font-medium ${TIER_TEXT_COLOR[tier]}`}>
-          {TIER_LABEL[tier]}
-        </span>
+        <div className="font-mono text-[0.65rem] text-text-tertiary truncate">
+          {secondary}
+          {isBadDebtIncident && (
+            <>
+              {" — est. exposure, not realized. "}
+              <a
+                href={factor.incidents[0].sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent-blue hover:underline"
+              >
+                {factor.incidents[0].date} ↗
+              </a>
+            </>
+          )}
+        </div>
       </div>
-
-      {/* Values */}
-      <div className="mb-3">
-        <div className="text-lg font-semibold text-text-primary">{primary}</div>
-        <div className="text-xs text-text-tertiary mt-0.5">{secondary}</div>
-        {factor.id === "bad-debt" && factor.incidents.length > 0 && (
-          <div className="text-[10px] text-text-tertiary mt-1 leading-snug">
-            Estimated exposure, not a confirmed realized loss.{" "}
-            <a
-              href={factor.incidents[0].sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-accent-blue hover:underline"
-            >
-              {factor.incidents[0].date} · source ↗
-            </a>
-          </div>
-        )}
-      </div>
-
-      {/* Percentile bar */}
-      <div>
-        <div className="h-1.5 bg-background-elevated rounded-full overflow-hidden">
+      <div className="w-[116px] flex-none">
+        <div className="h-1 bg-background-elevated rounded-full overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all ${TIER_BAR_COLOR[tier]}`}
+            className={`h-full rounded-full ${TIER_BAR_COLOR[tier]}`}
             style={{ width: `${factor.peer.percentile}%` }}
           />
         </div>
-        <div className="flex justify-between mt-1">
-          <span className="text-[10px] text-text-tertiary">
-            {ordinal(factor.peer.percentile)} percentile
-          </span>
-          <span className="text-[10px] text-text-tertiary">
-            among {factor.peer.peerCount} curators
-          </span>
+        <div className="flex justify-between mt-1 font-mono text-[0.58rem] tabular-nums">
+          <span className={TIER_TEXT_COLOR[tier]}>{TIER_LABEL[tier]}</span>
+          <span className="text-text-tertiary">{ordinal(factor.peer.percentile)}</span>
         </div>
       </div>
     </div>
