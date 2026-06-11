@@ -5,6 +5,7 @@
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATORS } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
+import { getAllCuratorRatings } from "@/lib/curator-engine-rating";
 
 export interface AssetDistribution {
   symbol: string;
@@ -30,6 +31,8 @@ export interface CuratorAggregates {
   protocols: string[];
   networks: string[];
   gradeDistribution: { high: number; medium: number; low: number };
+  /** Loss-anchored engine grade; null unless the rating feature is enabled and the curator is rated. */
+  engineRating: { grade: string; elMedian: number } | null;
   dataSources: string[];
   lastActive: Date | null;
   riskScore: "low" | "medium" | "high";
@@ -127,6 +130,14 @@ export async function getPaginatedCuratorAggregates(
   });
   const totalCurators = curators.length;
 
+  // Loss-anchored engine grades, keyed by lowercased curator address. Empty when
+  // the rating feature is off (getAllCuratorRatings returns [] behind the flag),
+  // so this is a no-op until the flag is enabled.
+  const ratingByAddress = new Map<string, { grade: string; elMedian: number }>();
+  for (const r of await getAllCuratorRatings()) {
+    ratingByAddress.set(r.curatorAddress.toLowerCase(), { grade: r.grade, elMedian: r.elMedian });
+  }
+
   // Calculate aggregates
   const aggregates: CuratorAggregates[] = [];
 
@@ -204,6 +215,7 @@ export async function getPaginatedCuratorAggregates(
       protocols: Array.from(protocolSet),
       networks: Array.from(networkSet),
       gradeDistribution,
+      engineRating: ratingByAddress.get(curator.address.toLowerCase()) ?? null,
       dataSources: Array.from(sourceSet),
       lastActive: null,
       riskScore,
@@ -332,6 +344,11 @@ export async function getCuratorAggregates(
   const strategyType: "Conservative" | "Moderate" | "Aggressive" =
     avgNetApy > 0.10 ? "Aggressive" : avgNetApy > 0.05 ? "Moderate" : "Conservative";
 
+  const rating = (await getAllCuratorRatings()).find(
+    (r) => r.curatorAddress.toLowerCase() === curator.address.toLowerCase()
+  );
+  const engineRating = rating ? { grade: rating.grade, elMedian: rating.elMedian } : null;
+
   return {
     curatorId: curator.id,
     curatorAddress: curator.address,
@@ -350,6 +367,7 @@ export async function getCuratorAggregates(
     protocols: Array.from(protocolSet),
     networks: Array.from(networkSet),
     gradeDistribution,
+    engineRating,
     dataSources: Array.from(sourceSet),
     lastActive: null,
     riskScore,

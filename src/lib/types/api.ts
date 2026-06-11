@@ -333,6 +333,8 @@ export interface CuratorDashboardItem {
   protocols: string[];
   networks: string[];
   gradeDistribution: { high: number; medium: number; low: number };
+  /** Loss-anchored engine grade; null unless the rating feature is enabled and the curator is rated. */
+  engineRating: { grade: string; elMedian: number } | null;
   dataSources: string[];
   lastActive: string | null;
   riskScore: "low" | "medium" | "high";

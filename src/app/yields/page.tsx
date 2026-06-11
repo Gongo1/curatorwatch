@@ -3,6 +3,7 @@ import Link from "next/link";
 import { fetchAllDashboardData } from "@/lib/dashboard-queries";
 import { ApyDistViz } from "@/components/ApyDistViz";
 import { formatCurrency } from "@/lib/utils/format";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 // ISR aligned to the ingestion cadence, like the home page: the cron
 // revalidates this path on completion; 6h is the fallback ceiling.
@@ -110,7 +111,7 @@ export default async function YieldsPage() {
                 {i + 1}
               </span>
               <Link
-                href={`/curator/${r.address}`}
+                href={`/curator/${curatorSlug(r.name, r.address)}`}
                 className="text-sm text-text-primary hover:text-accent-blue transition-colors truncate font-medium"
                 title={r.name}
               >

@@ -123,17 +123,33 @@ export async function resolveCuratorSlug(slug: string): Promise<string> {
   // Lazy-import prisma to avoid circular deps in non-server contexts
   const { prisma } = await import("@/lib/db");
   const curators = await prisma.curator.findMany({
-    select: { address: true, name: true },
+    select: { address: true, name: true, _count: { select: { vaults: true } } },
   });
 
-  const match = curators.find(
-    (c) => c.name && curatorSlug(c.name, c.address) === slug.toLowerCase()
+  const target = slug.toLowerCase();
+  const matches = curators.filter(
+    (c) => c.name && curatorSlug(c.name, c.address) === target
   );
 
-  if (match) return match.address.toLowerCase();
+  if (matches.length === 0) {
+    // No match — return the slug as-is (will 404 downstream)
+    return target;
+  }
 
-  // No match — return the slug as-is (will 404 downstream)
-  return slug.toLowerCase();
+  // Collision-safe: distinct curators can slugify to the same value (e.g. two
+  // "KPK" rows before a merge, or a visible curator sharing a name with a hidden
+  // 0-vault row). Prefer the curator the directory actually shows — vault-bearing,
+  // then most vaults — with address as a deterministic final tie-break so the same
+  // slug always resolves to the same curator.
+  matches.sort((a, b) => {
+    const aHas = a._count.vaults > 0 ? 1 : 0;
+    const bHas = b._count.vaults > 0 ? 1 : 0;
+    if (aHas !== bHas) return bHas - aHas;
+    if (a._count.vaults !== b._count.vaults) return b._count.vaults - a._count.vaults;
+    return a.address.toLowerCase() < b.address.toLowerCase() ? -1 : 1;
+  });
+
+  return matches[0].address.toLowerCase();
 }
 
 /** Pre-built lookup: alias address -> primary address */

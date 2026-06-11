@@ -62,6 +62,7 @@ export async function fetchAllDashboardData(params: {
           protocols: c.protocols,
           networks: c.networks,
           gradeDistribution: c.gradeDistribution,
+          engineRating: c.engineRating,
           dataSources: c.dataSources,
           lastActive: c.lastActive?.toISOString() ?? null,
           riskScore: c.riskScore,

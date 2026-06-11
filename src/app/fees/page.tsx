@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { fetchFeesOverview } from "@/lib/lens-overviews";
 import { formatCurrency } from "@/lib/utils/format";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 // ISR aligned to the ingestion cadence, like /yields.
 export const revalidate = 21600;
@@ -104,7 +105,7 @@ export default async function FeesPage() {
             >
               <span className="font-mono text-xs text-text-tertiary tabular-nums">{i + 1}</span>
               <Link
-                href={`/curator/${r.address}`}
+                href={`/curator/${curatorSlug(r.name, r.address)}`}
                 className="text-sm text-text-primary hover:text-accent-blue transition-colors truncate font-medium"
                 title={r.name}
               >

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Search } from "lucide-react";
 import type { CuratorDashboardItem } from "@/lib/types/api";
 import { formatCurrency } from "@/lib/utils/format";
+import { curatorSlug } from "@/lib/curator-aliases";
+import { gradeColor, GRADE_BLURB } from "@/lib/grade-style";
 
 function initials(name: string): string {
   return name
@@ -151,7 +153,7 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
           return (
             <Link
               key={c.curatorId}
-              href={`/curator/${c.curatorAddress}`}
+              href={`/curator/${curatorSlug(c.name, c.curatorAddress)}`}
               className="grid grid-cols-[34px_1fr_150px_96px_132px] gap-4 items-center px-3 py-3 border-t border-border-subtle hover:bg-background-subtle active:translate-y-px transition-colors group"
             >
               <span className="font-mono text-sm text-text-tertiary text-right tabular-nums">
@@ -176,8 +178,18 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
                   )}
                 </span>
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
-                    {name}
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
+                      {name}
+                    </span>
+                    {c.engineRating && (
+                      <span
+                        title={GRADE_BLURB[c.engineRating.grade]}
+                        className={`flex-none inline-flex items-center justify-center rounded border px-1.5 py-px font-mono text-[10px] font-semibold ${gradeColor(c.engineRating.grade)}`}
+                      >
+                        {c.engineRating.grade}
+                      </span>
+                    )}
                   </div>
                   {c.jurisdiction && (
                     <div className="font-mono text-xs text-text-tertiary mt-0.5 truncate">
