@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData } from "@/scripts/collect-data";
 import { updateVaultGrades } from "@/scripts/update-vault-grades";
+import { importRatingsData } from "@/scripts/import-risk-engine-ratings";
+import { ratingsData } from "@/lib/risk-engine-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
 
 export const maxDuration = 800; // Pro plan allows up to 900s
@@ -57,6 +59,15 @@ export async function GET(request: NextRequest) {
       console.log("[CRON] Vault grades updated:", gradeResult);
     } catch (gradeError) {
       console.error("[CRON] Vault grade update failed (non-fatal):", gradeError);
+    }
+
+    // Refresh the loss-anchored EL ratings from the bundled engine output
+    // (idempotent upsert; refreshes when a new ratings.json is deployed).
+    try {
+      const r = await importRatingsData(ratingsData);
+      console.log("[CRON] EL ratings imported:", { curators: r.curators, vaults: r.vaults, matched: r.matched });
+    } catch (ratingError) {
+      console.error("[CRON] EL rating import failed (non-fatal):", ratingError);
     }
 
     revalidateDataPages();

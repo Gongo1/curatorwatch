@@ -63,6 +63,24 @@ export const getVaultEngineRatings = cache(
   },
 );
 
+/** Single-vault EL grade (for the vault detail page + deposit drawer). */
+export const getVaultEngineRating = cache(
+  async (chainId: number, address: string): Promise<VaultEngineRating | null> => {
+    if (!RISK_GRADES_ENABLED) return null;
+    const row = await prisma.vaultRating.findUnique({
+      where: { vaultKey: `${chainId}:${address.toLowerCase()}` },
+    });
+    if (!row) return null;
+    return {
+      grade: row.grade,
+      elMedian: row.elMedian,
+      elCi: [row.elCiLow, row.elCiHigh],
+      pdAnnualMedian: row.pdAnnualMedian,
+      lgdMedian: row.lgdMedian,
+    };
+  },
+);
+
 export const getCuratorEngineRating = cache(
   async (curatorAddress: string): Promise<CuratorEngineRating | null> => {
     if (!RISK_GRADES_ENABLED) return null;

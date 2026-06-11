@@ -81,6 +81,10 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
   const showElGrade = !!vaultRatings && Object.keys(vaultRatings).length > 0;
   const elRatingOf = (v: CuratorVaultSummary) =>
     vaultRatings?.[`${v.chainId}:${v.address.toLowerCase()}`] ?? null;
+  const elDealGrade = (v: CuratorVaultSummary) => {
+    const r = elRatingOf(v);
+    return r ? { grade: r.grade, el: r.elMedian } : null;
+  };
   const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
   const grade = { high: 0, medium: 0, low: 0 };
   const assetMap: Record<string, number> = {};
@@ -140,6 +144,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
           chainName: v.chainName,
           estApr: v.dealEstApr ?? null,
           tvl: tvlOf(v),
+          elGrade: elDealGrade(v),
         }))
         .sort((a, b) => (b.tvl ?? 0) - (a.tvl ?? 0))
     : [];
@@ -382,6 +387,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
                                 chainName: v.chainName,
                                 estApr: v.dealEstApr,
                                 tvl: tvlOf(v),
+                                elGrade: elDealGrade(v),
                               },
                             ])
                           }

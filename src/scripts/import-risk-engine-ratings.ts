@@ -45,10 +45,17 @@ interface RatingsFile {
   vaults: EngineVault[];
 }
 
+/** Read the ratings JSON from disk (CLI / local). The cron passes parsed data to
+ *  importRatingsData() directly via a bundled import (Vercel-safe — no runtime fs). */
 export async function importRiskEngineRatings(
   path = join(process.cwd(), "data", "risk-engine", "ratings.json"),
+) {
+  return importRatingsData(JSON.parse(readFileSync(path, "utf-8")) as RatingsFile);
+}
+
+export async function importRatingsData(
+  data: RatingsFile,
 ): Promise<{ curators: number; vaults: number; matched: number; unmatched: string[] }> {
-  const data: RatingsFile = JSON.parse(readFileSync(path, "utf-8"));
   const generatedAt = new Date(data.generated_at);
 
   // site curator addresses for the join

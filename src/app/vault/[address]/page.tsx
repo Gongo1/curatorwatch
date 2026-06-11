@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { fetchVaultDetail } from "@/lib/vault-detail";
+import { getVaultEngineRating } from "@/lib/curator-engine-rating";
 import { formatCurrency } from "@/lib/utils/format";
 import { VaultDetailView } from "./vault-client";
 
@@ -78,5 +79,7 @@ export default async function VaultDetailPage({ params }: PageProps) {
     );
   }
 
-  return <VaultDetailView address={address} vault={vault} />;
+  const engineRating = await getVaultEngineRating(vault.chainId, vault.address);
+
+  return <VaultDetailView address={address} vault={vault} engineRating={engineRating} />;
 }
