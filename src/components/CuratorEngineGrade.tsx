@@ -1,4 +1,5 @@
 import type { CuratorEngineRating } from "@/lib/curator-engine-rating";
+import { GRADE_BLURB } from "@/lib/grade-style";
 
 // Loss-anchored grade (A+…E) → colour. Lower expected loss = safer = greener.
 const GRADE_STYLE: Record<string, string> = {
@@ -54,7 +55,9 @@ export function CuratorEngineGrade({ rating }: { rating: CuratorEngineRating }) 
             <p className="mt-1.5 text-xs text-text-secondary">
               Not rated — live book below the materiality threshold. Expected loss still shown below.
             </p>
-          ) : null}
+          ) : (
+            <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">{GRADE_BLURB[rating.grade]}</p>
+          )}
           <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-3">
             <Metric label="Expected loss / yr" value={bps(rating.elMedian)}
               sub={`90% CI ${bps(rating.elCi[0])}–${bps(rating.elCi[1])}`} />

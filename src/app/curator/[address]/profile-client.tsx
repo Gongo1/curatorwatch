@@ -15,7 +15,7 @@ const DealDepositDrawer = dynamic(
   { ssr: false }
 );
 import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
-import { CuratorRatingCard } from "@/components/CuratorRatingCard";
+import { CuratorEngineGrade } from "@/components/CuratorEngineGrade";
 import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
 import type { CuratorEngineRating, VaultEngineRating } from "@/lib/curator-engine-rating";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
@@ -185,8 +185,8 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
         <span className="text-text-secondary">{name}</span>
       </div>
 
-      {/* ── Trust masthead ── */}
-      <header className="grid lg:grid-cols-[1.2fr_1fr] gap-8 items-start mb-8">
+      {/* ── Trust masthead: identity (full width) ── */}
+      <header className="mb-6">
         <div>
           <div className="flex gap-4 items-start">
             <div className="relative w-14 h-14 rounded-[13px] flex-none bg-background-elevated border border-border grid place-items-center overflow-hidden font-display font-extrabold text-xl text-accent-blue">
@@ -240,9 +240,10 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
             </div>
           </div>
         </div>
+      </header>
 
-        {/* verdict (TVL) + CuratorWatch Rating, side by side at the top */}
-        <div className={engineRating ? "grid lg:grid-cols-2 gap-4" : ""}>
+      {/* ── Verdict: TVL + CuratorWatch Rating, breathing side by side at full width ── */}
+      <div className={engineRating ? "grid lg:grid-cols-2 gap-5 items-start mb-8" : "max-w-md mb-8"}>
         <div className="border border-border rounded-2xl bg-background-subtle p-5">
           <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">Total value locked</div>
           <div className="font-mono font-semibold text-3xl tracking-tight tabular-nums mt-0.5 mb-3">
@@ -286,9 +287,8 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
             <Fact k="Annual yield" v={formatCurrency(derived.annualYield)} />
           </div>
         </div>
-        {engineRating ? <CuratorRatingCard rating={engineRating} /> : null}
-        </div>
-      </header>
+        {engineRating ? <CuratorEngineGrade rating={engineRating} /> : null}
+      </div>
 
       <p className="font-mono text-xs text-text-tertiary leading-relaxed max-w-[720px] mb-2">
         A curator is the risk team behind these vaults — they choose markets, set exposure caps,
