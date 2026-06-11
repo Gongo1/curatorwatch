@@ -72,6 +72,16 @@ export const CURATOR_ALIAS_GROUPS: CuratorAliasGroup[] = [
       "0x0000000000000000000000000000000000000000",
     ],
   },
+  {
+    // Two Ethereum Morpho "Mainstreet USDC" vaults under different on-chain owner
+    // addresses fragmented into two same-named curator rows (slug collision on
+    // "mainstreet"). Merged 2026-06-11; archive/mainstreet-dedup-2026-06-11.json.
+    curatorName: "Mainstreet",
+    primaryAddress: "0xdc47b44e97806e22166a5710e3a60f92c0c9e085",
+    aliasAddresses: [
+      "0x66500ec135e4213f129a18da4618339317ec2087",
+    ],
+  },
 ];
 
 /**

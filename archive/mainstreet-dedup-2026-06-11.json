@@ -1,0 +1,36 @@
+{
+  "archivedReason": "Mainstreet dedup - two brand-fragmented rows merged into canonical 0xdc47b44e. The dup 0x66500ec (created 2026-06-09) is a second Ethereum Morpho 'Mainstreet USDC' (msUSDC) vault under a different on-chain owner address. Same brand; collapsed to remove the name-slug collision (both slugified to 'mainstreet'). Reversible: recreate the dup Curator row with the fields below, repoint vault 0xe3Ba8f17 back to it, restore the 8 CuratorSnapshots, and remove the curator-aliases.ts alias entry.",
+  "primaryCuratorId": "cmpodfhc9008fju04oh0lpjtn",
+  "primaryCuratorAddress": "0xdc47b44e97806e22166a5710e3a60f92c0c9e085",
+  "dupCurator": {
+    "id": "cmq6y8w8u007njx048y7wafv0",
+    "address": "0x66500ec135e4213f129a18da4618339317ec2087",
+    "name": "Mainstreet",
+    "totalAssetsManaged": 2499687.41561814,
+    "vaultCount": 1,
+    "createdAt": "2026-06-09T18:04:29.886",
+    "updatedAt": "2026-06-11T12:08:46.758"
+  },
+  "dupVault": {
+    "id": "cmq6y8wzr007pjx04y3krpcz0",
+    "address": "0xe3Ba8f17fe581DD473E6699CFaD04502998a57c7",
+    "name": "Mainstreet USDC",
+    "symbol": "msUSDC",
+    "chainId": 1,
+    "assetSymbol": "USDC",
+    "curatorAddress": "0x66500eC135e4213F129A18Da4618339317EC2087",
+    "previousCuratorId": "cmq6y8w8u007njx048y7wafv0",
+    "grade": "low-grade",
+    "dataSource": "morpho"
+  },
+  "dupCuratorSnapshotIds": [
+    "cmq6ygjhy00hwjx04ygdp2xtf",
+    "cmq7ba17c00hei804e3sft53d",
+    "cmq7o779y00hkl804gvpdxcta",
+    "cmq811t3i00hnkz04mqzhcmpo",
+    "cmq8dwg9h00htju04neltybrr",
+    "cmq8qq56w00hgjo046tg4t9ab",
+    "cmq93o62j00hfl104h8pd7vkk",
+    "cmq9gi1ux00hfkz04n0b559kv"
+  ]
+}
