@@ -39,7 +39,7 @@ function initials(name: string): string {
     .join("")
     .toUpperCase();
 }
-type VSortKey = "name" | "asset" | "protocol" | "grade" | "tvl" | "apy" | "fee";
+type VSortKey = "name" | "asset" | "protocol" | "el" | "tvl" | "apy" | "fee";
 
 // Deal links route into /deposit, which 404s unless the flag is on.
 const DEPOSIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TURTLE_DEPOSIT === "true";
@@ -69,16 +69,6 @@ const netApyOf = (v: CuratorVaultSummary): number => {
 const tvlOf = (v: CuratorVaultSummary): number => v.latestSnapshot?.totalAssetsUsd ?? 0;
 const gradeKey = (g: string | null): "high" | "medium" | "low" | null =>
   g === "high-grade" ? "high" : g === "medium-grade" ? "medium" : g === "low-grade" ? "low" : null;
-const GRADE_DOT: Record<string, string> = {
-  high: "bg-accent-green",
-  medium: "bg-accent-yellow",
-  low: "bg-accent-red",
-};
-const GRADE_TEXT: Record<string, string> = {
-  high: "text-accent-green",
-  medium: "text-accent-yellow",
-  low: "text-accent-red",
-};
 
 interface CuratorProfileViewProps {
   data: CuratorDetailResponse["data"];
@@ -92,8 +82,6 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
   const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
 
   const { vaults } = data;
-  // EL-grade column shows only when the flag is on AND ratings exist for this curator.
-  const showElGrade = !!vaultRatings && Object.keys(vaultRatings).length > 0;
   const elRatingOf = (v: CuratorVaultSummary) =>
     vaultRatings?.[`${v.chainId}:${v.address.toLowerCase()}`] ?? null;
   const elDealGrade = (v: CuratorVaultSummary) => {
@@ -217,9 +205,10 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
     if (vsort.k === "name") return a.name.toLowerCase() < b.name.toLowerCase() ? -dir : dir;
     if (vsort.k === "asset") return a.asset.symbol < b.asset.symbol ? -dir : dir;
     if (vsort.k === "protocol") return (a.protocol || "") < (b.protocol || "") ? -dir : dir;
-    if (vsort.k === "grade") {
-      const rank = (v: CuratorVaultSummary) => ({ high: 3, medium: 2, low: 1 }[gradeKey(v.grade) || "low"] || 0);
-      return (rank(a) - rank(b)) * dir;
+    if (vsort.k === "el") {
+      // Lower expected loss = better; unrated vaults sort last.
+      const el = (v: CuratorVaultSummary) => elRatingOf(v)?.elMedian ?? Number.POSITIVE_INFINITY;
+      return (el(a) - el(b)) * dir;
     }
     if (vsort.k === "fee") return ((a.performanceFee ?? 0) - (b.performanceFee ?? 0)) * dir;
     if (vsort.k === "apy") return (netApyOf(a) - netApyOf(b)) * dir;
@@ -373,7 +362,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
       </Section>
 
       {/* ── Vaults managed ── */}
-      <Section title="Vaults managed" meta="sortable — grade · fees · live deals">
+      <Section title="Vaults managed" meta="sortable — EL grade · fees · live deals">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[520px]">
             <thead>
@@ -381,12 +370,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
                 <VTh k="name" sort={vsort} onSort={onVSort} className="text-left">Vault</VTh>
                 <VTh k="asset" sort={vsort} onSort={onVSort} className="text-left">Asset</VTh>
                 <VTh k="protocol" sort={vsort} onSort={onVSort} className="text-left">Protocol</VTh>
-                <VTh k="grade" sort={vsort} onSort={onVSort} className="text-left">Grade</VTh>
-                {showElGrade ? (
-                  <th className="font-mono text-[0.62rem] uppercase tracking-[0.1em] font-medium pb-3 px-3 text-left text-text-tertiary">
-                    EL grade
-                  </th>
-                ) : null}
+                <VTh k="el" sort={vsort} onSort={onVSort} className="text-left">EL grade</VTh>
                 <VTh k="tvl" sort={vsort} onSort={onVSort} className="text-right">TVL</VTh>
                 <VTh k="apy" sort={vsort} onSort={onVSort} className="text-right">Net APY</VTh>
                 <VTh k="fee" sort={vsort} onSort={onVSort} className="text-right">Perf fee</VTh>
@@ -395,7 +379,6 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
             </thead>
             <tbody>
               {sortedVaults.map((v) => {
-                const gk = gradeKey(v.grade);
                 return (
                   <tr key={v.id} className="border-t border-border-subtle hover:bg-background-subtle transition-colors group">
                     <td className="py-3 px-3">
@@ -407,19 +390,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
                     <td className="py-3 px-3">
                       <span className="font-mono text-xs text-text-secondary capitalize">{v.protocol || "—"}</span>
                     </td>
-                    <td className="py-3 px-3">
-                      {gk ? (
-                        <span className={`font-mono text-xs inline-flex items-center gap-1.5 ${GRADE_TEXT[gk]}`}>
-                          <span className={`w-1.5 h-1.5 rounded-sm ${GRADE_DOT[gk]}`} />
-                          {gk[0].toUpperCase() + gk.slice(1)}
-                        </span>
-                      ) : (
-                        <span className="font-mono text-xs text-text-tertiary">—</span>
-                      )}
-                    </td>
-                    {showElGrade ? (
-                      <td className="py-3 px-3"><VaultEngineGradeBadge rating={elRatingOf(v)} /></td>
-                    ) : null}
+                    <td className="py-3 px-3"><VaultEngineGradeBadge rating={elRatingOf(v)} /></td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{formatCurrency(tvlOf(v))}</td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{netApyOf(v) > 0 ? `${(netApyOf(v) * 100).toFixed(2)}%` : "—"}</td>
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums text-text-secondary">
@@ -447,10 +418,13 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
             </tbody>
           </table>
         </div>
-        <p className="font-mono text-xs text-text-tertiary mt-4">
-          Grade is source-derived per vault (10-requirement model). Click a vault for its full breakdown.
-          Deal links open the deposit flow for vaults this curator currently offers through Turtle; TVL
-          and APR are pulled live from the opportunity.
+        <p className="font-mono text-xs text-text-tertiary mt-4 leading-relaxed">
+          <span className="text-text-secondary">EL grade</span> is the vault&rsquo;s Expected-Loss rating from
+          CuratorWatch&rsquo;s loss-anchored model — the annual loss an LP should expect (probability of loss
+          &times; severity), graded A+ (lowest expected loss) through E. Hover a grade for the modeled bps/yr
+          and confidence interval; &ldquo;&mdash;&rdquo; means not yet rated. Deal links open the deposit flow
+          for vaults this curator currently offers through Turtle, with TVL and APR pulled live from the
+          opportunity.
         </p>
       </Section>
 
