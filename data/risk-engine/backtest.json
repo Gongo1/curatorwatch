@@ -6,11 +6,11 @@
   "test_vault_months": 2456,
   "test_events": 7,
   "auc": 0.713,
-  "top_quartile_lift": 2.84,
+  "top_quartile_lift": 2.26,
   "brier": 0.00285,
   "divergences": 0,
-  "max_rhat": 1.005,
+  "max_rhat": 1.006,
   "panel_vault_months": 4497,
   "methodology_version": "v1 (curatorwatch-risk-methodology-v1.md)",
-  "generated_at": "2026-06-11"
+  "generated_at": "2026-06-15"
 }
