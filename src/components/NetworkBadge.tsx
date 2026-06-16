@@ -15,6 +15,18 @@ const NETWORK_STYLES: Record<string, { bg: string; text: string; label: string }
   "bnb chain": { bg: "bg-yellow-500/15 border-yellow-500/30", text: "text-yellow-400", label: "BNB Chain" },
   monad: { bg: "bg-indigo-500/15 border-indigo-500/30", text: "text-indigo-400", label: "Monad" },
   plasma: { bg: "bg-teal-500/15 border-teal-500/30", text: "text-teal-400", label: "Plasma" },
+  unichain: { bg: "bg-pink-500/15 border-pink-500/30", text: "text-pink-400", label: "Unichain" },
+  berachain: { bg: "bg-orange-500/15 border-orange-500/30", text: "text-orange-400", label: "Berachain" },
+  hyperevm: { bg: "bg-emerald-500/15 border-emerald-500/30", text: "text-emerald-400", label: "HyperEVM" },
+  tac: { bg: "bg-cyan-500/15 border-cyan-500/30", text: "text-cyan-400", label: "TAC" },
+  linea: { bg: "bg-slate-400/15 border-slate-400/30", text: "text-slate-300", label: "Linea" },
+  gnosis: { bg: "bg-green-500/15 border-green-500/30", text: "text-green-400", label: "Gnosis" },
+  sonic: { bg: "bg-amber-400/15 border-amber-400/30", text: "text-amber-300", label: "Sonic" },
+  mantle: { bg: "bg-stone-500/15 border-stone-500/30", text: "text-stone-300", label: "Mantle" },
+  ink: { bg: "bg-violet-500/15 border-violet-500/30", text: "text-violet-400", label: "Ink" },
+  swell: { bg: "bg-sky-500/15 border-sky-500/30", text: "text-sky-400", label: "Swell" },
+  metis: { bg: "bg-teal-400/15 border-teal-400/30", text: "text-teal-300", label: "Metis" },
+  "x layer": { bg: "bg-zinc-500/15 border-zinc-500/30", text: "text-zinc-300", label: "X Layer" },
 };
 
 const DEFAULT_STYLE = { bg: "bg-gray-500/15 border-gray-500/30", text: "text-gray-400" };

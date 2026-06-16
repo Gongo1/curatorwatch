@@ -13,7 +13,7 @@ import { prisma } from "../lib/db";
 import { fetchTurtleOpportunities } from "../lib/turtle/client";
 import { extractProtocol } from "../lib/turtle/protocol-extractor";
 import { matchCurator } from "../lib/turtle/curator-matcher";
-import { getChainId, getChainName } from "../lib/turtle/chain-mapper";
+import { resolveChainId, canonicalChainName } from "../lib/turtle/chain-mapper";
 import type { TurtleOpportunity } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 100_000; // $100K dust floor
@@ -84,13 +84,22 @@ async function upsertTurtleVault(
   try {
     const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
 
-    // Extract chain info from deposit tokens
-    const chainSlug =
-      opp.depositTokens?.[0]?.chain?.slug ??
-      opp.chain?.slug ??
-      "ethereum";
-    const chainId = getChainId(chainSlug);
-    const chainName = getChainName(chainSlug);
+    // Extract chain info. Prefer Turtle's authoritative numeric chainId (present on
+    // every chain object) over the slug→id map, so chains we haven't enumerated are
+    // never silently mislabeled as Ethereum (chainId 1). Skip + log if neither resolves.
+    const chainObj = opp.depositTokens?.[0]?.chain ?? opp.chain;
+    const chainSlug = (chainObj?.slug ?? "ethereum").toLowerCase();
+    const chainId = resolveChainId(chainObj?.chainId, chainSlug);
+    if (chainId === null) {
+      return {
+        upserted: false,
+        matched: false,
+        skipped: true,
+        curatorName: opp.curator?.name ?? opp.name,
+        error: `unknown chain (no numeric id, unmapped slug "${chainSlug}")`,
+      };
+    }
+    const chainName = canonicalChainName(chainId, chainSlug);
 
     // Extract asset info from deposit tokens
     const depositToken = opp.depositTokens?.[0];
@@ -132,6 +141,7 @@ async function upsertTurtleVault(
       curatorId,
       dataSource: "turtle" as const,
       opportunityType: opp.type,
+      chainId,
       chainName,
       estTotalAPR,
       netAPR: estTotalAPR,
@@ -151,7 +161,6 @@ async function upsertTurtleVault(
       create: {
         address: syntheticAddress,
         symbol: assetSymbol,
-        chainId,
         assetAddress,
         assetSymbol,
         assetDecimals,

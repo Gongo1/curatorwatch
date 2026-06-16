@@ -19,6 +19,21 @@ const CHAIN_MAP: Record<string, { id: number; name: string }> = {
   mode: { id: 34443, name: "Mode" },
   sei: { id: 1329, name: "Sei" },
   sonic: { id: 146, name: "Sonic" },
+  // Chains Turtle returns that were previously unmapped — ids verified against the
+  // live Turtle feed (earn.turtle.xyz/v1/opportunities, which carries an explicit
+  // numeric chainId per chain) and cross-checked against the risk engine's data.
+  monad: { id: 143, name: "Monad" },
+  plasma: { id: 9745, name: "Plasma" },
+  katana: { id: 747474, name: "Katana" },
+  unichain: { id: 130, name: "Unichain" },
+  berachain: { id: 80094, name: "Berachain" },
+  hyperevm: { id: 999, name: "HyperEVM" },
+  tac: { id: 239, name: "TAC" },
+  ink: { id: 57073, name: "Ink" },
+  swell: { id: 1923, name: "Swell" },
+  metis: { id: 1088, name: "Metis" },
+  pharos: { id: 1672, name: "Pharos" },
+  xlayer: { id: 196, name: "X Layer" },
 };
 
 export function getChainId(slug: string): number {
@@ -54,4 +69,35 @@ export function prettyChainName(
     return byId === "Unknown" ? null : byId;
   }
   return null;
+}
+
+/**
+ * Resolve a numeric chainId for an ingested vault. Prefers the source's explicit
+ * numeric chainId (Turtle puts one on every chain object), falling back to the
+ * slug→id map. Returns null when neither resolves — callers should skip + log the
+ * vault rather than silently mislabel it as Ethereum (chainId 1), which was the
+ * root cause of ~60 non-Ethereum vaults collapsing onto mainnet.
+ */
+export function resolveChainId(
+  rawChainId: unknown,
+  slug?: string | null
+): number | null {
+  const n = rawChainId != null ? Number(rawChainId) : NaN;
+  if (Number.isFinite(n) && n > 0) return n;
+  const bySlug = slug ? CHAIN_MAP[slug.toLowerCase()]?.id : undefined;
+  return bySlug ?? null;
+}
+
+/**
+ * Canonical, display-ready chain name for storage. Resolves the registry name by
+ * chainId; if the id is unknown, Title-cases the slug so we never store a raw
+ * lowercase value. Use this at INGESTION so chainName is always canonical
+ * (TitleCase) and read sites can group by it without casing dupes.
+ */
+export function canonicalChainName(chainId: number, fallbackSlug?: string | null): string {
+  const byId = getChainNameById(chainId);
+  if (byId !== "Unknown") return byId;
+  const s = fallbackSlug?.trim();
+  if (s) return s === s.toLowerCase() ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  return "Unknown";
 }
