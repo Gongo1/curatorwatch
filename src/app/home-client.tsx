@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { CuratorIndex } from "@/components/curators/CuratorIndex";
 import { ApyDistViz, type ApyDistribution } from "@/components/ApyDistViz";
 import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
+import { isStablecoin } from "@/lib/utils/asset-class";
 
 export type { ApyDistribution };
 
@@ -75,7 +76,7 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
     const top = sorted.slice(0, 6);
     const otherAmt = sorted.slice(6).reduce((s, [, v]) => s + v, 0);
     const stableAmt = sorted
-      .filter(([s]) => !/eth|btc/i.test(s))
+      .filter(([s]) => isStablecoin(s))
       .reduce((s, [, v]) => s + v, 0);
     const segments = [
       ...top.map(([symbol, amount]) => ({ symbol, pct: total ? (amount / total) * 100 : 0 })),

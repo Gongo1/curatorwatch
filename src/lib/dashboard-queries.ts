@@ -59,6 +59,7 @@ export async function fetchAllDashboardData(params: {
           avgApy: c.avgApy,
           avgNetApy: c.avgNetApy,
           assetDistribution: c.assetDistribution,
+          stablePct: c.stablePct,
           protocols: c.protocols,
           networks: c.networks,
           gradeDistribution: c.gradeDistribution,

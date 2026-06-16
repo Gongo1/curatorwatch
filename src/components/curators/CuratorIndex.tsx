@@ -19,10 +19,16 @@ function initials(name: string): string {
 }
 
 type SortKey = "name" | "grade" | "vaults" | "tvl";
-type SrcFilter = "all" | "regulated";
+type SrcFilter = "all" | "regulated" | "stable";
+
+// A curator counts as "stablecoin-focused" when >= this share of its AUM is in
+// stablecoins (per the canonical classifier). Captures the monoline/niche-house
+// archetypes from the stablecoin-landscape research; tunable.
+const STABLE_FOCUS_THRESHOLD = 90;
 
 const CHIPS: { key: SrcFilter; label: string }[] = [
   { key: "all", label: "All" },
+  { key: "stable", label: "Stablecoin focus" },
   { key: "regulated", label: "Has jurisdiction" },
 ];
 
@@ -40,6 +46,7 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
     const list = curators.filter((c) => {
       if (q && !(c.name || "").toLowerCase().includes(q)) return false;
       if (filterSrc === "regulated") return !!c.jurisdiction;
+      if (filterSrc === "stable") return c.stablePct >= STABLE_FOCUS_THRESHOLD;
       return true;
     });
     return [...list].sort((a, b) => {

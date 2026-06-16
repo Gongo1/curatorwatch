@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATORS } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 import { getAllCuratorRatings } from "@/lib/curator-engine-rating";
+import { stablecoinSharePct } from "@/lib/utils/asset-class";
 
 export interface AssetDistribution {
   symbol: string;
@@ -28,6 +29,8 @@ export interface CuratorAggregates {
   avgApy: number;
   avgNetApy: number;
   assetDistribution: AssetDistribution[];
+  /** Stablecoin share of this curator's AUM (0–100), per the canonical classifier. */
+  stablePct: number;
   protocols: string[];
   networks: string[];
   gradeDistribution: { high: number; medium: number; low: number };
@@ -212,6 +215,7 @@ export async function getPaginatedCuratorAggregates(
       avgApy,
       avgNetApy,
       assetDistribution,
+      stablePct: stablecoinSharePct(assetDistribution),
       protocols: Array.from(protocolSet),
       networks: Array.from(networkSet),
       gradeDistribution,
@@ -364,6 +368,7 @@ export async function getCuratorAggregates(
     avgApy,
     avgNetApy,
     assetDistribution,
+    stablePct: stablecoinSharePct(assetDistribution),
     protocols: Array.from(protocolSet),
     networks: Array.from(networkSet),
     gradeDistribution,

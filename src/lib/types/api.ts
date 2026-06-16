@@ -331,6 +331,8 @@ export interface CuratorDashboardItem {
   avgApy: number;
   avgNetApy: number;
   assetDistribution: AssetDistribution[];
+  /** Stablecoin share of this curator's AUM (0–100). */
+  stablePct: number;
   protocols: string[];
   networks: string[];
   gradeDistribution: { high: number; medium: number; low: number };
