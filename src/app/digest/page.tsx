@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Rss } from "lucide-react";
 import { getLatestDigest, getRecentDigests } from "@/lib/digest/read";
 import { DigestView } from "./DigestView";
+import { PersonalDigestPanel } from "./PersonalDigestPanel";
 import type { DigestData } from "@/lib/digest/types";
 
 // ISR aligned to ingestion; the digest cron revalidates /digest on completion.
@@ -47,6 +48,8 @@ export default async function DigestPage() {
         generatedBy={latest.generatedBy}
         data={data}
       />
+
+      <PersonalDigestPanel data={data} />
 
       <div className="mt-8 flex items-center gap-4 flex-wrap">
         <Link href="/feed/digest.xml" className="inline-flex items-center gap-2 font-mono text-xs text-accent-blue">
