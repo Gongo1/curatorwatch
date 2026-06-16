@@ -15,7 +15,9 @@ export default async function Page() {
 
   return (
     <CuratorsHome
-      curators={data.curators.data.curators}
+      // Drop the per-vault array from the home payload — only /compare reads it (via
+      // /api/dashboard). Keeps the highest-traffic page's RSC payload slim.
+      curators={data.curators.data.curators.map((c) => ({ ...c, vaults: [] }))}
       stats={data.curators.data.stats}
       apyDist={data.apyDistribution ?? null}
     />

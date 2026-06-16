@@ -18,9 +18,12 @@ import type { TurtleOpportunity } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 100_000; // $100K dust floor
 
-/** Testnet chains — balances here are not real TVL and must never be counted. */
+/** Testnet chains — balances here are not real TVL and must never be counted.
+ * NOTE: "pharos" is a real MAINNET in the live Turtle feed (chainId 1672, active —
+ * e.g. Axil's ~$8.4M of vaults), not a testnet; it must NOT be denylisted. A future
+ * Pharos testnet would carry a distinct slug. */
 const TESTNET_CHAINS = new Set([
-  "sepolia", "pharos", "goerli", "holesky", "fuji", "mumbai",
+  "sepolia", "goerli", "holesky", "fuji", "mumbai",
 ]);
 
 export interface TurtleCollectionResult {

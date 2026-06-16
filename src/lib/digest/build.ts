@@ -58,9 +58,12 @@ export async function buildDigest(now: Date): Promise<DigestData> {
   const flows: DigestFlowItem[] = [];
   let baselineTvl = 0;
   for (const [curatorId, { first, last }] of byCur) {
-    baselineTvl += first;
     const c = curById.get(curatorId);
     if (!c) continue; // excluded / synthetic — not in the public directory
+    // Denominator (baselineTvl) and numerator (flows) must range over the SAME set:
+    // directory curators only. Synthetic/excluded rows still get CuratorSnapshots, so
+    // counting their baseline here would bias netFlowPct + the stress flow score low.
+    baselineTvl += first;
     const deltaUsd = last - first;
     if (Math.abs(deltaUsd) < 1) continue;
     flows.push({
@@ -172,9 +175,18 @@ export async function buildDigest(now: Date): Promise<DigestData> {
   const topCurators: { curator: string; seizedUsd: number }[] = [];
   if (liqs.length) {
     const marketKeys = [...new Set(liqs.map((l) => l.marketUniqueKey))];
+    // MarketAllocation is an append-only time-series and a market can be held by many
+    // vaults/curators. Attribute each market deterministically to the LARGEST supplier in
+    // its MOST RECENT allocation snapshot (orderBy snapshotTime desc, then supplyAssetsUsd
+    // desc + first-wins) — not an arbitrary row, which previously mis-named the "most
+    // exposed" curator in the published digest.
     const allocs = await prisma.marketAllocation.findMany({
       where: { marketUniqueKey: { in: marketKeys } },
-      select: { marketUniqueKey: true, vault: { select: { curator: { select: { name: true } } } } },
+      select: {
+        marketUniqueKey: true,
+        vault: { select: { curator: { select: { name: true } } } },
+      },
+      orderBy: [{ snapshotTime: "desc" }, { supplyAssetsUsd: "desc" }],
     });
     const marketToCurator = new Map<string, string>();
     for (const a of allocs) {

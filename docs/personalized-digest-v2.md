@@ -56,3 +56,13 @@ and the minimal path — so the identity decision can be made before any code.
 
 The engine (`personalizeDigest`, the deterministic renderer, the alert filter) is already in place
 — v2 is identity + persistence + a per-user build loop, not new analytics.
+
+## Known limitation (preview)
+
+`personalizeDigest` matches flows by `curatorId` (correct) but matches concentration flags by
+the curator's **display name**, because the localStorage watchlist stores only `{id, name}` and a
+concentration flag carries `{topCuratorAddress, topCurator(name)}` — no shared id. So a dominant
+curator with a null `name` won't surface in the concentration slice (a narrow corner: it needs
+≥84% of a ≥$50M stablecoin asset *and* a null directory name). When the watchlist gains durable
+rows in v2, store the curator **address** and match concentration on `topCuratorAddress` (also
+avoids same-name collisions).

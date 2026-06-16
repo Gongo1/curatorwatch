@@ -66,9 +66,11 @@ export function computeStressIndex(
   let flowScore: number | null = null;
   if (flow) {
     const out = Math.max(0, -flow.netFlowPct); // net outflow fraction
-    const gross = Math.max(0, flow.grossOutflowPct);
-    // Calibration: a 5% net outflow over the window -> 60; 10% gross churn -> 40.
-    flowScore = clamp((out / 0.05) * 60 + (gross / 0.1) * 40);
+    // "Rotation" = gross outflow BEYOND the net drain (money leaving while other money
+    // arrives), so the same outflow dollars aren't charged once as net and again as gross.
+    const rotation = Math.max(0, flow.grossOutflowPct - out);
+    // Calibration: a 5% pure net outflow -> 60 (Stressed); +10% of churn on top -> +40.
+    flowScore = clamp((out / 0.05) * 60 + (rotation / 0.1) * 40);
     drivers.push(
       out > 0
         ? `net ${(out * 100).toFixed(1)}% outflow over ${flow.windowDays}d`
