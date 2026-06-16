@@ -82,6 +82,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<CuratorDas
       avgNetApy: c.avgNetApy,
       assetDistribution: c.assetDistribution,
       stablePct: c.stablePct,
+      vaults: c.vaults,
       protocols: c.protocols,
       networks: c.networks,
       gradeDistribution: c.gradeDistribution,

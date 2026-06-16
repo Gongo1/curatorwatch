@@ -7,9 +7,20 @@ import { Search, X, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { gradeColor, fmtBps, GRADE_BLURB } from "@/lib/grade-style";
-import type { CuratorDashboardItem } from "@/lib/types/api";
+import type { CuratorDashboardItem, CompareVaultItem } from "@/lib/types/api";
+import { COMPARE_PRESETS } from "@/lib/compare-presets";
 
 const MAX_COMPARE = 4;
+
+/** min / median / max of the real per-vault net APYs (percent), ignoring unknowns. */
+function apySpread(vaults: CompareVaultItem[]): { min: number; med: number; max: number; n: number } | null {
+  const xs = vaults
+    .map((v) => v.netApyPct)
+    .filter((x): x is number => x != null)
+    .sort((a, b) => a - b);
+  if (!xs.length) return null;
+  return { min: xs[0], med: xs[Math.floor((xs.length - 1) / 2)], max: xs[xs.length - 1], n: xs.length };
+}
 
 function compactUsd(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
@@ -160,6 +171,25 @@ export function CompareClient() {
         </div>
       </div>
 
+      {/* preset packs */}
+      <div className="flex gap-2 items-center flex-wrap mb-8 -mt-4">
+        <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">Packs</span>
+        {COMPARE_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            title={p.hint}
+            onClick={() => {
+              const a = p.select(curators);
+              if (a.length) setSelection(a);
+            }}
+            className="font-mono text-xs rounded-lg px-3 py-1.5 border border-border bg-background-subtle text-text-secondary hover:text-accent-blue hover:border-accent-blue active:translate-y-px transition-colors"
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {selected.length === 0 && (
         <div className="border border-border rounded-2xl bg-background-subtle p-10 text-center">
           <Plus className="w-6 h-6 text-text-tertiary mx-auto mb-3" aria-hidden="true" />
@@ -246,21 +276,34 @@ export function CompareClient() {
                 </tr>
               )}
               <Row label="AUM" cells={selected.map((c) => compactUsd(c.totalAUM))} highlight={best(selected.map((c) => c.totalAUM))} />
-              <Row
-                label="30d TVL change"
-                cells={selected.map((c) =>
-                  c.tvlChangePct30d ? `${c.tvlChangePct30d > 0 ? "+" : ""}${c.tvlChangePct30d.toFixed(1)}%` : "—"
-                )}
-                tones={selected.map((c) =>
-                  c.tvlChangePct30d > 0 ? "text-accent-green" : c.tvlChangePct30d < 0 ? "text-accent-red" : ""
-                )}
-              />
               <Row label="Vaults" cells={selected.map((c) => String(c.vaultCount))} />
               <Row
-                label="Avg net APY"
+                label="Net APY (TVL-wtd)"
                 cells={selected.map((c) => `${(c.avgNetApy * 100).toFixed(2)}%`)}
                 highlight={best(selected.map((c) => c.avgNetApy))}
               />
+              <tr className="border-t border-border-subtle">
+                <td className="p-4 text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary align-top">
+                  Per-vault net APY
+                </td>
+                {selected.map((c) => {
+                  const s = apySpread(c.vaults);
+                  return (
+                    <td key={c.curatorAddress} className="p-4 align-top tabular-nums text-text-primary">
+                      {s ? (
+                        <>
+                          {s.min.toFixed(1)}% · <span className="text-text-secondary">{s.med.toFixed(1)}%</span> · {s.max.toFixed(1)}%
+                          <div className="text-[0.62rem] normal-case tracking-normal text-text-tertiary mt-1">
+                            min · med · max across {s.n} vault{s.n === 1 ? "" : "s"}
+                          </div>
+                        </>
+                      ) : (
+                        <span className="text-text-tertiary">—</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
               <Row
                 label="Est. annual yield"
                 cells={selected.map((c) => formatCurrency(c.totalAUM * c.avgNetApy))}

@@ -316,6 +316,15 @@ export interface AssetDistribution {
   percentage: number;
 }
 
+export interface CompareVaultItem {
+  address: string;
+  name: string;
+  assetSymbol: string;
+  grade: string | null;
+  tvl: number;
+  netApyPct: number | null;
+}
+
 export interface CuratorDashboardItem {
   curatorId: string;
   curatorAddress: string;
@@ -333,6 +342,8 @@ export interface CuratorDashboardItem {
   assetDistribution: AssetDistribution[];
   /** Stablecoin share of this curator's AUM (0–100). */
   stablePct: number;
+  /** Per-vault rows for the compare dispersion view (real per-vault net APY, %). */
+  vaults: CompareVaultItem[];
   protocols: string[];
   networks: string[];
   gradeDistribution: { high: number; medium: number; low: number };

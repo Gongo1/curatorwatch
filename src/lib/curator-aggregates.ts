@@ -4,7 +4,7 @@
 
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATORS } from "@/lib/curator-aliases";
-import { sanitizeApy } from "@/lib/utils/sanitize-apy";
+import { sanitizeApy, sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
 import { getAllCuratorRatings } from "@/lib/curator-engine-rating";
 import { stablecoinSharePct } from "@/lib/utils/asset-class";
 
@@ -12,6 +12,26 @@ export interface AssetDistribution {
   symbol: string;
   amountUsd: number;
   percentage: number;
+}
+
+/** Slim per-vault row for the compare feed: real per-vault net APY (percent),
+ *  unit-reconciled across Morpho (snapshot decimal) and Turtle (netAPR percent). */
+export interface CompareVault {
+  address: string;
+  name: string;
+  assetSymbol: string;
+  grade: string | null;
+  tvl: number;
+  netApyPct: number | null;
+}
+
+/** Per-vault net APY in PERCENT, reconciling the two unit conventions: Turtle
+ *  stores netAPR as a percentage on the Vault row; Morpho stores a decimal on the
+ *  snapshot. Returns null when implausible/missing so the UI shows "—", never 0. */
+function vaultNetApyPct(netAPR: number | null, snapAvgNetApy: number | null): number | null {
+  if (netAPR != null) return sanitizeApyPct(netAPR);
+  const dec = sanitizeApyForStorage(snapAvgNetApy);
+  return dec == null ? null : dec * 100;
 }
 
 export interface CuratorAggregates {
@@ -31,6 +51,8 @@ export interface CuratorAggregates {
   assetDistribution: AssetDistribution[];
   /** Stablecoin share of this curator's AUM (0–100), per the canonical classifier. */
   stablePct: number;
+  /** Per-vault rows for the compare dispersion view. */
+  vaults: CompareVault[];
   protocols: string[];
   networks: string[];
   gradeDistribution: { high: number; medium: number; low: number };
@@ -158,6 +180,7 @@ export async function getPaginatedCuratorAggregates(
     const networkSet = new Set<string>();
     const gradeDistribution = { high: 0, medium: 0, low: 0 };
     const sourceSet = new Set<string>();
+    const vaultRows: CompareVault[] = [];
 
     for (const vault of vaults) {
       // Vault grade + ingestion source are independent of snapshots.
@@ -179,7 +202,16 @@ export async function getPaginatedCuratorAggregates(
       assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
       protocolSet.add(vault.protocol ?? "morpho");
       networkSet.add((vault as Record<string, unknown>).chainName as string ?? "Ethereum");
+      vaultRows.push({
+        address: vault.address,
+        name: vault.name,
+        assetSymbol: vault.assetSymbol,
+        grade,
+        tvl,
+        netApyPct: vaultNetApyPct(vault.netAPR, snap.avgNetApy),
+      });
     }
+    vaultRows.sort((a, b) => b.tvl - a.tvl);
 
     if (totalAUM === 0) continue;
 
@@ -216,6 +248,7 @@ export async function getPaginatedCuratorAggregates(
       avgNetApy,
       assetDistribution,
       stablePct: stablecoinSharePct(assetDistribution),
+      vaults: vaultRows,
       protocols: Array.from(protocolSet),
       networks: Array.from(networkSet),
       gradeDistribution,
@@ -310,6 +343,7 @@ export async function getCuratorAggregates(
   const networkSet = new Set<string>();
   const gradeDistribution = { high: 0, medium: 0, low: 0 };
   const sourceSet = new Set<string>();
+  const vaultRows: CompareVault[] = [];
 
   for (const vault of vaults) {
     const grade = (vault as Record<string, unknown>).grade as string | null;
@@ -330,7 +364,16 @@ export async function getCuratorAggregates(
     assetMap[vault.assetSymbol] = (assetMap[vault.assetSymbol] || 0) + tvl;
     protocolSet.add((vault as Record<string, unknown>).protocol as string ?? "morpho");
     networkSet.add((vault as Record<string, unknown>).chainName as string ?? "Ethereum");
+    vaultRows.push({
+      address: vault.address,
+      name: vault.name,
+      assetSymbol: vault.assetSymbol,
+      grade,
+      tvl,
+      netApyPct: vaultNetApyPct(vault.netAPR, snap.avgNetApy),
+    });
   }
+  vaultRows.sort((a, b) => b.tvl - a.tvl);
 
   const avgApy = totalAUM > 0 ? weightedApySum / totalAUM : 0;
   const avgNetApy = totalAUM > 0 ? weightedNetApySum / totalAUM : 0;
@@ -369,6 +412,7 @@ export async function getCuratorAggregates(
     avgNetApy,
     assetDistribution,
     stablePct: stablecoinSharePct(assetDistribution),
+    vaults: vaultRows,
     protocols: Array.from(protocolSet),
     networks: Array.from(networkSet),
     gradeDistribution,
