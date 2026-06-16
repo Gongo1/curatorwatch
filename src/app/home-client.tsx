@@ -7,6 +7,8 @@ import { CuratorIndex } from "@/components/curators/CuratorIndex";
 import { ApyDistViz, type ApyDistribution } from "@/components/ApyDistViz";
 import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
 import { isStablecoin } from "@/lib/utils/asset-class";
+import { singleManagerFlags } from "@/lib/concentration";
+import { curatorSlug } from "@/lib/curator-aliases";
 
 export type { ApyDistribution };
 
@@ -95,6 +97,13 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
     return g;
   }, [curators]);
 
+  // Single-manager concentration: stablecoins where one curator runs >=84% of the
+  // asset's vault TVL — the single points of failure an allocator should see.
+  const concFlags = useMemo(
+    () => singleManagerFlags(curators, { thresholdPct: 84, minAssetUsd: 50_000_000 }).slice(0, 6),
+    [curators]
+  );
+
   const largest = curators.length
     ? curators.reduce((a, b) => (b.totalAUM > a.totalAUM ? b : a))
     : null;
@@ -156,6 +165,40 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
           </div>
         </div>
       </header>
+
+      {/* ── Single-manager concentration ── */}
+      {concFlags.length > 0 && (
+        <section className="mb-8">
+          <div className="flex items-baseline gap-3 mb-3 flex-wrap">
+            <span className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">
+              Single-manager concentration
+            </span>
+            <span className="font-mono text-[11px] text-text-muted ml-auto text-right">
+              stablecoins ≥84% run by one curator
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            {concFlags.map((f) => (
+              <Link
+                key={f.symbol}
+                href={f.topCuratorAddress ? `/curator/${curatorSlug(f.topCurator, f.topCuratorAddress)}` : "#"}
+                className="rounded-xl border border-border bg-background-subtle px-3.5 py-3 hover:border-accent-blue active:translate-y-px transition-colors group"
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-mono text-sm font-semibold text-text-primary truncate">{f.symbol}</span>
+                  <span className="font-mono text-xs text-accent-yellow tabular-nums">{Math.round(f.topCuratorPct)}%</span>
+                </div>
+                <div className="font-mono text-[11px] text-text-tertiary mt-1 truncate">
+                  {compactUsd(f.totalUsd)} · {f.curatorCount} curator{f.curatorCount === 1 ? "" : "s"}
+                </div>
+                <div className="font-mono text-[11px] text-text-secondary mt-0.5 truncate group-hover:text-accent-blue transition-colors">
+                  {f.topCurator || "—"}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ── Context strip ── */}
       <div className="flex gap-x-12 gap-y-4 flex-wrap py-4 border-y border-border-subtle mb-8">
