@@ -517,3 +517,29 @@ model VaultRating {
   @@index([vaultAddress])
   @@index([chainId, vaultAddress])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Curator Daily — the nightly digest. One precomputed row per day, built by the
+// /api/cron/digest job from existing tables (TVL flows, grade moves, new/retired
+// vaults, yield moves, incidents, concentration + stress index). structuredJson is
+// the machine-readable source of truth; bodyMarkdown is the rendered prose
+// (deterministic template for v1; Claude-authored once an API key is provisioned).
+// ─────────────────────────────────────────────────────────────────────────────
+model Digest {
+  id             String   @id @default(cuid())
+  slug           String   @unique              // "2026-06-15" — URL + idempotent upsert key
+  date           DateTime                        // publish timestamp (RSS pubDate + ordering)
+  title          String
+  summary        String?  @db.Text               // one-line standfirst
+  bodyMarkdown   String   @db.Text               // rendered digest prose
+  structuredJson Json                            // sections/items the body renders from
+  generatedBy    String   @default("template")   // "template" | "claude" | model id
+  stressScore    Float?                          // curator stress index (0–100) at publish
+  stressBand     String?                         // Calm | Normal | Elevated | Stressed | Critical
+  published      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([date])
+  @@index([published, date])
+}

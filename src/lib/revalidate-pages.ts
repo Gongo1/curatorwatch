@@ -10,4 +10,6 @@ export function revalidateDataPages(): void {
   revalidatePath("/yields");
   revalidatePath("/curator/[address]", "page");
   revalidatePath("/vault/[address]", "page");
+  revalidatePath("/digest");
+  revalidatePath("/feed/digest.xml");
 }

@@ -16,6 +16,7 @@ import {
   FileText,
   GitCompare,
   ShieldCheck,
+  Newspaper,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -61,6 +62,7 @@ export function Sidebar() {
     {
       title: "Monitor",
       items: [
+        { href: "/digest", icon: <Newspaper className="w-5 h-5" />, label: "Curator Daily" },
         { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", badge: alertCount },
         { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog" },
         { href: "/docs", icon: <FileText className="w-5 h-5" />, label: "Docs" },

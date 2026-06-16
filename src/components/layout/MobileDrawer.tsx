@@ -15,6 +15,7 @@ import {
   FileText,
   GitCompare,
   ShieldCheck,
+  Newspaper,
   X,
 } from "lucide-react";
 
@@ -56,6 +57,7 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
     { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Lenses" },
     { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Lenses" },
     { href: "/calculator", icon: <Calculator className="w-5 h-5" />, label: "LP Calculator", section: "Lenses" },
+    { href: "/digest", icon: <Newspaper className="w-5 h-5" />, label: "Curator Daily", section: "Monitor" },
     { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", section: "Monitor" },
     { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog", section: "Monitor" },
     { href: "/docs", icon: <FileText className="w-5 h-5" />, label: "Docs", section: "Monitor" },
