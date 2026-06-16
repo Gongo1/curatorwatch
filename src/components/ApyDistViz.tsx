@@ -87,7 +87,19 @@ export function ApyDistViz({
           />
         ))}
       </div>
-      <div className="font-mono text-[0.62rem] text-text-tertiary mt-1 tabular-nums">
+      {/* Minimal x-axis: a tick + APY % at each bin's lower edge (aligns to bar starts). */}
+      <div className="flex gap-[3px] mt-1" aria-hidden="true">
+        {d.histEdges.slice(0, -1).map((edge, i) => (
+          <div key={i} className="flex-1 min-w-[6px]">
+            <span className="block w-px h-1 bg-border" />
+            <span className="block font-mono text-[0.55rem] leading-none text-text-muted tabular-nums mt-0.5">
+              {edge}
+              {i === d.histEdges.length - 2 ? "+" : ""}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="font-mono text-[0.62rem] text-text-tertiary mt-1.5 tabular-nums">
         median <span className="text-text-secondary">{d.median.toFixed(1)}%</span> · 95th{" "}
         <span className="text-text-secondary">{Math.round(d.p95)}%</span> · shade = TVL
       </div>

@@ -1,0 +1,73 @@
+name: Weekly ratings refresh
+
+# Phase 2 of the rating-engine roadmap: re-fit the loss-anchored engine on a fresh
+# combined Morpho V1+V2 panel each week and open a PR with the new bundle. Merging the
+# PR deploys it; the site's collect cron then imports it. Manual run via "Run workflow".
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout site repo
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Clone engine repo (read-only deploy key)
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          echo "${{ secrets.ENGINE_DEPLOY_KEY }}" > ~/.ssh/engine_key
+          chmod 600 ~/.ssh/engine_key
+          GIT_SSH_COMMAND="ssh -i ~/.ssh/engine_key -o StrictHostKeyChecking=no" \
+            git clone --depth 1 -b build/risk-engine-v1 \
+            git@github.com:Gongo1/curatorwatch-risk-engine.git engine
+
+      - name: Install Python deps (PyMC stack)
+        run: pip install pymc arviz pandas numpy scipy pyarrow requests netcdf4 h5netcdf
+
+      - name: Install site deps + Prisma client (for universe export)
+        run: |
+          npm ci
+          npx prisma generate
+
+      - name: Run refresh pipeline (writes bundle, no commit)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          DIRECT_URL: ${{ secrets.DIRECT_URL || secrets.DATABASE_URL }}
+        run: |
+          cd engine
+          PY=python SITE_REPO="$GITHUB_WORKSPACE" COMMIT=0 ./refresh.sh
+
+      - name: Open PR if the bundle changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          if git diff --quiet -- data/risk-engine/; then
+            echo "No rating changes this week."; exit 0
+          fi
+          DATE=$(date -u +%Y-%m-%d)
+          BR="ratings-refresh-$DATE"
+          git config user.name "curatorwatch-ratings-bot"
+          git config user.email "ratings-bot@users.noreply.github.com"
+          git checkout -b "$BR"
+          git add data/risk-engine/
+          git commit -m "Weekly ratings refresh $DATE"
+          git push origin "$BR"
+          gh pr create --base main --head "$BR" \
+            --title "Weekly ratings refresh $DATE" \
+            --body "Automated combined Morpho V1+V2 rating refresh. Review grade/EL movements (esp. infant-rating curators), then merge to deploy — the collect cron imports the bundle post-deploy."

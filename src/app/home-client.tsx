@@ -9,6 +9,8 @@ import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/ap
 import { isStablecoin } from "@/lib/utils/asset-class";
 import { singleManagerFlags } from "@/lib/concentration";
 import { curatorSlug } from "@/lib/curator-aliases";
+import { Newswire } from "@/components/news/Newswire";
+import type { RecentNewsItem } from "@/lib/news/queries";
 
 export type { ApyDistribution };
 
@@ -61,9 +63,10 @@ interface CuratorsHomeProps {
   curators: CuratorDashboardItem[];
   stats: CuratorDashboardStats;
   apyDist: ApyDistribution | null;
+  news: RecentNewsItem[];
 }
 
-export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
+export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomeProps) {
   // Asset mix + ecosystem grade distribution, summed from the curator list so they
   // reconcile exactly with the tracked-TVL hero (no separate, differently-scoped query).
   const mix = useMemo(() => {
@@ -225,8 +228,16 @@ export function CuratorsHome({ curators, stats, apyDist }: CuratorsHomeProps) {
         .
       </p>
 
+      {/* ── Newswire: press naming tracked curators ── */}
+      {news.length > 0 && (
+        <section className="mt-2 mb-12">
+          <SectionHead title="Newswire" meta={`latest press naming tracked curators · ${news.length}`} />
+          <Newswire variant="strip" items={news} limit={8} title="Latest" />
+        </section>
+      )}
+
       {/* ── TVL by curator (30d) ── */}
-      <section className="mt-2">
+      <section className="mt-12">
         <SectionHead title="Tracked TVL by curator" meta="top 6 · stacked · 30 days · hover to inspect" />
         <ChartWhenVisible />
       </section>

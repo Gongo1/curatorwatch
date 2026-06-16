@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getAllCuratorRatings, RISK_GRADES_ENABLED } from "@/lib/curator-engine-rating";
 import { gradeColor, fmtBps, GRADE_BLURB } from "@/lib/grade-style";
 import { curatorSlug } from "@/lib/curator-aliases";
+import { BacktestPanel } from "@/components/BacktestPanel";
 
 export const revalidate = 21600;
 
@@ -47,6 +48,8 @@ export default async function RatingsPage() {
           </div>
         )}
       </header>
+
+      {rows.length > 0 && <BacktestPanel />}
 
       {rows.length === 0 ? (
         <p className="font-mono text-sm text-text-tertiary">No ratings available.</p>

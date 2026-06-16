@@ -4,6 +4,7 @@ import { updateVaultGrades } from "@/scripts/update-vault-grades";
 import { importRatingsData } from "@/scripts/import-risk-engine-ratings";
 import { ratingsData } from "@/lib/risk-engine-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
+import { fetchNews } from "@/lib/news/fetch-news";
 
 export const maxDuration = 800; // Pro plan allows up to 900s
 export const dynamic = "force-dynamic";
@@ -68,6 +69,14 @@ export async function GET(request: NextRequest) {
       console.log("[CRON] EL ratings imported:", { curators: r.curators, vaults: r.vaults, matched: r.matched });
     } catch (ratingError) {
       console.error("[CRON] EL rating import failed (non-fatal):", ratingError);
+    }
+
+    // Newswire: pull free RSS feeds and tag headlines to tracked curators.
+    try {
+      const news = await fetchNews();
+      console.log("[CRON] News ingest:", news);
+    } catch (newsError) {
+      console.error("[CRON] News ingest failed (non-fatal):", newsError);
     }
 
     revalidateDataPages();
