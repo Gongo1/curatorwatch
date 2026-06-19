@@ -211,12 +211,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy, 
                 >
                   {curator!.name}
                 </Link>
-                <Link
-                  href={`${curatorHref}#risk-profile`}
-                  className="text-xs text-accent-blue hover:underline"
-                >
-                  View Risk Profile →
-                </Link>
               </div>
             ) : (
               <span className="text-sm font-semibold text-accent-red">Unknown</span>

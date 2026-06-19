@@ -14,7 +14,6 @@ const DealDepositDrawer = dynamic(
     ),
   { ssr: false }
 );
-import { CuratorRiskProfile } from "@/components/CuratorRiskProfile";
 import { Newswire } from "@/components/news/Newswire";
 import { CuratorEngineGrade } from "@/components/CuratorEngineGrade";
 import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
@@ -354,11 +353,6 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
         }
       >
         <TrackRecord history={data.aumHistory ?? []} />
-      </Section>
-
-      {/* ── Risk profile (inline, above the fold) ── */}
-      <Section title="Risk profile" meta="peer-ranked among tracked curators">
-        <CuratorRiskProfile curatorAddress={curator.address} dataAsOf={data.dataAsOf} />
       </Section>
 
       {/* ── Vaults managed ── */}
