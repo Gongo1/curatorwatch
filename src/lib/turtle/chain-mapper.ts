@@ -51,6 +51,30 @@ export function getChainNameById(id: number): string {
   return "Unknown";
 }
 
+/** Known testnet chain ids → slug. The v2 Earn API gives only a numeric chainId
+ * per token (no slug), so the slug-based testnet guard in the ingestion needs a
+ * reverse lookup to keep working. Kept separate from CHAIN_MAP (mainnets only). */
+const TESTNET_CHAIN_IDS: Record<number, string> = {
+  11155111: "sepolia",
+  5: "goerli",
+  17000: "holesky",
+  43113: "fuji",
+  80001: "mumbai",
+};
+
+/**
+ * Reverse lookup: numeric chainId → Turtle slug. Returns the mainnet slug from
+ * CHAIN_MAP, a known testnet slug, or "" when unknown. Used by the v2 client to
+ * reconstruct the `chain.slug` that v1 supplied directly, so downstream code
+ * (testnet filter, canonicalChainName fallback) is unchanged.
+ */
+export function getChainSlugById(id: number): string {
+  for (const [slug, entry] of Object.entries(CHAIN_MAP)) {
+    if (entry.id === id) return slug;
+  }
+  return TESTNET_CHAIN_IDS[id] ?? "";
+}
+
 /**
  * Display-ready chain label from a possibly-missing/slug-cased chainName plus a
  * chainId fallback. Title-cases bare slugs ("monad" → "Monad"), keeps proper

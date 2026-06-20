@@ -1,6 +1,7 @@
 /**
- * TypeScript interfaces for Turtle API responses
- * Source: GET https://earn.turtle.xyz/v1/opportunities/
+ * Internal, normalized Turtle opportunity shape used throughout the app.
+ * Populated by client.ts from the v2 feed (GET https://earn.turtle.xyz/v2/opportunities/),
+ * which is normalized back to this shape so downstream consumers are source-agnostic.
  */
 
 export interface TurtleChain {
