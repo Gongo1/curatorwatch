@@ -16,6 +16,7 @@ import {
   GitCompare,
   ShieldCheck,
   Newspaper,
+  Wallet,
   X,
 } from "lucide-react";
 
@@ -57,6 +58,9 @@ export function MobileDrawer({ open, onClose }: MobileDrawerProps) {
     { href: "/fees", icon: <Coins className="w-5 h-5" />, label: "Fees", section: "Lenses" },
     { href: "/liquidations", icon: <Zap className="w-5 h-5" />, label: "Liquidations", section: "Lenses" },
     { href: "/calculator", icon: <Calculator className="w-5 h-5" />, label: "LP Calculator", section: "Lenses" },
+    ...(process.env.NEXT_PUBLIC_FEATURE_PORTFOLIO === "true"
+      ? [{ href: "/portfolio", icon: <Wallet className="w-5 h-5" />, label: "Portfolio", section: "Monitor" }]
+      : []),
     { href: "/digest", icon: <Newspaper className="w-5 h-5" />, label: "Curator Daily", section: "Monitor" },
     { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", section: "Monitor" },
     { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog", section: "Monitor" },

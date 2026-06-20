@@ -17,6 +17,7 @@ import {
   GitCompare,
   ShieldCheck,
   Newspaper,
+  Wallet,
 } from "lucide-react";
 
 export function Sidebar() {
@@ -62,6 +63,11 @@ export function Sidebar() {
     {
       title: "Monitor",
       items: [
+        // Portfolio is feature-flagged (route 404s until NEXT_PUBLIC_FEATURE_PORTFOLIO),
+        // so only surface the link when the flag is on — keeps the nav clean pre-launch.
+        ...(process.env.NEXT_PUBLIC_FEATURE_PORTFOLIO === "true"
+          ? [{ href: "/portfolio", icon: <Wallet className="w-5 h-5" />, label: "Portfolio" }]
+          : []),
         { href: "/digest", icon: <Newspaper className="w-5 h-5" />, label: "Curator Daily" },
         { href: "/alerts", icon: <Bell className="w-5 h-5" />, label: "Alerts", badge: alertCount },
         { href: "/changelog", icon: <BookOpen className="w-5 h-5" />, label: "Changelog" },
