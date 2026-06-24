@@ -1,6 +1,8 @@
 import { Sprout } from "lucide-react";
 import type { CuratorEngineRating } from "@/lib/curator-engine-rating";
 import { GRADE_BLURB } from "@/lib/grade-style";
+import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
+import { DisclosureFlag } from "@/components/DisclosureFlag";
 
 // Loss-anchored grade (A+…E) → colour. Lower expected loss = safer = greener.
 const GRADE_STYLE: Record<string, string> = {
@@ -29,7 +31,8 @@ const FLAG_LABEL: Record<string, { label: string; tone: "good" | "bad" }> = {
 
 const bps = (x: number) => `${(x * 1e4).toFixed(x < 0.001 ? 1 : 0)} bps`;
 
-export function CuratorEngineGrade({ rating }: { rating: CuratorEngineRating }) {
+export function CuratorEngineGrade({ rating, curatorAddress }: { rating: CuratorEngineRating; curatorAddress?: string }) {
+  const flagged = hasCuratorDisclosure(curatorAddress);
   const gradeStyle = GRADE_STYLE[rating.grade] ?? GRADE_STYLE.NR;
   const channels = Object.entries(rating.channels)
     .filter(([, v]) => typeof v === "number")
@@ -39,9 +42,13 @@ export function CuratorEngineGrade({ rating }: { rating: CuratorEngineRating }) 
   return (
     <div className="rounded-2xl border border-border bg-background-subtle p-5">
       <div className="flex items-start gap-5">
-        <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border text-3xl font-bold font-display ${gradeStyle}`}>
-          {rating.grade}
-        </div>
+        {flagged ? (
+          <DisclosureFlag size="lg" />
+        ) : (
+          <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl border text-3xl font-bold font-display ${gradeStyle}`}>
+            {rating.grade}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="font-display text-sm font-bold text-text-primary">Expected-loss grade</h3>
@@ -57,7 +64,14 @@ export function CuratorEngineGrade({ rating }: { rating: CuratorEngineRating }) 
               </span>
             ) : null}
           </div>
-          {rating.grade === "NR" ? (
+          {flagged ? (
+            <p className="mt-1.5 text-sm leading-relaxed text-text-secondary">
+              Letter grade withheld pending a material disclosure.{" "}
+              <a href="#curator-disclosure" className="font-medium text-red-400 hover:underline">
+                View disclosure ↓
+              </a>
+            </p>
+          ) : rating.grade === "NR" ? (
             <p className="mt-1.5 text-xs text-text-secondary">
               Not rated — live book below the materiality threshold. Expected loss still shown below.
             </p>

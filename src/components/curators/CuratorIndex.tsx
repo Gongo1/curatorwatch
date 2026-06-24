@@ -7,6 +7,8 @@ import type { CuratorDashboardItem } from "@/lib/types/api";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { gradeColor, GRADE_BLURB } from "@/lib/grade-style";
+import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
+import { DisclosureFlag } from "@/components/DisclosureFlag";
 
 function initials(name: string): string {
   return name
@@ -189,14 +191,17 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
                     <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
                       {name}
                     </span>
-                    {c.engineRating && (
-                      <span
-                        title={GRADE_BLURB[c.engineRating.grade]}
-                        className={`flex-none inline-flex items-center justify-center rounded border px-1.5 py-px font-mono text-[10px] font-semibold ${gradeColor(c.engineRating.grade)}`}
-                      >
-                        {c.engineRating.grade}
-                      </span>
-                    )}
+                    {c.engineRating &&
+                      (hasCuratorDisclosure(c.curatorAddress) ? (
+                        <DisclosureFlag />
+                      ) : (
+                        <span
+                          title={GRADE_BLURB[c.engineRating.grade]}
+                          className={`flex-none inline-flex items-center justify-center rounded border px-1.5 py-px font-mono text-[10px] font-semibold ${gradeColor(c.engineRating.grade)}`}
+                        >
+                          {c.engineRating.grade}
+                        </span>
+                      ))}
                   </div>
                   {c.jurisdiction && (
                     <div className="font-mono text-xs text-text-tertiary mt-0.5 truncate">

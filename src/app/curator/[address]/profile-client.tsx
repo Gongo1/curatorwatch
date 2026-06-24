@@ -341,7 +341,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
             </div>
           </div>
         </div>
-        {engineRating ? <CuratorEngineGrade rating={engineRating} /> : null}
+        {engineRating ? <CuratorEngineGrade rating={engineRating} curatorAddress={curator.address} /> : null}
       </div>
 
       {/* ── Material off-chain disclosures the EL engine can't price (litigation, etc.) ── */}
