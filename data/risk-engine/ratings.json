@@ -755,17 +755,17 @@
         }
       ],
       "grade": "A+",
-      "el_median": 0.000216,
+      "el_median": 0.000848,
       "el_ci90": [
-        1.2e-05,
-        0.00269
+        4.6e-05,
+        0.010945
       ],
-      "p_loss_annual_median": 0.000507,
+      "p_loss_annual_median": 0.001861,
       "lgd_median": 0.445159,
       "channels": {
-        "credit": 0.093,
-        "technical": 0.688,
-        "operational": 0.22
+        "credit": 0.047,
+        "technical": 0.351,
+        "operational": 0.601
       },
       "confidence": "Wide",
       "supporting": {
@@ -779,7 +779,7 @@
         "multisig_verified": false,
         "framework_published": false,
         "repeat_offender": false,
-        "diligence_conflict": false,
+        "diligence_conflict": true,
         "declined_credit": false,
         "any_rating_input_missing": false,
         "provisional": true
