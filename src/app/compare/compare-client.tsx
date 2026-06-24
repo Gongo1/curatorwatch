@@ -7,6 +7,8 @@ import { Search, X, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { gradeColor, fmtBps, GRADE_BLURB } from "@/lib/grade-style";
+import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
+import { DisclosureFlag } from "@/components/DisclosureFlag";
 import type { CuratorDashboardItem, CompareVaultItem } from "@/lib/types/api";
 import { COMPARE_PRESETS } from "@/lib/compare-presets";
 
@@ -230,14 +232,17 @@ export function CompareClient() {
                       >
                         {c.name || c.curatorAddress.slice(0, 10)}
                       </Link>
-                      {c.engineRating && (
-                        <span
-                          title={GRADE_BLURB[c.engineRating.grade]}
-                          className={`flex-none inline-flex items-center justify-center rounded border px-1.5 py-px font-mono text-[10px] font-semibold ${gradeColor(c.engineRating.grade)}`}
-                        >
-                          {c.engineRating.grade}
-                        </span>
-                      )}
+                      {c.engineRating &&
+                        (hasCuratorDisclosure(c.curatorAddress) ? (
+                          <DisclosureFlag />
+                        ) : (
+                          <span
+                            title={GRADE_BLURB[c.engineRating.grade]}
+                            className={`flex-none inline-flex items-center justify-center rounded border px-1.5 py-px font-mono text-[10px] font-semibold ${gradeColor(c.engineRating.grade)}`}
+                          >
+                            {c.engineRating.grade}
+                          </span>
+                        ))}
                     </div>
                     <div className="font-mono text-[0.62rem] text-text-tertiary mt-0.5">
                       {c.jurisdiction || "Jurisdiction unknown"}
@@ -257,11 +262,15 @@ export function CompareClient() {
                       {c.engineRating ? (
                         <>
                           <div className="flex items-center gap-2">
-                            <span
-                              className={`inline-flex min-w-[2rem] items-center justify-center rounded border px-1.5 py-0.5 text-xs font-semibold ${gradeColor(c.engineRating.grade)}`}
-                            >
-                              {c.engineRating.grade}
-                            </span>
+                            {hasCuratorDisclosure(c.curatorAddress) ? (
+                              <DisclosureFlag />
+                            ) : (
+                              <span
+                                className={`inline-flex min-w-[2rem] items-center justify-center rounded border px-1.5 py-0.5 text-xs font-semibold ${gradeColor(c.engineRating.grade)}`}
+                              >
+                                {c.engineRating.grade}
+                              </span>
+                            )}
                             <span className="tabular-nums text-text-secondary">{fmtBps(c.engineRating.elMedian)}</span>
                           </div>
                           <p className="text-[0.62rem] normal-case tracking-normal text-text-tertiary mt-1.5 leading-relaxed max-w-[200px]">

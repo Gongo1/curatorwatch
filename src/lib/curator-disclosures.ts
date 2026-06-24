@@ -45,3 +45,9 @@ export function getCuratorDisclosures(address: string | null | undefined): Curat
   if (!address) return [];
   return CURATOR_DISCLOSURES[address.toLowerCase()] ?? [];
 }
+
+/** True when a curator has a material disclosure on record. Used to suppress the
+ *  letter grade in favour of a flag wherever the grade is shown. */
+export function hasCuratorDisclosure(address: string | null | undefined): boolean {
+  return getCuratorDisclosures(address).length > 0;
+}

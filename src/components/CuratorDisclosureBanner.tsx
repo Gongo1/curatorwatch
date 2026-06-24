@@ -11,7 +11,7 @@ export function CuratorDisclosureBanner({ address }: { address: string }) {
   if (disclosures.length === 0) return null;
 
   return (
-    <div className="mb-8 space-y-3">
+    <div id="curator-disclosure" className="mb-8 scroll-mt-24 space-y-3">
       {disclosures.map((d, i) => (
         <div
           key={i}

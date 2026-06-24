@@ -3,6 +3,8 @@ import Link from "next/link";
 import { getAllCuratorRatings, RISK_GRADES_ENABLED } from "@/lib/curator-engine-rating";
 import { gradeColor, fmtBps, GRADE_BLURB } from "@/lib/grade-style";
 import { curatorSlug } from "@/lib/curator-aliases";
+import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
+import { DisclosureFlag } from "@/components/DisclosureFlag";
 import { BacktestPanel } from "@/components/BacktestPanel";
 
 export const revalidate = 21600;
@@ -76,7 +78,11 @@ export default async function RatingsPage() {
                       </Link>
                     </td>
                     <td className="py-3 px-3">
-                      <span className={`inline-flex min-w-[2rem] items-center justify-center rounded border px-1.5 py-0.5 font-mono text-xs font-semibold ${gradeColor(r.grade)}`}>{r.grade}</span>
+                      {hasCuratorDisclosure(r.curatorAddress) ? (
+                        <DisclosureFlag />
+                      ) : (
+                        <span className={`inline-flex min-w-[2rem] items-center justify-center rounded border px-1.5 py-0.5 font-mono text-xs font-semibold ${gradeColor(r.grade)}`}>{r.grade}</span>
+                      )}
                     </td>
                     <td className="py-3 px-3 text-right max-sm:hidden font-mono text-sm tabular-nums text-text-secondary">{fmtBps(r.elMedian)}</td>
                     <td className="py-3 px-3 text-right max-sm:hidden font-mono text-xs text-text-tertiary">{r.confidence}</td>
