@@ -16,6 +16,7 @@ const DealDepositDrawer = dynamic(
 );
 import { Newswire } from "@/components/news/Newswire";
 import { CuratorEngineGrade } from "@/components/CuratorEngineGrade";
+import { CuratorDisclosureBanner } from "@/components/CuratorDisclosureBanner";
 import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
 import type { CuratorEngineRating, VaultEngineRating } from "@/lib/curator-engine-rating";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
@@ -342,6 +343,9 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
         </div>
         {engineRating ? <CuratorEngineGrade rating={engineRating} /> : null}
       </div>
+
+      {/* ── Material off-chain disclosures the EL engine can't price (litigation, etc.) ── */}
+      <CuratorDisclosureBanner address={curator.address} />
 
       {/* ── Track record: AUM under management over time ── */}
       <Section
