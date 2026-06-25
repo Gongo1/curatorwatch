@@ -52,7 +52,7 @@ jobs:
           cd engine
           PY=python SITE_REPO="$GITHUB_WORKSPACE" COMMIT=0 ./refresh.sh
 
-      - name: Open PR if the bundle changed
+      - name: Open PR and auto-merge when the bundle is sane
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -60,6 +60,20 @@ jobs:
           if git diff --quiet -- data/risk-engine/; then
             echo "No rating changes this week."; exit 0
           fi
+          # Sanity gate: a plausible bundle auto-merges (the collect cron then imports it);
+          # anything odd is left as an OPEN PR and the run fails, so a human looks before it
+          # can deploy. This is what keeps the weekly refresh from silently piling up unmerged.
+          SANE=$(node -e '
+            try {
+              const d = require("./data/risk-engine/ratings.json");
+              const n = d.curators.length;
+              const nr = d.curators.filter(c => c.grade === "NR").length;
+              const ok = Array.isArray(d.curators) && n >= 30 && n <= 150
+                && nr < n * 0.8 && !!d.schema_version && !!d.methodology_version
+                && d.curators.every(c => c.grade && c.confidence);
+              process.stdout.write(ok ? "yes" : "no");
+            } catch (e) { process.stdout.write("no"); }')
+          echo "sanity gate: $SANE"
           DATE=$(date -u +%Y-%m-%d)
           BR="ratings-refresh-$DATE"
           git config user.name "curatorwatch-ratings-bot"
@@ -70,4 +84,11 @@ jobs:
           git push origin "$BR"
           gh pr create --base main --head "$BR" \
             --title "Weekly ratings refresh $DATE" \
-            --body "Automated combined Morpho V1+V2 rating refresh. Review grade/EL movements (esp. infant-rating curators), then merge to deploy — the collect cron imports the bundle post-deploy."
+            --body "Automated Morpho V1+V2 rating refresh. Sanity gate: **$SANE**. If sane, this auto-merged and the collect cron imports the bundle post-deploy; otherwise it is left open for manual review of grade/EL movements (esp. infant-rating curators)."
+          if [ "$SANE" = "yes" ]; then
+            echo "Sanity gate passed → auto-merging."
+            gh pr merge "$BR" --merge --delete-branch
+          else
+            echo "::error::Sanity gate FAILED — PR left open for manual review; not auto-merged."
+            exit 1
+          fi
