@@ -21,6 +21,7 @@ export const ALERT_TYPES = {
   // Curator-level (stored in PlatformAlert)
   CURATOR_AUM_DROP: "CURATOR_AUM_DROP",   // Curator total AUM fell >5% in 24h or >15% in 72h
   CURATOR_AUM_SURGE: "CURATOR_AUM_SURGE", // Curator total AUM grew >15% in 24h
+  DISCLOSURE_CANDIDATE: "DISCLOSURE_CANDIDATE", // Possible off-chain legal/regulatory event — human review → curator-disclosure skill
 
   // Ecosystem-level (stored in PlatformAlert)
   ECOSYSTEM_AUM_DROP: "ECOSYSTEM_AUM_DROP", // Total platform AUM fell >3% in 24h
@@ -163,6 +164,12 @@ export const ALERT_METADATA: Record<
     color: "green",
     description:
       "Alerts when a curator's total AUM grows >15% in 24h. Strong growth signal.",
+  },
+  DISCLOSURE_CANDIDATE: {
+    label: "Disclosure Candidate",
+    color: "red",
+    description:
+      "Possible off-chain legal/regulatory/governance event (legal-tagged news or an SEC filing naming the curator). Flagged for human review — not auto-published.",
   },
   ECOSYSTEM_AUM_DROP: {
     label: "Ecosystem AUM Drop",

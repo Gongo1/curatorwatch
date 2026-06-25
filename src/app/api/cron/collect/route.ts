@@ -5,6 +5,8 @@ import { importRatingsData } from "@/scripts/import-risk-engine-ratings";
 import { ratingsData } from "@/lib/risk-engine-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
 import { fetchNews } from "@/lib/news/fetch-news";
+import { detectDisclosureCandidates } from "@/lib/news/disclosure-listener";
+import { storePlatformAlerts } from "@/lib/curator-alert-detector";
 
 export const maxDuration = 800; // Pro plan allows up to 900s
 export const dynamic = "force-dynamic";
@@ -77,6 +79,17 @@ export async function GET(request: NextRequest) {
       console.log("[CRON] News ingest:", news);
     } catch (newsError) {
       console.error("[CRON] News ingest failed (non-fatal):", newsError);
+    }
+
+    // Disclosure listener: surface possible off-chain legal/regulatory events
+    // (legal-tagged news + SEC EDGAR filings naming a curator) as DISCLOSURE_CANDIDATE
+    // alerts for human review. Never auto-published.
+    try {
+      const candidates = await detectDisclosureCandidates();
+      const stored = await storePlatformAlerts(candidates);
+      console.log("[CRON] Disclosure candidates:", { found: candidates.length, stored });
+    } catch (disclosureError) {
+      console.error("[CRON] Disclosure scan failed (non-fatal):", disclosureError);
     }
 
     revalidateDataPages();
