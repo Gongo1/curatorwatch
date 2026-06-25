@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getAllCuratorRatings, RISK_GRADES_ENABLED } from "@/lib/curator-engine-rating";
+import { getAllCuratorRatings, getRatingsGeneratedAt, RISK_GRADES_ENABLED } from "@/lib/curator-engine-rating";
 import { gradeColor, fmtBps, GRADE_BLURB } from "@/lib/grade-style";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
@@ -25,6 +25,10 @@ const FLAG_LABEL: Record<string, { label: string; bad: boolean }> = {
 export default async function RatingsPage() {
   const rows = RISK_GRADES_ENABLED ? await getAllCuratorRatings() : [];
   const dist = GRADE_ORDER.map((g) => ({ g, n: rows.filter((r) => r.grade === g).length })).filter((d) => d.n > 0);
+  const generatedAt = RISK_GRADES_ENABLED ? await getRatingsGeneratedAt() : null;
+  const updatedLabel = generatedAt
+    ? new Date(generatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
+    : null;
 
   return (
     <div className="max-w-[1000px]">
@@ -40,6 +44,11 @@ export default async function RatingsPage() {
           The annualized probability that a dollar entrusted to a curator suffers a loss,
           decomposed into the channels they control. Loss axis only — yield and fees are separate.
         </p>
+        {updatedLabel && (
+          <p className="font-mono text-xs text-text-tertiary mt-2">
+            Updated {updatedLabel} · pinned snapshot, refreshed manually
+          </p>
+        )}
         {dist.length > 0 && (
           <div className="flex flex-wrap gap-2 mt-5">
             {dist.map(({ g, n }) => (
