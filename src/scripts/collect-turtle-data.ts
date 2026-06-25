@@ -14,6 +14,7 @@ import { fetchTurtleOpportunities } from "../lib/turtle/client";
 import { extractProtocol } from "../lib/turtle/protocol-extractor";
 import { matchCurator } from "../lib/turtle/curator-matcher";
 import { resolveChainId, canonicalChainName } from "../lib/turtle/chain-mapper";
+import { sanitizeApyPct } from "../lib/utils/sanitize-apy";
 import type { TurtleOpportunity } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 100_000; // $100K dust floor
@@ -124,8 +125,11 @@ async function upsertTurtleVault(
     const syntheticAddress = `turtle-${opp.id}`;
 
     // Turtle API returns estimatedApr as percentage (e.g. 8.33 = 8.33%).
-    // Store directly as percentage — no APY conversion.
-    const estTotalAPR = opp.estimatedApr ?? null;
+    // Store directly as percentage — no APY conversion. Sanitize first: the Turtle
+    // feed occasionally reports garbage (e.g. 5,769% on "Staked Plasma USD"), and
+    // unlike the Morpho write path this one was previously unguarded. >200% → null,
+    // which propagates to netAPR + the snapshot's decimal APY fields below.
+    const estTotalAPR = sanitizeApyPct(opp.estimatedApr ?? null);
 
     // Build APR breakdown from incentives (name, description, rewardType, apr).
     const aprBreakdown = opp.incentives?.length > 0
