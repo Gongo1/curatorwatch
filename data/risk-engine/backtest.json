@@ -5,12 +5,12 @@
   "train_vault_months": 2041,
   "test_vault_months": 2456,
   "test_events": 7,
-  "auc": 0.708,
-  "top_quartile_lift": 2.29,
+  "auc": 0.701,
+  "top_quartile_lift": 2.27,
   "brier": 0.00285,
   "divergences": 0,
   "max_rhat": 1.006,
   "panel_vault_months": 4497,
   "methodology_version": "v1 (curatorwatch-risk-methodology-v1.md)",
-  "generated_at": "2026-06-22"
+  "generated_at": "2026-06-25"
 }
