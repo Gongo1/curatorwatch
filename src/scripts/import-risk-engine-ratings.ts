@@ -99,6 +99,13 @@ export async function importRatingsData(
       modelGit: data.model_git ?? null,
       generatedAt,
     };
+    // One rating row per engine curatorKey. A curator can resolve to a different
+    // site address between runs (duplicate / renamed site curators collide on the
+    // normalized-name join), which previously upserted a *second* row instead of
+    // updating the first. Drop any stale-address rows for this key before upserting.
+    await prisma.curatorRating.deleteMany({
+      where: { curatorKey: c.curator, curatorAddress: { not: curatorAddress } },
+    });
     await prisma.curatorRating.upsert({
       where: { curatorAddress },
       update: payload,
