@@ -188,12 +188,18 @@ async function loadMatchers(): Promise<CuratorMatcher[]> {
 // ── Light classification ───────────────────────────────────────────────────
 
 const RE_INCIDENT = /\b(hack|hacked|exploit|exploited|drain|depeg|de-peg|insolven|bad debt|attack|vulnerab|breach|stolen|rug|collapse|paused|frozen|shortfall|loss of funds)\b/i;
+// Off-chain legal / regulatory / governance events — the kind the on-chain EL engine
+// cannot price. A curator-matched headline hitting this is raised as a DISCLOSURE_CANDIDATE
+// for human review (see disclosure-listener.ts).
+const RE_LEGAL = /\b(lawsuit|sued|sues|suing|complaint|fraud|defraud|s\.?e\.?c\.?\b|securities and exchange|subpoena|indict|indicted|charged|prosecut|settlement|investigation|probe|litigation|sanction|enforcement action|injunction|class action|allege[sd]?|13\(?d\)?|wells notice|cease and desist)\b/i;
 const RE_AUDIT = /\b(audit|attestation|proof of reserves|security review)\b/i;
 const RE_PARTNER = /\b(partner|partnership|integrat|collaborat)\b/i;
 const RE_POSITIVE = /\b(launch|launches|deploys?|goes live|mainnet|expand|raises?|funding|onboard|adds? support|new vault)\b/i;
 
 function classify(title: string, description: string): { sentiment: string | null; category: string | null } {
   const t = `${title} ${description}`;
+  // Legal/regulatory takes precedence over incident — it's the higher-signal, harder-to-price event.
+  if (RE_LEGAL.test(t)) return { sentiment: "negative", category: "legal" };
   if (RE_INCIDENT.test(t)) return { sentiment: "negative", category: "incident" };
   if (RE_AUDIT.test(t)) return { sentiment: "positive", category: "audit" };
   if (RE_PARTNER.test(t)) return { sentiment: "positive", category: "partnership" };
