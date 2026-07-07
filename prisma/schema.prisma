@@ -56,6 +56,16 @@ model Vault {
   riskIndicatorScore Float?    // 0-10
   gradeFailures     String[]  // Failure reasons from grade computation
 
+  // Returns analytics (computed set-based from VaultSnapshot share-price
+  // history by update-returns-metrics; null when the vault's share price
+  // doesn't genuinely move — e.g. sources that report a constant price)
+  ret30dPct       Float?   // 30-day share-price return, percent
+  ret90dPct       Float?   // 90-day share-price return, percent
+  retLifetimePct  Float?   // return since first snapshot, percent
+  vol90dPct       Float?   // annualized 90-day volatility of daily log returns, percent
+  sharpe90d       Float?   // 90-day Sharpe ratio (rf = 0)
+  maxDrawdownPct  Float?   // max share-price drawdown over history, percent (negative)
+
   // Morpho governance warnings
   warnings           Json?                        // [{type, level}] from Morpho API
   listed             Boolean  @default(true)       // Morpho whitelisted status
