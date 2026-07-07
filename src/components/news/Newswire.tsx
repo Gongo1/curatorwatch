@@ -18,8 +18,9 @@ export interface NewswireRow {
 
 interface NewswireProps {
   items: NewswireRow[];
-  /** "rail" = narrow vertical list (curator page); "strip" = wider list with curator labels (home). */
-  variant?: "rail" | "strip";
+  /** "rail" = narrow vertical list (curator page); "strip" = wider list with curator
+   *  labels; "bar" = single-line headline bar (home — latest item only). */
+  variant?: "rail" | "strip" | "bar";
   title?: string;
   limit?: number;
   /** Optional "view all" target. */
@@ -57,6 +58,40 @@ export function Newswire({
   emptyHint = "No headlines naming this curator yet. We scan major crypto desks every few hours.",
 }: NewswireProps) {
   const rows = limit ? items.slice(0, limit) : items;
+
+  // One-line headline bar: the latest item, nothing else. Renders nothing when
+  // there's no news — a bar with an empty-state would defeat its minimalism.
+  if (variant === "bar") {
+    const latest = rows[0];
+    if (!latest) return null;
+    return (
+      <div className="border-y border-border-subtle py-2 flex items-center gap-2 font-mono text-xs min-w-0">
+        <span className="text-[0.62rem] uppercase tracking-[0.12em] text-text-tertiary flex-none">
+          {title}
+        </span>
+        <span className={`w-1.5 h-1.5 rounded-full flex-none ${sentimentDot(latest.sentiment)}`} />
+        <a
+          href={latest.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-text-primary hover:text-accent-blue focus-visible:text-accent-blue focus-visible:outline-none transition-colors truncate min-w-0"
+        >
+          {latest.title}
+        </a>
+        <span className="text-text-tertiary flex-none hidden sm:inline">
+          {latest.source} ·{" "}
+          <time dateTime={latest.publishedAt} className="tabular-nums">
+            {compactAge(latest.publishedAt)}
+          </time>
+        </span>
+        {items.length > 1 && (
+          <span className="text-text-muted tabular-nums flex-none ml-auto">
+            +{items.length - 1}
+          </span>
+        )}
+      </div>
+    );
+  }
 
   return (
     <section className="border border-border rounded-2xl bg-background-subtle overflow-hidden">
