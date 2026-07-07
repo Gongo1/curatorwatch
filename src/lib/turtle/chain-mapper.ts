@@ -35,6 +35,9 @@ const CHAIN_MAP: Record<string, { id: number; name: string }> = {
   pharos: { id: 1672, name: "Pharos" },
   xlayer: { id: 196, name: "X Layer" },
   flare: { id: 14, name: "Flare" },
+  // Synthetic id: Hypercore (Hyperliquid's L1 order-book chain) is not an EVM
+  // chain and has no EIP-155 chainId; negative = unambiguously not a real one.
+  hypercore: { id: -999, name: "Hypercore" },
 };
 
 export function getChainId(slug: string): number {
