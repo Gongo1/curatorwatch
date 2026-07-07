@@ -15,3 +15,16 @@ export const prisma =
 if (!globalForPrisma.prisma) {
   globalForPrisma.prisma = prisma;
 }
+
+/**
+ * Chain id for a vault address (case-insensitive), defaulting to Ethereum.
+ * Live Morpho API lookups need the vault's actual chain now that ingestion
+ * is multi-chain.
+ */
+export async function getVaultChainId(address: string): Promise<number> {
+  const vault = await prisma.vault.findFirst({
+    where: { address: { equals: address, mode: "insensitive" } },
+    select: { chainId: true },
+  });
+  return vault?.chainId ?? 1;
+}

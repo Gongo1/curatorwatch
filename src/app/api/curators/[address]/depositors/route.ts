@@ -42,13 +42,17 @@ export async function GET(
       select: { id: true },
     });
 
+    // Morpho-sourced vaults only: Turtle rows carry synthetic addresses the
+    // Morpho positions API can't resolve.
     const vaults = await prisma.vault.findMany({
       where: {
         curatorId: curator?.id ?? "__none__",
+        dataSource: "morpho",
       },
       select: {
         address: true,
         name: true,
+        chainId: true,
       },
     });
 
@@ -86,7 +90,7 @@ export async function GET(
           GET_VAULT_POSITIONS,
           {
             address: vault.address.toLowerCase(),
-            chainId: 1,
+            chainId: vault.chainId,
             first: 50,
           }
         );

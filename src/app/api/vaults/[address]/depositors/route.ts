@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { morphoClient } from "@/lib/graphql/client";
+import { getVaultChainId } from "@/lib/db";
 import {
   GET_VAULT_POSITIONS,
   VaultPositionsResponse,
@@ -33,12 +34,13 @@ export async function GET(
     const searchParams = request.nextUrl.searchParams;
     const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
-    // Fetch positions from Morpho API
+    // Fetch positions from Morpho API (on the vault's own chain)
+    const chainId = await getVaultChainId(address);
     const response = await morphoClient.request<VaultPositionsResponse>(
       GET_VAULT_POSITIONS,
       {
         address: address.toLowerCase(),
-        chainId: 1,
+        chainId,
         first: limit,
       }
     );
