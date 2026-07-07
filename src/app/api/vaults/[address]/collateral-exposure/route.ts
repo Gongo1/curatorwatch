@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { morphoClient } from "@/lib/graphql/client";
+import { getVaultChainId } from "@/lib/db";
 import {
   GET_VAULT_ADAPTERS,
   VaultAdaptersResponse,
@@ -54,12 +55,13 @@ export async function GET(
   try {
     const { address } = await params;
 
-    // Fetch vault adapters from Morpho API
+    // Fetch vault adapters from Morpho API (on the vault's own chain)
+    const chainId = await getVaultChainId(address);
     const response = await morphoClient.request<VaultAdaptersResponse>(
       GET_VAULT_ADAPTERS,
       {
         address: address.toLowerCase(),
-        chainId: 1,
+        chainId,
       }
     );
 
