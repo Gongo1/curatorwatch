@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData, MORPHO_CHAINS } from "@/scripts/collect-data";
 import { updateVaultGrades } from "@/scripts/update-vault-grades";
+import { updateReturnsMetrics } from "@/scripts/update-returns-metrics";
 import { importRatingsData } from "@/scripts/import-risk-engine-ratings";
 import { ratingsData } from "@/lib/risk-engine-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
@@ -74,6 +75,17 @@ export async function GET(request: NextRequest) {
       console.log("[CRON] Vault grades updated:", gradeResult);
     } catch (gradeError) {
       console.error("[CRON] Vault grade update failed (non-fatal):", gradeError);
+    }
+
+    // Returns analytics from share-price history — one set-based SQL
+    // statement covering every vault, so it only needs to run on one lane.
+    if (lane === "core") {
+      try {
+        const returnsResult = await updateReturnsMetrics();
+        console.log("[CRON] Returns metrics updated:", returnsResult);
+      } catch (returnsError) {
+        console.error("[CRON] Returns metrics update failed (non-fatal):", returnsError);
+      }
     }
 
     // Refresh the loss-anchored EL ratings from the bundled engine output
