@@ -31,6 +31,7 @@ import {
   fetchEulerAttribution,
   type EulerApiVault,
 } from "../lib/euler/client";
+import { fetchSonicEulerVaults } from "../lib/euler/onchain";
 import { matchCurator } from "../lib/turtle/curator-matcher";
 import { fetchTurtleOpportunities } from "../lib/turtle/client";
 import { resolveChainId, canonicalChainName } from "../lib/turtle/chain-mapper";
@@ -64,7 +65,8 @@ function logError(message: string, error?: unknown) {
 async function upsertEulerVault(
   vault: EulerApiVault,
   kind: "evk" | "earn",
-  curatorId: string
+  curatorId: string,
+  listed = true
 ): Promise<{ upserted: boolean; skipped?: boolean; error?: string }> {
   try {
     const chainId = vault.chainId;
@@ -91,6 +93,9 @@ async function upsertEulerVault(
       netAPR: estTotalAPR,
       creationTimestamp,
       active: true,
+      // Wound-down (non-insolvency deprecated) markets that still hold funds
+      // count toward curator AUM but aren't promoted in the directory.
+      listed,
     };
 
     const existing = await prisma.vault.findUnique({
@@ -317,6 +322,64 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
         logError(msg);
         errors.push(msg);
       }
+    }
+
+    // ── Sonic (chainId 146): v3 API doesn't serve it — read on-chain ────────
+    try {
+      const sonic = await fetchSonicEulerVaults();
+      let sonicUpserted = 0;
+      for (const vault of sonic.vaults) {
+        if (vault.tvlUsd < MIN_TVL_USD) continue;
+
+        const addressLower = vault.address.toLowerCase();
+        const owner = foreignKeys.get(`${addressLower}:146`);
+        if (owner) {
+          crossSourceOverlaps.push({ name: vault.name, tvl: vault.tvlUsd, address: addressLower, source: owner });
+          continue;
+        }
+
+        const curatorId = await matchCurator(vault.productName, {
+          name: vault.entityName,
+          landingUrl: vault.entityUrl,
+        });
+        if (curatorId === null) {
+          skippedUnlabeled++;
+          skippedUnlabeledTvlUsd += vault.tvlUsd;
+          continue;
+        }
+
+        const result = await upsertEulerVault(
+          {
+            chainId: 146,
+            address: vault.address,
+            name: vault.name,
+            symbol: vault.assetSymbol,
+            decimals: vault.assetDecimals,
+            asset: { address: vault.assetAddress, symbol: vault.assetSymbol, decimals: vault.assetDecimals },
+            totalAssets: "0",
+            totalSupplyUsd: vault.tvlUsd,
+            supplyApy: null, // no APY oracle on-chain — null, not a guess
+          },
+          "evk",
+          curatorId,
+          vault.listed
+        );
+        if (result.upserted) {
+          sonicUpserted++;
+        } else if (result.error) {
+          errors.push(`${vault.name}: ${result.error}`);
+        }
+      }
+      vaultsUpserted += sonicUpserted;
+      log(`  Sonic (on-chain): ${sonic.vaults.length} readable funded vaults, ${sonicUpserted} upserted (${sonic.vaults.filter((v) => !v.listed).length} wound-down → listed=false)`);
+      if (sonic.skippedNonStable.length > 0) {
+        log(`    non-stable assets skipped (no oracle): ${sonic.skippedNonStable.map((s) => s.symbol).join(", ")}`);
+      }
+      log(`    insolvency-deprecated excluded: ${sonic.skippedInsolvency} · empty/unreadable: ${sonic.skippedEmpty}`);
+    } catch (error) {
+      const msg = `Sonic on-chain failed: ${error instanceof Error ? error.message : error}`;
+      logError(msg);
+      errors.push(msg);
     }
 
     await updateEulerCuratorStats();
