@@ -2,6 +2,8 @@ import { prisma } from "../lib/db";
 import { morphoClient } from "../lib/graphql/client";
 import {
   GET_VAULTS_V2_PAGINATED,
+  GET_VAULTS_V1_PAGINATED,
+  GET_MORPHO_CURATORS,
   GET_VAULT_V2_TRANSACTIONS,
   GET_VAULT_REALLOCATES,
   type VaultV2TransactionsResponse,
@@ -9,7 +11,13 @@ import {
 } from "../lib/graphql/queries";
 import { collectLiquidations } from "./collect-liquidations";
 import { collectMarketAllocations } from "./collect-market-allocations";
-import type { VaultV2sResponse, MorphoVaultV2 } from "../lib/types/vault";
+import {
+  v1ToCommonShape,
+  type VaultV2sResponse,
+  type VaultsV1Response,
+  type MorphoVaultV2,
+  type MorphoCanonicalCurator,
+} from "../lib/types/vault";
 import { calculateAllRiskMetrics } from "../lib/risk-calculator";
 import { detectChanges, storeChanges } from "../lib/change-detector";
 import {
@@ -27,8 +35,30 @@ import {
 import { sanitizeApyForStorage } from "../lib/utils/sanitize-apy";
 import { canonicalChainName } from "../lib/turtle/chain-mapper";
 
-const CHAIN_ID = 1; // Ethereum mainnet
-const CHAIN_NAME = canonicalChainName(CHAIN_ID); // "Ethereum" — store it so reads don't depend on null defaulting
+/**
+ * Chains the Morpho pipeline ingests, both vault generations (V1 MetaMorpho +
+ * V2). Ethereum keeps the original $1k floor (its vaults are long-tracked);
+ * newly added chains use a $50k floor so dust vaults don't flood the directory
+ * or the cron's 800s budget. The floor is enforced server-side in the GraphQL
+ * where-clause and re-checked locally.
+ */
+export interface MorphoChainConfig {
+  chainId: number;
+  minTvlUsd: number;
+}
+
+export const MORPHO_CHAINS: MorphoChainConfig[] = [
+  { chainId: 1, minTvlUsd: 1_000 }, // Ethereum
+  { chainId: 8453, minTvlUsd: 50_000 }, // Base
+  { chainId: 999, minTvlUsd: 50_000 }, // HyperEVM (Felix et al.)
+  { chainId: 143, minTvlUsd: 50_000 }, // Monad
+  { chainId: 747474, minTvlUsd: 50_000 }, // Katana
+  { chainId: 42161, minTvlUsd: 50_000 }, // Arbitrum
+  { chainId: 137, minTvlUsd: 50_000 }, // Polygon
+  { chainId: 10, minTvlUsd: 50_000 }, // Optimism
+  { chainId: 130, minTvlUsd: 50_000 }, // Unichain
+];
+
 const BATCH_SIZE = 100; // Vaults per API request
 const PARALLEL_BATCH_SIZE = 3; // Vaults processed in parallel
 const TRANSACTIONS_PER_VAULT = 50;
@@ -76,16 +106,65 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Fetch ALL V2 vaults from Morpho API with pagination.
+ * Fetch the canonical curator registry (org id/name + addresses across every
+ * chain) once per run and index it by lowercase curator address. Used to
+ * resolve a vault's curator address to the same Curator row regardless of
+ * which chain the vault lives on. An empty map (registry fetch failure)
+ * degrades gracefully to address-only resolution — today's behavior.
+ */
+export async function fetchMorphoCuratorRegistry(): Promise<Map<string, MorphoCanonicalCurator>> {
+  const byAddress = new Map<string, MorphoCanonicalCurator>();
+  let skip = 0;
+
+  while (true) {
+    try {
+      const response = await morphoClient.request<{
+        curators: { items: MorphoCanonicalCurator[] };
+      }>(GET_MORPHO_CURATORS, { first: BATCH_SIZE, skip });
+
+      const items = response.curators.items;
+      for (const org of items) {
+        for (const a of org.addresses) {
+          const key = a.address.toLowerCase();
+          if (!byAddress.has(key)) byAddress.set(key, org);
+        }
+      }
+      if (items.length < BATCH_SIZE) break;
+      skip += BATCH_SIZE;
+      await sleep(API_DELAY_MS);
+    } catch (error) {
+      logError(`Failed to fetch curator registry at skip=${skip}`, error);
+      break;
+    }
+  }
+
+  log(`Curator registry: ${byAddress.size} curator addresses mapped`);
+  return byAddress;
+}
+
+/**
+ * Effective TVL floor for a chain: the per-chain floor, or the caller's
+ * override when it is stricter. (The cron passes minTvlUsd=1000, which must
+ * not lower the $50k floor on newly added chains.)
+ */
+function effectiveMinTvl(chain: MorphoChainConfig, options: CollectionOptions): number {
+  return Math.max(chain.minTvlUsd, options.minTvlUsd ?? MIN_TVL_USD);
+}
+
+/**
+ * Fetch all V2 vaults on one chain from the Morpho API with pagination.
  * Returns vaults sorted by TVL descending.
  */
-async function fetchAllVaults(options: CollectionOptions = {}): Promise<MorphoVaultV2[]> {
+export async function fetchAllVaults(
+  chain: MorphoChainConfig,
+  options: CollectionOptions = {}
+): Promise<MorphoVaultV2[]> {
   const allVaults: MorphoVaultV2[] = [];
   let skip = 0;
   let hasMore = true;
-  const minTvl = options.minTvlUsd ?? MIN_TVL_USD;
+  const minTvl = effectiveMinTvl(chain, options);
 
-  log(`Fetching all V2 vaults from Morpho API (min TVL: $${minTvl.toLocaleString()})...`);
+  log(`Fetching V2 vaults for chain ${chain.chainId} (min TVL: $${minTvl.toLocaleString()})...`);
 
   while (hasMore) {
     try {
@@ -94,7 +173,8 @@ async function fetchAllVaults(options: CollectionOptions = {}): Promise<MorphoVa
         {
           first: BATCH_SIZE,
           skip,
-          chainId: CHAIN_ID,
+          chainId: chain.chainId,
+          minTvl,
         }
       );
 
@@ -103,7 +183,7 @@ async function fetchAllVaults(options: CollectionOptions = {}): Promise<MorphoVa
       if (vaults.length === 0) {
         hasMore = false;
       } else {
-        // Filter by minimum TVL
+        // Filter by minimum TVL (backstop — the where-clause already applies it)
         const validVaults = vaults.filter((v) => (v.totalAssetsUsd ?? 0) >= minTvl);
         allVaults.push(...validVaults);
 
@@ -127,12 +207,68 @@ async function fetchAllVaults(options: CollectionOptions = {}): Promise<MorphoVa
         }
       }
     } catch (error) {
-      logError(`Failed to fetch vaults batch at skip=${skip}`, error);
+      logError(`Failed to fetch vaults batch at skip=${skip} (chain ${chain.chainId})`, error);
       hasMore = false;
     }
   }
 
-  log(`Fetched ${allVaults.length} total vaults from API`);
+  log(`  Chain ${chain.chainId}: ${allVaults.length} V2 vaults`);
+  return allVaults;
+}
+
+/**
+ * Fetch all V1 (MetaMorpho) vaults on one chain, normalized to the common
+ * shape. V1 vaults are separate contracts from V2 — both generations coexist.
+ */
+export async function fetchAllVaultsV1(
+  chain: MorphoChainConfig,
+  options: CollectionOptions = {}
+): Promise<MorphoVaultV2[]> {
+  const allVaults: MorphoVaultV2[] = [];
+  let skip = 0;
+  let hasMore = true;
+  const minTvl = effectiveMinTvl(chain, options);
+
+  log(`Fetching V1 (MetaMorpho) vaults for chain ${chain.chainId} (min TVL: $${minTvl.toLocaleString()})...`);
+
+  while (hasMore) {
+    try {
+      const response = await morphoClient.request<VaultsV1Response>(
+        GET_VAULTS_V1_PAGINATED,
+        {
+          first: BATCH_SIZE,
+          skip,
+          chainId: chain.chainId,
+          minTvl,
+        }
+      );
+
+      const vaults = response.vaults.items;
+
+      if (vaults.length === 0) {
+        hasMore = false;
+      } else {
+        for (const v1 of vaults) {
+          const common = v1ToCommonShape(v1);
+          if (common && (common.totalAssetsUsd ?? 0) >= minTvl) {
+            allVaults.push(common);
+          }
+        }
+
+        if (vaults.length < BATCH_SIZE) {
+          hasMore = false;
+        } else {
+          skip += BATCH_SIZE;
+          await sleep(API_DELAY_MS);
+        }
+      }
+    } catch (error) {
+      logError(`Failed to fetch V1 vaults batch at skip=${skip} (chain ${chain.chainId})`, error);
+      hasMore = false;
+    }
+  }
+
+  log(`  Chain ${chain.chainId}: ${allVaults.length} V1 vaults`);
   return allVaults;
 }
 
@@ -192,39 +328,61 @@ async function fetchVaultReallocations(vaultAddress: string) {
 
 /**
  * Ensure curator exists in database. Creates new record if not found.
- * Extracts curator name from vault name if available.
+ *
+ * Resolution order:
+ *  1. Alias-normalized address lookup (existing behavior — keeps every
+ *     Ethereum-era curator row stable).
+ *  2. Canonical identity from the Morpho curator registry: the org's curator
+ *     addresses across ALL chains. This is what stops "Gauntlet on Base" from
+ *     minting a second Gauntlet row next to the Ethereum one.
+ *  3. Create, preferring the registry's display name over the vault-name guess.
+ *
  * Returns the curator ID.
  */
 async function ensureCuratorExists(
   curatorAddress: string,
-  vaultName?: string
+  vaultName?: string,
+  canonical?: MorphoCanonicalCurator | null
 ): Promise<{ curatorId: string; created: boolean }> {
   const normalizedAddress = resolveCuratorAddress(curatorAddress);
+  const canonicalName = canonical?.name?.trim() || null;
 
-  // Try to find existing curator
+  // Try to find existing curator by direct (alias-resolved) address
   let curator = await prisma.curator.findUnique({
     where: { address: normalizedAddress },
   });
 
+  // Fall back to the org's other known addresses (any chain)
+  if (!curator && canonical && canonical.addresses.length > 0) {
+    curator = await prisma.curator.findFirst({
+      where: {
+        address: {
+          in: canonical.addresses.map((a) => a.address),
+          mode: "insensitive",
+        },
+      },
+    });
+  }
+
   if (curator) {
     // If curator exists but has auto-generated name, try to update it
-    if (vaultName && isAutogeneratedCuratorName(curator.name)) {
-      const extractedName = extractCuratorFromVaultName(vaultName);
-      if (extractedName && extractedName.length >= 2) {
+    if (isAutogeneratedCuratorName(curator.name)) {
+      const betterName =
+        canonicalName ?? (vaultName ? extractCuratorFromVaultName(vaultName) : null);
+      if (betterName && betterName.length >= 2) {
         await prisma.curator.update({
-          where: { address: normalizedAddress },
-          data: { name: extractedName },
+          where: { id: curator.id },
+          data: { name: betterName },
         });
-        log(`  Updated curator name: ${extractedName} (from: ${vaultName})`);
+        log(`  Updated curator name: ${betterName} (from: ${canonicalName ? "registry" : vaultName})`);
       }
     }
     return { curatorId: curator.id, created: false };
   }
 
-  // Extract curator name from vault name
-  const extractedName = vaultName
-    ? extractCuratorFromVaultName(vaultName)
-    : null;
+  // Best available name: registry first, vault-name extraction second
+  const extractedName =
+    canonicalName ?? (vaultName ? extractCuratorFromVaultName(vaultName) : null);
 
   // Create new curator with extracted or default name
   try {
@@ -234,7 +392,7 @@ async function ensureCuratorExists(
         name: extractedName || null,
       },
     });
-    log(`  Created new curator: ${extractedName || normalizedAddress.slice(0, 10)}... (from: ${vaultName || 'no vault'})`);
+    log(`  Created new curator: ${extractedName || normalizedAddress.slice(0, 10)}... (from: ${canonicalName ? "registry" : vaultName || 'no vault'})`);
     return { curatorId: curator.id, created: true };
   } catch {
     // May already exist due to race condition
@@ -245,19 +403,51 @@ async function ensureCuratorExists(
   }
 }
 
-async function upsertVault(vault: MorphoVaultV2): Promise<{ vaultId: string; curatorCreated: boolean }> {
+/** Per-chain, per-generation context threaded through vault processing. */
+interface ChainContext {
+  chainId: number;
+  chainName: string;
+  isV1: boolean; // V1 has no adapters/transactions endpoints — skip those steps
+  curatorRegistry: Map<string, MorphoCanonicalCurator>;
+}
+
+async function upsertVault(
+  vault: MorphoVaultV2,
+  ctx: ChainContext
+): Promise<{ vaultId: string; curatorCreated: boolean; skipped?: boolean }> {
   const existing = await prisma.vault.findUnique({
     where: { address: vault.address },
   });
+
+  // Vault.address is globally unique (not per chain). A same-address vault on a
+  // different chain would clobber the original row — skip it loudly instead.
+  // Morpho factories don't reuse addresses across chains today, so this should
+  // stay at zero; if it ever fires, address+chainId needs a composite key.
+  if (existing && existing.chainId !== ctx.chainId) {
+    log(`  ⚠ Address collision across chains, skipping: ${vault.address} (db chain ${existing.chainId}, api chain ${ctx.chainId})`);
+    return { vaultId: existing.id, curatorCreated: false, skipped: true };
+  }
 
   // Link to curator if available
   let curatorId: string | null = null;
   let curatorCreated = false;
 
+  // Canonical org: inline on V1 vaults; V2 resolves via the per-run registry
+  const canonical =
+    vault.curators?.items?.[0] ??
+    (vault.curator?.address
+      ? ctx.curatorRegistry.get(vault.curator.address.toLowerCase()) ?? null
+      : null);
   if (vault.curator?.address) {
     // Check for vault-level curator overrides (e.g. Clearstar vaults under Re7's address)
     const resolvedCuratorAddress = resolveVaultCuratorAddress(vault.address, vault.curator.address);
-    const curatorResult = await ensureCuratorExists(resolvedCuratorAddress, vault.name);
+    const curatorResult = await ensureCuratorExists(resolvedCuratorAddress, vault.name, canonical);
+    curatorId = curatorResult.curatorId;
+    curatorCreated = curatorResult.created;
+  } else if (canonical && canonical.addresses.length > 0) {
+    // V1 vaults occasionally report no state.curator while the registry still
+    // attributes them — use the org's first known address as the curator key.
+    const curatorResult = await ensureCuratorExists(canonical.addresses[0].address, vault.name, canonical);
     curatorId = curatorResult.curatorId;
     curatorCreated = curatorResult.created;
   }
@@ -268,7 +458,9 @@ async function upsertVault(vault: MorphoVaultV2): Promise<{ vaultId: string; cur
       data: {
         name: vault.name,
         symbol: vault.symbol,
-        chainName: CHAIN_NAME,
+        chainId: ctx.chainId,
+        chainName: ctx.chainName,
+        onchainAddress: vault.address.toLowerCase(),
         curatorAddress: vault.curator?.address,
         curatorId,
         performanceFee: vault.performanceFee,
@@ -287,8 +479,9 @@ async function upsertVault(vault: MorphoVaultV2): Promise<{ vaultId: string; cur
         address: vault.address,
         name: vault.name,
         symbol: vault.symbol,
-        chainId: CHAIN_ID,
-        chainName: CHAIN_NAME,
+        chainId: ctx.chainId,
+        chainName: ctx.chainName,
+        onchainAddress: vault.address.toLowerCase(),
         assetAddress: vault.asset.address,
         assetSymbol: vault.asset.symbol,
         assetDecimals: vault.asset.decimals,
@@ -639,7 +832,8 @@ async function createRiskSnapshot(
 async function processVault(
   vault: MorphoVaultV2,
   snapshotTime: Date,
-  options: CollectionOptions
+  options: CollectionOptions,
+  ctx: ChainContext
 ): Promise<{
   success: boolean;
   curatorCreated: boolean;
@@ -650,17 +844,22 @@ async function processVault(
 }> {
   try {
     // Upsert vault record
-    const { vaultId, curatorCreated } = await upsertVault(vault);
+    const { vaultId, curatorCreated, skipped } = await upsertVault(vault, ctx);
+    if (skipped) {
+      return { success: true, curatorCreated: false, txCount: 0, reallocCount: 0, changesDetected: 0 };
+    }
 
     // Create snapshot
     await createSnapshot(vaultId, vault);
 
-    // Store adapter allocations
-    const allocations = await storeAdapterAllocations(vaultId, vault, snapshotTime);
+    // Store adapter allocations (V1 has no adapters — allocation is market-level)
+    const allocations = ctx.isV1
+      ? []
+      : await storeAdapterAllocations(vaultId, vault, snapshotTime);
 
-    // Fetch and store transactions (unless skipped)
+    // Fetch and store transactions (unless skipped; V2-only endpoint)
     let txCount = 0;
-    if (!options.skipTransactions) {
+    if (!options.skipTransactions && !ctx.isV1) {
       const transactions = await fetchVaultTransactions(vault.address);
       const vaultPriceData: VaultPriceData = {
         sharePrice: vault.sharePrice || calculateSharePrice(vault),
@@ -671,15 +870,19 @@ async function processVault(
       txCount = await storeTransactions(vaultId, transactions, vaultPriceData);
     }
 
-    // Fetch and store reallocations (unless skipped)
+    // Fetch and store reallocations (unless skipped; V2-only endpoint)
     let reallocCount = 0;
-    if (!options.skipReallocations) {
+    if (!options.skipReallocations && !ctx.isV1) {
       const reallocations = await fetchVaultReallocations(vault.address);
       reallocCount = await storeReallocations(vaultId, reallocations);
     }
 
-    // Create risk snapshot
-    await createRiskSnapshot(vaultId, vault, allocations);
+    // Create risk snapshot. Skipped for V1: with no adapter data every metric
+    // would read "100% idle / zero diversification", which is a data artifact,
+    // not a risk signal.
+    if (!ctx.isV1) {
+      await createRiskSnapshot(vaultId, vault, allocations);
+    }
 
     // Detect and store changes
     let changesDetected = 0;
@@ -728,7 +931,8 @@ async function processVault(
 async function processVaultsBatch(
   vaults: MorphoVaultV2[],
   snapshotTime: Date,
-  options: CollectionOptions
+  options: CollectionOptions,
+  ctx: ChainContext
 ): Promise<{
   processed: number;
   curatorsCreated: number;
@@ -748,7 +952,7 @@ async function processVaultsBatch(
     const batch = vaults.slice(i, i + PARALLEL_BATCH_SIZE);
 
     const results = await Promise.all(
-      batch.map((vault) => processVault(vault, snapshotTime, options))
+      batch.map((vault) => processVault(vault, snapshotTime, options, ctx))
     );
 
     for (let j = 0; j < results.length; j++) {
@@ -793,34 +997,71 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
   log(`Options: fetchAll=${options.fetchAll ?? true}, minTvl=$${minTvlUsd}, skipTx=${options.skipTransactions ?? false}`);
 
   try {
-    // Fetch all vaults from API
-    const allVaults = await fetchAllVaults(options);
+    const snapshotTime = new Date();
 
-    // Validate and filter vaults
-    const validVaults: MorphoVaultV2[] = [];
+    // Aggregate across chains and vault generations
+    let totalValid = 0;
     let skippedCount = 0;
+    const result = {
+      processed: 0,
+      curatorsCreated: 0,
+      txCollected: 0,
+      reallocsCollected: 0,
+      changesDetected: 0,
+    };
 
-    for (const vault of allVaults) {
-      const validation = isValidVault(vault, minTvlUsd);
-      if (validation.valid) {
-        validVaults.push(vault);
-      } else {
-        skippedCount++;
-        if (options.verbose) {
-          log(`  Skipped ${vault.name || vault.address}: ${validation.reason}`);
+    // Canonical curator identities, fetched once and shared by every chain
+    const curatorRegistry = await fetchMorphoCuratorRegistry();
+
+    // Each chain is fetched and processed independently: one chain's API
+    // trouble must not take down the whole collection run.
+    for (const chain of MORPHO_CHAINS) {
+      const chainName = canonicalChainName(chain.chainId);
+      const chainMinTvl = effectiveMinTvl(chain, options);
+
+      for (const isV1 of [false, true]) {
+        const ctx: ChainContext = { chainId: chain.chainId, chainName, isV1, curatorRegistry };
+        const label = `${chainName} ${isV1 ? "V1" : "V2"}`;
+
+        try {
+          const fetched = isV1
+            ? await fetchAllVaultsV1(chain, options)
+            : await fetchAllVaults(chain, options);
+
+          // Validate and filter vaults
+          const validVaults: MorphoVaultV2[] = [];
+          for (const vault of fetched) {
+            const validation = isValidVault(vault, chainMinTvl);
+            if (validation.valid) {
+              validVaults.push(vault);
+            } else {
+              skippedCount++;
+              if (options.verbose) {
+                log(`  Skipped ${vault.name || vault.address}: ${validation.reason}`);
+              }
+            }
+          }
+          totalValid += validVaults.length;
+
+          if (validVaults.length === 0) continue;
+          log(`Processing ${validVaults.length} ${label} vaults...`);
+
+          const batchResult = await processVaultsBatch(validVaults, snapshotTime, options, ctx);
+          errors.push(...batchResult.errors);
+          result.processed += batchResult.processed;
+          result.curatorsCreated += batchResult.curatorsCreated;
+          result.txCollected += batchResult.txCollected;
+          result.reallocsCollected += batchResult.reallocsCollected;
+          result.changesDetected += batchResult.changesDetected;
+        } catch (error) {
+          const msg = `${label} collection failed: ${error instanceof Error ? error.message : error}`;
+          logError(msg);
+          errors.push(msg);
         }
       }
     }
 
-    log(`Processing ${validVaults.length} valid vaults (${skippedCount} skipped)`);
-
-    const snapshotTime = new Date();
-
-    // Process vaults in parallel batches
-    const result = await processVaultsBatch(validVaults, snapshotTime, options);
-    errors.push(...result.errors);
-
-    log(`Processed: ${result.processed}/${validVaults.length} vaults`);
+    log(`Processed: ${result.processed}/${totalValid} vaults across ${MORPHO_CHAINS.length} chains`);
 
     // Update curator statistics
     await updateCuratorStats();
@@ -894,7 +1135,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
 
     log("-".repeat(60));
     log("Data collection completed!");
-    log(`  Vaults processed: ${result.processed}/${validVaults.length}`);
+    log(`  Vaults processed: ${result.processed}/${totalValid}`);
     log(`  Vaults skipped: ${skippedCount}`);
     log(`  Curators created: ${result.curatorsCreated}`);
     log(`  Transactions collected: ${result.txCollected}`);

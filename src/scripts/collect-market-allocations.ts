@@ -3,7 +3,6 @@ import { morphoClient } from "../lib/graphql/client";
 import { gql } from "graphql-request";
 
 const API_DELAY_MS = 100;
-const CHAIN_ID = 1;
 
 function log(message: string) {
   const timestamp = new Date().toISOString();
@@ -88,9 +87,11 @@ export async function collectMarketAllocations(): Promise<{
 
   log("Starting market allocation collection...");
 
+  // Morpho-sourced vaults only: Turtle rows have synthetic addresses the Morpho
+  // API can't resolve. chainId comes from the row now that ingestion is multi-chain.
   const vaults = await prisma.vault.findMany({
-    where: { active: true },
-    select: { id: true, address: true, name: true },
+    where: { active: true, dataSource: "morpho" },
+    select: { id: true, address: true, name: true, chainId: true },
   });
 
   log(`Processing ${vaults.length} vaults...`);
@@ -101,7 +102,7 @@ export async function collectMarketAllocations(): Promise<{
     try {
       const response = await morphoClient.request<VaultMarketCapsResponse>(
         GET_VAULT_MARKET_CAPS,
-        { address: vault.address, chainId: CHAIN_ID }
+        { address: vault.address, chainId: vault.chainId }
       );
 
       const vaultData = response.vaultV2ByAddress;

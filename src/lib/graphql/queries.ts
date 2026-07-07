@@ -2,13 +2,13 @@ import { gql } from "graphql-request";
 
 // Fetch Morpho V2 vaults with pagination support
 export const GET_VAULTS_V2_PAGINATED = gql`
-  query GetVaultsV2Paginated($first: Int!, $skip: Int!, $chainId: Int!) {
+  query GetVaultsV2Paginated($first: Int!, $skip: Int!, $chainId: Int!, $minTvl: Float!) {
     vaultV2s(
       first: $first
       skip: $skip
       orderBy: TotalAssetsUsd
       orderDirection: Desc
-      where: { chainId_in: [$chainId] }
+      where: { chainId_in: [$chainId], totalAssetsUsd_gte: $minTvl }
     ) {
       items {
         address
@@ -53,6 +53,77 @@ export const GET_VAULTS_V2_PAGINATED = gql`
         }
         curator {
           address
+        }
+      }
+    }
+  }
+`;
+
+// Canonical curator registry: every curator org with its addresses across all
+// chains. Fetched once per collection run (inlining this on the paginated V2
+// vault query blows the API's complexity budget), then joined locally by
+// curator address.
+export const GET_MORPHO_CURATORS = gql`
+  query GetMorphoCurators($first: Int!, $skip: Int!) {
+    curators(first: $first, skip: $skip) {
+      items {
+        id
+        name
+        addresses {
+          address
+          chainId
+        }
+      }
+    }
+  }
+`;
+
+// Fetch Morpho V1 (MetaMorpho) vaults with pagination support. V1 vaults are
+// separate contracts from V2 — both generations coexist per chain and neither
+// list contains the other. V1 has no adapters (it allocates straight to
+// markets) and no separate management fee (state.fee is the performance fee).
+export const GET_VAULTS_V1_PAGINATED = gql`
+  query GetVaultsV1Paginated($first: Int!, $skip: Int!, $chainId: Int!, $minTvl: Float!) {
+    vaults(
+      first: $first
+      skip: $skip
+      orderBy: TotalAssetsUsd
+      orderDirection: Desc
+      where: { chainId_in: [$chainId], totalAssetsUsd_gte: $minTvl }
+    ) {
+      items {
+        address
+        name
+        symbol
+        listed
+        creationTimestamp
+        asset {
+          address
+          symbol
+          decimals
+        }
+        state {
+          totalAssets
+          totalAssetsUsd
+          totalSupply
+          sharePriceNumber
+          apy
+          netApy
+          avgNetApy
+          fee
+          curator
+          curators {
+            id
+            name
+            addresses {
+              address
+              chainId
+            }
+          }
+        }
+        warnings {
+          type
+          level
         }
       }
     }
