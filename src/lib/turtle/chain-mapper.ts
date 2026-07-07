@@ -34,6 +34,7 @@ const CHAIN_MAP: Record<string, { id: number; name: string }> = {
   metis: { id: 1088, name: "Metis" },
   pharos: { id: 1672, name: "Pharos" },
   xlayer: { id: 196, name: "X Layer" },
+  flare: { id: 14, name: "Flare" },
 };
 
 export function getChainId(slug: string): number {
