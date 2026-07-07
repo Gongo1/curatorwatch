@@ -29,7 +29,10 @@ export async function updateVaultGrades(): Promise<{
 }> {
   // 1. Load all active vaults with curator + market allocations + latest snapshot + APR
   const vaults = await prisma.vault.findMany({
-    where: { active: true },
+    // Tokenized funds (JPM JLTXX, Centrifuge/Anemoy) are a separate segment:
+    // the grading model assumes DeFi vault mechanics (adapters, markets,
+    // on-chain risk indicators) that don't apply to a registered fund.
+    where: { active: true, NOT: { opportunityType: "tokenized-fund" } },
     select: {
       id: true,
       address: true,

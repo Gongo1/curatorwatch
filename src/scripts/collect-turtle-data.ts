@@ -89,7 +89,8 @@ function filterOpportunities(
  */
 async function upsertTurtleVault(
   opp: TurtleOpportunity,
-  morphoVaultKeys: Set<string>
+  morphoVaultKeys: Set<string>,
+  fundAddresses: Set<string>
 ): Promise<{
   upserted: boolean;
   matched: boolean;
@@ -148,7 +149,9 @@ async function upsertTurtleVault(
     // overlap in the run report so it can be reviewed and merged deliberately —
     // never auto-unlinked (no silent drops).
     const isOverlap =
-      onchainAddress !== null && morphoVaultKeys.has(`${onchainAddress}:${chainId}`);
+      onchainAddress !== null &&
+      (morphoVaultKeys.has(`${onchainAddress}:${chainId}`) ||
+        fundAddresses.has(onchainAddress));
     if (isOverlap) {
       const existing = await prisma.vault.findUnique({
         where: { address: syntheticAddress },
@@ -319,6 +322,26 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       morphoVaults.map((v) => `${v.address.toLowerCase()}:${v.chainId}`)
     );
 
+    // Rows the funds pipeline adopted keep their synthetic turtle-<uuid>
+    // address but are fund-owned now: their NAV comes from the fund source,
+    // and this collector must not overwrite it with opportunity TVL.
+    const adoptedRows = await prisma.vault.findMany({
+      where: { dataSource: "fund", address: { startsWith: "turtle-" } },
+      select: { address: true },
+    });
+    const fundAdopted = new Set(adoptedRows.map((v) => v.address));
+    let fundAdoptedSkipped = 0;
+
+    // Fund share tokens, matched by address on ANY chain: tokenized funds
+    // (Centrifuge hub-and-spoke) deploy the same share-token address across
+    // chains, and every instance is the same fund — a per-chain Turtle row
+    // would double-count NAV the fund row already carries.
+    const fundRows = await prisma.vault.findMany({
+      where: { dataSource: "fund", onchainAddress: { not: null } },
+      select: { onchainAddress: true },
+    });
+    const fundAddresses = new Set(fundRows.map((v) => v.onchainAddress!));
+
     // 3. Upsert each vault
     let vaultsUpserted = 0;
     let snapshotsCreated = 0;
@@ -329,7 +352,11 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     const crossSourceOverlaps: TurtleCollectionResult["crossSourceOverlaps"] = [];
 
     for (const opp of filtered) {
-      const result = await upsertTurtleVault(opp, morphoVaultKeys);
+      if (fundAdopted.has(`turtle-${opp.id}`)) {
+        fundAdoptedSkipped++;
+        continue;
+      }
+      const result = await upsertTurtleVault(opp, morphoVaultKeys, fundAddresses);
       if (result.overlap) {
         crossSourceOverlaps.push({
           name: opp.name,
@@ -375,6 +402,9 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     log(`  Snapshots created: ${snapshotsCreated}`);
     log(`  Attributed to a curator: ${vaultsAttributed}`);
     log(`  Skipped (unresolved — denylisted protocols / no curator): ${unmatchedHidden}`);
+    if (fundAdoptedSkipped > 0) {
+      log(`  Skipped (adopted by the funds pipeline): ${fundAdoptedSkipped}`);
+    }
     if (hiddenVaults.length > 0) {
       const distinct = [...new Set(hiddenVaults.map((h) => h.name))];
       log(
