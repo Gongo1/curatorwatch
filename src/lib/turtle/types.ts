@@ -43,6 +43,7 @@ export interface TurtleOpportunity {
   tvl: number;
   estimatedApr: number;
   depositTokens: TurtleToken[];
+  receiptToken?: TurtleToken; // share/receipt token — the vault's real on-chain identity
   rewardTokens: TurtleToken[];
   incentives: TurtleIncentive[];
   curator?: TurtleCurator;

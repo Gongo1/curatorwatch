@@ -37,6 +37,11 @@ export interface TurtleCollectionResult {
   vaultsAttributed: number; // vaults matched to a real curator
   unmatchedHidden: number; // vaults ingested but left unattributed (hidden from the directory)
   hiddenVaults: { name: string; tvl: number }[];
+  // Opportunities whose receipt token matches a Morpho-sourced vault on the same
+  // chain — the same on-chain vault seen through both pipelines. New ones are
+  // skipped (never stored); ones with a pre-existing Turtle row are reported here
+  // for review, NOT auto-unlinked (no silent drops).
+  crossSourceOverlaps: { name: string; tvl: number; onchainAddress: string; existingRow: boolean }[];
   errors: string[];
   duration: number;
 }
@@ -83,8 +88,16 @@ function filterOpportunities(
  * Upsert a single Turtle vault into the database.
  */
 async function upsertTurtleVault(
-  opp: TurtleOpportunity
-): Promise<{ upserted: boolean; matched: boolean; skipped?: boolean; curatorName: string; error?: string }> {
+  opp: TurtleOpportunity,
+  morphoVaultKeys: Set<string>
+): Promise<{
+  upserted: boolean;
+  matched: boolean;
+  skipped?: boolean;
+  curatorName: string;
+  error?: string;
+  overlap?: { onchainAddress: string; existingRow: boolean };
+}> {
   try {
     const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
 
@@ -124,6 +137,34 @@ async function upsertTurtleVault(
 
     const syntheticAddress = `turtle-${opp.id}`;
 
+    // Real on-chain identity: the receipt/share token is the vault contract for
+    // ERC-4626-style opportunities. Stored lowercase for cross-source joins.
+    const onchainAddress = opp.receiptToken?.address?.toLowerCase() ?? null;
+    const onchainSymbol = opp.receiptToken?.symbol ?? null;
+
+    // Cross-source guard: if the Morpho pipeline already tracks this exact vault
+    // (same on-chain address + chain), don't create a second row for it. If a
+    // Turtle row already exists from before, keep refreshing it but flag the
+    // overlap in the run report so it can be reviewed and merged deliberately —
+    // never auto-unlinked (no silent drops).
+    const isOverlap =
+      onchainAddress !== null && morphoVaultKeys.has(`${onchainAddress}:${chainId}`);
+    if (isOverlap) {
+      const existing = await prisma.vault.findUnique({
+        where: { address: syntheticAddress },
+        select: { id: true },
+      });
+      if (!existing) {
+        return {
+          upserted: false,
+          matched: false,
+          skipped: true,
+          curatorName: opp.curator?.name ?? opp.name,
+          overlap: { onchainAddress, existingRow: false },
+        };
+      }
+    }
+
     // Turtle API returns estimatedApr as percentage (e.g. 8.33 = 8.33%).
     // Store directly as percentage — no APY conversion. Sanitize first: the Turtle
     // feed occasionally reports garbage (e.g. 5,769% on "Staked Plasma USD"), and
@@ -150,6 +191,8 @@ async function upsertTurtleVault(
       opportunityType: opp.type,
       chainId,
       chainName,
+      onchainAddress,
+      onchainSymbol,
       estTotalAPR,
       netAPR: estTotalAPR,
       aprBreakdown: aprBreakdown ?? undefined,
@@ -189,7 +232,12 @@ async function upsertTurtleVault(
       },
     });
 
-    return { upserted: true, matched: true, curatorName };
+    return {
+      upserted: true,
+      matched: true,
+      curatorName,
+      overlap: isOverlap && onchainAddress ? { onchainAddress, existingRow: true } : undefined,
+    };
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
     return {
@@ -260,6 +308,16 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     const filtered = filterOpportunities(allOpportunities);
     log(`Filtered to ${filtered.length} opportunities (TVL>=$100K, non-Morpho, non-testnet)`);
 
+    // Snapshot of Morpho-sourced vault identities for the cross-source guard
+    // (real address + chain). Built once per run.
+    const morphoVaults = await prisma.vault.findMany({
+      where: { dataSource: "morpho" },
+      select: { address: true, chainId: true },
+    });
+    const morphoVaultKeys = new Set(
+      morphoVaults.map((v) => `${v.address.toLowerCase()}:${v.chainId}`)
+    );
+
     // 3. Upsert each vault
     let vaultsUpserted = 0;
     let snapshotsCreated = 0;
@@ -267,21 +325,41 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     // "hiddenVaults" now holds opportunities SKIPPED (not stored) because they didn't
     // resolve to a curator — denylisted protocols/infra, or no curator name.
     const hiddenVaults: { name: string; tvl: number }[] = [];
+    const crossSourceOverlaps: TurtleCollectionResult["crossSourceOverlaps"] = [];
 
     for (const opp of filtered) {
-      const result = await upsertTurtleVault(opp);
+      const result = await upsertTurtleVault(opp, morphoVaultKeys);
+      if (result.overlap) {
+        crossSourceOverlaps.push({
+          name: opp.name,
+          tvl: opp.tvl ?? 0,
+          onchainAddress: result.overlap.onchainAddress,
+          existingRow: result.overlap.existingRow,
+        });
+      }
       if (result.upserted) {
         vaultsUpserted++;
         snapshotsCreated++;
         vaultsAttributed++;
       } else if (result.skipped) {
-        hiddenVaults.push({ name: result.curatorName, tvl: opp.tvl ?? 0 });
+        if (!result.overlap) {
+          hiddenVaults.push({ name: result.curatorName, tvl: opp.tvl ?? 0 });
+        }
       } else if (result.error) {
         errors.push(`${opp.name}: ${result.error}`);
         logError(`Failed to upsert ${opp.name}: ${result.error}`);
       }
     }
     const unmatchedHidden = hiddenVaults.length;
+
+    if (crossSourceOverlaps.length > 0) {
+      log(`  ⚠ Cross-source overlaps (same vault also tracked by the Morpho pipeline): ${crossSourceOverlaps.length}`);
+      for (const o of crossSourceOverlaps.slice(0, 10)) {
+        log(
+          `    ${o.name} (${o.onchainAddress}, $${(o.tvl / 1e6).toFixed(1)}M) — ${o.existingRow ? "EXISTING Turtle row, review & merge" : "new, skipped"}`
+        );
+      }
+    }
 
     // 4. Update curator stats
     await updateTurtleCuratorStats();
@@ -316,6 +394,7 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       vaultsAttributed,
       unmatchedHidden,
       hiddenVaults,
+      crossSourceOverlaps,
       errors,
       duration,
     };
@@ -334,6 +413,7 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       vaultsAttributed: 0,
       unmatchedHidden: 0,
       hiddenVaults: [],
+      crossSourceOverlaps: [],
       errors,
       duration: Date.now() - startTime,
     };

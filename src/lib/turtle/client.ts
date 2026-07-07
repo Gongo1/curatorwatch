@@ -60,6 +60,7 @@ interface V2Opportunity {
   tvl?: number;
   estimatedApr?: number;
   depositTokens?: V2Token[] | null;
+  receiptToken?: V2Token | null;
   incentives?: V2Incentive[] | null;
   curator?: V2Curator | null;
 }
@@ -112,6 +113,7 @@ function normalizeOpportunity(o: V2Opportunity): TurtleOpportunity {
     tvl: o.tvl ?? 0,
     estimatedApr: o.estimatedApr ?? 0,
     depositTokens,
+    receiptToken: o.receiptToken ? toTurtleToken(o.receiptToken) : undefined,
     rewardTokens: [], // v2 has no separate rewardTokens; ingestion doesn't use them
     incentives,
     curator,

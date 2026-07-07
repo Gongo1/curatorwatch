@@ -64,6 +64,7 @@ export async function GET(request: NextRequest) {
         snapshotsCreated: result.snapshotsCreated,
         vaultsAttributed: result.vaultsAttributed,
         unmatchedHidden: result.unmatchedHidden,
+        crossSourceOverlaps: result.crossSourceOverlaps,
         duration: result.duration,
       },
       dealSync,

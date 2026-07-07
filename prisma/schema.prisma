@@ -30,6 +30,8 @@ model Vault {
   dataSource      String   @default("morpho")  // Which pipeline owns this vault: "morpho" | "turtle"
   opportunityType String?                      // "lending" | "vault" from Turtle
   chainName       String?                      // Human-readable chain name ("Base", "Arbitrum", etc.)
+  onchainAddress  String?                      // Real on-chain vault/receipt-token address, lowercase (Turtle rows keep a synthetic `address`)
+  onchainSymbol   String?                      // Receipt/share token symbol (e.g. "sUSDS")
 
   // Turtle-specific yield fields (APR, not APY)
   estTotalAPR     Float?                       // Turtle's reported "Est. Total APR" (percentage, e.g. 8.33)
@@ -86,6 +88,7 @@ model Vault {
   @@index([dataSource])
   @@index([grade])
   @@index([riskScore])
+  @@index([onchainAddress])
 }
 
 model VaultSnapshot {
