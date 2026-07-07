@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collectData } from "@/scripts/collect-data";
+import { collectData, MORPHO_CHAINS } from "@/scripts/collect-data";
 import { updateVaultGrades } from "@/scripts/update-vault-grades";
 import { importRatingsData } from "@/scripts/import-risk-engine-ratings";
 import { ratingsData } from "@/lib/risk-engine-data";
@@ -8,7 +8,7 @@ import { fetchNews } from "@/lib/news/fetch-news";
 import { detectDisclosureCandidates } from "@/lib/news/disclosure-listener";
 import { storePlatformAlerts } from "@/lib/curator-alert-detector";
 
-export const maxDuration = 800; // Pro plan allows up to 900s
+export const maxDuration = 900; // Pro plan maximum
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
@@ -34,12 +34,24 @@ export async function GET(request: NextRequest) {
   // Check if this is a full collection request
   const fullCollection = request.nextUrl.searchParams.get("full") === "true";
 
+  // Cron lanes: the default lane collects Ethereum (the big one — it must
+  // finish inside the function budget on its own); the "alt" lane collects
+  // every other Morpho chain in a separate invocation. The 2026-07-07 18:00
+  // run proved one invocation can't do both: it timed out at ~834s five
+  // vaults into Base V1, and the chains after Base never ran.
+  const lane = request.nextUrl.searchParams.get("lane") === "alt" ? "alt" : "core";
+  const laneChainIds =
+    lane === "alt"
+      ? MORPHO_CHAINS.filter((c) => c.chainId !== 1).map((c) => c.chainId)
+      : [1];
+
   try {
-    console.log(`[CRON] Starting ${fullCollection ? "full" : "light"} data collection...`);
+    console.log(`[CRON] Starting ${fullCollection ? "full" : "light"} data collection (lane: ${lane})...`);
 
     const result = await collectData({
       fetchAll: true,
       minTvlUsd: 1000,
+      chainIds: laneChainIds,
       // Light collection: skip heavy operations for speed
       skipTransactions: !fullCollection,
       skipReallocations: !fullCollection,

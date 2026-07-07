@@ -89,6 +89,10 @@ export interface CollectionOptions {
   skipLiquidations?: boolean; // Skip liquidation collection
   minTvlUsd?: number; // Minimum TVL to include
   verbose?: boolean; // Verbose logging
+  // Restrict the run to these chains (cron lanes: Ethereum alone is ~2/3 of
+  // the vault count and must finish within the function budget, so the other
+  // chains run in their own invocation). Default: all MORPHO_CHAINS.
+  chainIds?: number[];
 }
 
 function log(message: string) {
@@ -1015,7 +1019,10 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
 
     // Each chain is fetched and processed independently: one chain's API
     // trouble must not take down the whole collection run.
-    for (const chain of MORPHO_CHAINS) {
+    const chains = options.chainIds
+      ? MORPHO_CHAINS.filter((c) => options.chainIds!.includes(c.chainId))
+      : MORPHO_CHAINS;
+    for (const chain of chains) {
       const chainName = canonicalChainName(chain.chainId);
       const chainMinTvl = effectiveMinTvl(chain, options);
 
@@ -1061,7 +1068,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       }
     }
 
-    log(`Processed: ${result.processed}/${totalValid} vaults across ${MORPHO_CHAINS.length} chains`);
+    log(`Processed: ${result.processed}/${totalValid} vaults across ${chains.length} chain(s)`);
 
     // Update curator statistics
     await updateCuratorStats();
