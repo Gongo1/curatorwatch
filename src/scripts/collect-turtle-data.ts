@@ -308,10 +308,11 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     const filtered = filterOpportunities(allOpportunities);
     log(`Filtered to ${filtered.length} opportunities (TVL>=$100K, non-Morpho, non-testnet)`);
 
-    // Snapshot of Morpho-sourced vault identities for the cross-source guard
-    // (real address + chain). Built once per run.
+    // Snapshot of vault identities owned by the native pipelines (Morpho +
+    // Euler rows store the real contract in `address`) for the cross-source
+    // guard. Built once per run.
     const morphoVaults = await prisma.vault.findMany({
-      where: { dataSource: "morpho" },
+      where: { dataSource: { in: ["morpho", "euler"] } },
       select: { address: true, chainId: true },
     });
     const morphoVaultKeys = new Set(
