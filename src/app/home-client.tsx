@@ -169,54 +169,46 @@ export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomePro
         </div>
       </header>
 
-      {/* ── Single-manager concentration ── */}
-      {concFlags.length > 0 && (
-        <section className="mb-8">
-          <div className="flex items-baseline gap-3 mb-3 flex-wrap">
-            <span className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">
-              Single-manager concentration
-            </span>
-            <span className="font-mono text-[11px] text-text-muted ml-auto text-right">
-              stablecoins ≥84% run by one curator
-            </span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {concFlags.map((f) => (
-              <Link
-                key={f.symbol}
-                href={f.topCuratorAddress ? `/curator/${curatorSlug(f.topCurator, f.topCuratorAddress)}` : "#"}
-                className="rounded-xl border border-border bg-background-subtle px-3.5 py-3 hover:border-accent-blue active:translate-y-px transition-colors group"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold text-text-primary truncate">{f.symbol}</span>
-                  <span className="font-mono text-xs text-accent-yellow tabular-nums">{Math.round(f.topCuratorPct)}%</span>
-                </div>
-                <div className="font-mono text-[11px] text-text-tertiary mt-1 truncate">
-                  {compactUsd(f.totalUsd)} · {f.curatorCount} curator{f.curatorCount === 1 ? "" : "s"}
-                </div>
-                <div className="font-mono text-[11px] text-text-secondary mt-0.5 truncate group-hover:text-accent-blue transition-colors">
-                  {f.topCurator || "—"}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      {/* ── Newswire: one-line headline bar ── */}
+      {news.length > 0 && <Newswire variant="bar" items={news} title="Newswire" />}
 
-      {/* ── Context strip ── */}
-      <div className="flex gap-x-12 gap-y-4 flex-wrap py-4 border-y border-border-subtle mb-8">
-        <Stat k="Curators" v={String(stats.totalCurators)} />
-        <Stat k="Products managed" v={String(stats.totalVaults)} sub="vaults" />
-        {apyDist && apyDist.count > 0 ? (
-          <ApyDistViz d={apyDist} />
-        ) : (
-          <Stat k="Net APY" v="—" />
-        )}
+      {/* ── Signal strip: APY · largest · single-manager concentration ── */}
+      <div className="flex gap-x-10 gap-y-4 items-end flex-wrap py-4 border-b border-border-subtle mb-10">
+        {apyDist && apyDist.count > 0 && <ApyDistViz d={apyDist} />}
         {largest && <Stat k="Largest curator" v={largest.name || "—"} sub={compactUsd(largest.totalAUM)} />}
+        {concFlags.length > 0 && (
+          <div className="min-w-0">
+            <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
+              Single-manager <span className="text-text-muted normal-case tracking-normal">≥84% one curator</span>
+            </div>
+            <div className="flex gap-x-4 gap-y-1 flex-wrap mt-1.5 font-mono text-sm">
+              {concFlags.slice(0, 4).map((f) => (
+                <Link
+                  key={f.symbol}
+                  href={f.topCuratorAddress ? `/curator/${curatorSlug(f.topCurator, f.topCuratorAddress)}` : "#"}
+                  className="group whitespace-nowrap"
+                  title={`${f.symbol}: ${compactUsd(f.totalUsd)} across ${f.curatorCount} curator${f.curatorCount === 1 ? "" : "s"} — ${Math.round(f.topCuratorPct)}% with ${f.topCurator}`}
+                >
+                  <span className="font-semibold text-text-primary">{f.symbol}</span>{" "}
+                  <span className="text-accent-yellow tabular-nums">{Math.round(f.topCuratorPct)}%</span>{" "}
+                  <span className="text-text-tertiary group-hover:text-accent-blue transition-colors">
+                    {f.topCurator || "—"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* ── TVL by curator (30d) — the first full view ── */}
+      <section>
+        <SectionHead title="Tracked TVL by curator" meta="top 6 · stacked · 30 days · hover to inspect" />
+        <ChartWhenVisible />
+      </section>
+
       {/* ── What a curator is ── */}
-      <p className="text-sm text-text-secondary leading-relaxed max-w-[760px] mb-10">
+      <p className="text-sm text-text-secondary leading-relaxed max-w-[760px] mt-12 mb-6">
         A <span className="text-text-primary font-medium">curator</span> is the risk team behind a
         vault: they pick the lending markets, set exposure caps, and rebalance deposits — LPs
         delegate those decisions in exchange for yield. So the real due-diligence question
@@ -228,23 +220,9 @@ export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomePro
         .
       </p>
 
-      {/* ── Newswire: press naming tracked curators ── */}
-      {news.length > 0 && (
-        <section className="mt-2 mb-12">
-          <SectionHead title="Newswire" meta={`latest press naming tracked curators · ${news.length}`} />
-          <Newswire variant="strip" items={news} limit={8} title="Latest" />
-        </section>
-      )}
-
-      {/* ── TVL by curator (30d) ── */}
-      <section className="mt-12">
-        <SectionHead title="Tracked TVL by curator" meta="top 6 · stacked · 30 days · hover to inspect" />
-        <ChartWhenVisible />
-      </section>
-
       {/* ── Curator index ── */}
-      <section className="mt-12">
-        <SectionHead title="All curators" meta={`${stats.totalCurators} · ranked by TVL · search & sort`} />
+      <section>
+        <SectionHead title="All curators" meta="ranked by TVL · search & sort" />
         <CuratorIndex curators={curators} />
       </section>
 
