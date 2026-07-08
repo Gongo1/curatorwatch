@@ -56,8 +56,11 @@ export async function GET(request: NextRequest) {
       // Light collection: skip heavy operations for speed
       skipTransactions: !fullCollection,
       skipReallocations: !fullCollection,
-      skipMarketAllocations: !fullCollection,
-      skipLiquidations: !fullCollection,
+      // Market allocations + liquidations moved to their own cron
+      // (/api/cron/collect-market-data) — at connection_limit=1 they don't fit
+      // in the same budget as a full Ethereum collection.
+      skipMarketAllocations: true,
+      skipLiquidations: true,
       verbose: false,
     });
 
@@ -69,51 +72,55 @@ export async function GET(request: NextRequest) {
       duration: `${result.duration}s`,
     });
 
-    // Update vault risk scores and grades
-    try {
-      const gradeResult = await updateVaultGrades();
-      console.log("[CRON] Vault grades updated:", gradeResult);
-    } catch (gradeError) {
-      console.error("[CRON] Vault grade update failed (non-fatal):", gradeError);
-    }
+    // Post-collection steps run on the ALT lane only. The core lane (Ethereum,
+    // ~2/3 of the vault count) needs its whole function budget for collection —
+    // on 2026-07-07/08 it repeatedly timed out mid-post-steps, which is how the
+    // ratings import and returns metrics silently stalled. The alt lane's
+    // collection is small (~150 vaults), leaving real headroom for these.
+    if (lane === "alt") {
+      // Update vault risk scores and grades
+      try {
+        const gradeResult = await updateVaultGrades();
+        console.log("[CRON] Vault grades updated:", gradeResult);
+      } catch (gradeError) {
+        console.error("[CRON] Vault grade update failed (non-fatal):", gradeError);
+      }
 
-    // Returns analytics from share-price history — one set-based SQL
-    // statement covering every vault, so it only needs to run on one lane.
-    if (lane === "core") {
+      // Returns analytics from share-price history — one set-based SQL statement
       try {
         const returnsResult = await updateReturnsMetrics();
         console.log("[CRON] Returns metrics updated:", returnsResult);
       } catch (returnsError) {
         console.error("[CRON] Returns metrics update failed (non-fatal):", returnsError);
       }
-    }
 
-    // Refresh the loss-anchored EL ratings from the bundled engine output
-    // (idempotent upsert; refreshes when a new ratings.json is deployed).
-    try {
-      const r = await importRatingsData(ratingsData);
-      console.log("[CRON] EL ratings imported:", { curators: r.curators, vaults: r.vaults, matched: r.matched });
-    } catch (ratingError) {
-      console.error("[CRON] EL rating import failed (non-fatal):", ratingError);
-    }
+      // Refresh the loss-anchored EL ratings from the bundled engine output
+      // (idempotent upsert; refreshes when a new ratings.json is deployed).
+      try {
+        const r = await importRatingsData(ratingsData);
+        console.log("[CRON] EL ratings imported:", { curators: r.curators, vaults: r.vaults, matched: r.matched });
+      } catch (ratingError) {
+        console.error("[CRON] EL rating import failed (non-fatal):", ratingError);
+      }
 
-    // Newswire: pull free RSS feeds and tag headlines to tracked curators.
-    try {
-      const news = await fetchNews();
-      console.log("[CRON] News ingest:", news);
-    } catch (newsError) {
-      console.error("[CRON] News ingest failed (non-fatal):", newsError);
-    }
+      // Newswire: pull free RSS feeds and tag headlines to tracked curators.
+      try {
+        const news = await fetchNews();
+        console.log("[CRON] News ingest:", news);
+      } catch (newsError) {
+        console.error("[CRON] News ingest failed (non-fatal):", newsError);
+      }
 
-    // Disclosure listener: surface possible off-chain legal/regulatory events
-    // (legal-tagged news + SEC EDGAR filings naming a curator) as DISCLOSURE_CANDIDATE
-    // alerts for human review. Never auto-published.
-    try {
-      const candidates = await detectDisclosureCandidates();
-      const stored = await storePlatformAlerts(candidates);
-      console.log("[CRON] Disclosure candidates:", { found: candidates.length, stored });
-    } catch (disclosureError) {
-      console.error("[CRON] Disclosure scan failed (non-fatal):", disclosureError);
+      // Disclosure listener: surface possible off-chain legal/regulatory events
+      // (legal-tagged news + SEC EDGAR filings naming a curator) as DISCLOSURE_CANDIDATE
+      // alerts for human review. Never auto-published.
+      try {
+        const candidates = await detectDisclosureCandidates();
+        const stored = await storePlatformAlerts(candidates);
+        console.log("[CRON] Disclosure candidates:", { found: candidates.length, stored });
+      } catch (disclosureError) {
+        console.error("[CRON] Disclosure scan failed (non-fatal):", disclosureError);
+      }
     }
 
     revalidateDataPages();

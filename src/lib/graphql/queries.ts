@@ -274,7 +274,7 @@ export const GET_VAULT_REALLOCATES = gql`
           address
         }
         market {
-          uniqueKey
+          marketId
         }
       }
     }
@@ -306,7 +306,7 @@ export interface VaultReallocate {
     address: string;
   };
   market: {
-    uniqueKey: string;
+    marketId: string;
   } | null;
 }
 
@@ -359,8 +359,8 @@ export interface VaultPositionsResponse {
 // Fetch market details by unique key
 export const GET_MARKET_BY_KEY = gql`
   query GetMarketByKey($uniqueKey: String!, $chainId: Int!) {
-    marketByUniqueKey(uniqueKey: $uniqueKey, chainId: $chainId) {
-      uniqueKey
+    marketById(marketId: $uniqueKey, chainId: $chainId) {
+      marketId
       loanAsset {
         address
         symbol
@@ -390,7 +390,7 @@ export const GET_MARKET_BY_KEY = gql`
 `;
 
 export interface MorphoMarket {
-  uniqueKey: string;
+  marketId: string;
   loanAsset: {
     address: string;
     symbol: string;
@@ -418,7 +418,7 @@ export interface MorphoMarket {
 }
 
 export interface MarketByKeyResponse {
-  marketByUniqueKey: MorphoMarket | null;
+  marketById: MorphoMarket | null;
 }
 
 // Fetch vault adapters (simplified - adapters don't expose market details directly)
@@ -535,7 +535,7 @@ export const GET_LIQUIDATION_TRANSACTIONS = gql`
             badDebtAssetsUsd
             liquidator
             market {
-              uniqueKey
+              marketId
             }
           }
         }
@@ -553,7 +553,7 @@ export interface LiquidationTransactionData {
   badDebtAssetsUsd: number;
   liquidator: string;
   market: {
-    uniqueKey: string;
+    marketId: string;
   };
 }
 
