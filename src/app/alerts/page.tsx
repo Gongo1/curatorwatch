@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { formatTimeAgo } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { AlertSubscribeCard } from "@/components/alerts/AlertSubscribeCard";
+import { AlertConfigPanel } from "@/components/alerts/AlertConfigPanel";
 import { usePortfolio } from "@/hooks/usePortfolio";
 
 interface VaultInfo {
@@ -95,7 +95,7 @@ export default function AlertsPage() {
   const [offset, setOffset] = useState(0);
 
   // New state
-  const [alertTab, setAlertTab] = useState<"all" | "my">("all");
+  const [alertTab, setAlertTab] = useState<"all" | "my" | "config">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCurators, setSelectedCurators] = useState<string[]>([]);
@@ -438,10 +438,8 @@ export default function AlertsPage() {
         breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Alerts" }]}
       />
 
-      <AlertSubscribeCard />
-
-      {/* My Alerts / All Alerts Tabs */}
-      <div className="flex items-center gap-2 mb-6">
+      {/* My Alerts / All Alerts / Alert Configuration Tabs */}
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
         <button
           onClick={() => { setAlertTab("my"); setSelectedCurators([]); }}
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
@@ -462,7 +460,22 @@ export default function AlertsPage() {
         >
           All Alerts
         </button>
+        <button
+          onClick={() => { setAlertTab("config"); }}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ml-auto ${
+            alertTab === "config"
+              ? "bg-accent-blue text-white"
+              : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
+          }`}
+        >
+          Alert Configuration
+        </button>
       </div>
+
+      {/* Alert Configuration tab: email + Telegram subscriptions */}
+      {alertTab === "config" && <AlertConfigPanel />}
+
+      {alertTab !== "config" && (<>
 
       {/* Portfolio Summary (My Alerts tab) */}
       {alertTab === "my" && hasTrackedItems && (
@@ -878,6 +891,7 @@ export default function AlertsPage() {
           </button>
         </div>
       )}
+      </>)}
     </>
   );
 }

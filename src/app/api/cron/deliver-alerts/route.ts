@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { sendEmail, alertsEmail, digestEmail, emailConfigured, SITE_URL } from "@/lib/notify/email";
+import { sendEmail, alertsEmail, digestEmail, confirmEmail, emailConfigured, SITE_URL } from "@/lib/notify/email";
 import { sendTelegram, formatAlertTg, formatDigestTg, telegramConfigured } from "@/lib/notify/telegram";
 
 export const maxDuration = 300;
@@ -74,6 +74,37 @@ export async function GET(request: NextRequest) {
       summary.digest = { slug: digest.slug, emailed, failed, telegram: tg };
       return NextResponse.json({ success: true, summary });
     }
+
+    // ── Confirmation backlog ─────────────────────────────────────────────────
+    // Emails captured while delivery was dark (confirmSentAt null) get their
+    // double-opt-in confirmation now that email is configured. Runs before the
+    // alert send so a same-run confirm→alert can't happen (they aren't confirmed
+    // until they click).
+    let confirmationsSent = 0;
+    if (emailConfigured()) {
+      const pending = await prisma.alertSubscription.findMany({
+        where: { confirmedAt: null, confirmSentAt: null },
+        take: 50,
+      });
+      for (const sub of pending) {
+        const names = sub.curatorIds.length
+          ? (await prisma.curator.findMany({ where: { id: { in: sub.curatorIds } }, select: { name: true } })).map(
+              (c) => c.name ?? "unnamed curator"
+            )
+          : [];
+        const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${sub.confirmToken}`;
+        const mail = confirmEmail(confirmUrl, names, sub.wantsDigest);
+        const result = await sendEmail({ to: sub.email, subject: mail.subject, html: mail.html });
+        if (result.sent) {
+          await prisma.alertSubscription.update({ where: { id: sub.id }, data: { confirmSentAt: new Date() } });
+          confirmationsSent++;
+        } else {
+          console.error(`[deliver] backlog confirm → ${sub.email} failed:`, result.reason);
+          break; // provider problem — stop, retry next run
+        }
+      }
+    }
+    summary.confirmationsSent = confirmationsSent;
 
     // ── Alert delivery ───────────────────────────────────────────────────────
     // Telegram channel: warning/critical alerts not yet posted (48h lookback

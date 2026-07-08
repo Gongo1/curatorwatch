@@ -10,18 +10,16 @@ const MAX_CURATORS = 20;
 
 /**
  * POST { email, curatorIds?: string[], wantsDigest?: boolean }
- * Creates (or re-configures) a subscription and sends the double-opt-in
- * confirmation email. Re-subscribing an existing email updates its
- * preferences and, if unconfirmed, re-sends the confirmation.
+ *
+ * ALWAYS persists the subscription (we capture every interested email), then:
+ *  - if email delivery is configured and the sub isn't confirmed yet → sends
+ *    the double-opt-in confirmation and stamps confirmSentAt.
+ *  - if delivery isn't configured yet → saves the record with confirmSentAt
+ *    null; the deliver-alerts cron sends confirmations to this backlog once the
+ *    keys land. The user is told they're on the list.
+ * Re-subscribing an existing email updates its preferences.
  */
 export async function POST(request: NextRequest) {
-  if (!emailConfigured()) {
-    return NextResponse.json(
-      { success: false, error: "Email delivery isn't configured yet — check back soon." },
-      { status: 503 }
-    );
-  }
-
   let body: { email?: string; curatorIds?: string[]; wantsDigest?: boolean };
   try {
     body = await request.json();
@@ -65,23 +63,33 @@ export async function POST(request: NextRequest) {
         data: { email, curatorIds: validIds, wantsDigest, confirmToken, unsubToken },
       });
 
-  if (!sub.confirmedAt) {
-    const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${sub.confirmToken}`;
-    const mail = confirmEmail(
-      confirmUrl,
-      curators.map((c) => c.name ?? "unnamed curator"),
-      wantsDigest
-    );
-    const result = await sendEmail({ to: email, subject: mail.subject, html: mail.html });
-    if (!result.sent) {
-      console.error("[alerts] confirmation email failed:", result.reason);
-      return NextResponse.json(
-        { success: false, error: "Couldn't send the confirmation email — try again shortly." },
-        { status: 502 }
-      );
-    }
-    return NextResponse.json({ success: true, status: "confirmation_sent" });
+  if (sub.confirmedAt) {
+    return NextResponse.json({ success: true, status: "updated" });
   }
 
-  return NextResponse.json({ success: true, status: "updated" });
+  // Not yet confirmed. If we can send email, send the confirmation now.
+  // Otherwise the record is saved (email captured) and the delivery cron will
+  // send confirmations to the backlog once delivery is configured.
+  if (!emailConfigured()) {
+    return NextResponse.json({ success: true, status: "saved_pending" });
+  }
+
+  const confirmUrl = `${SITE_URL}/api/alerts/confirm?token=${sub.confirmToken}`;
+  const mail = confirmEmail(
+    confirmUrl,
+    curators.map((c) => c.name ?? "unnamed curator"),
+    wantsDigest
+  );
+  const result = await sendEmail({ to: email, subject: mail.subject, html: mail.html });
+  if (!result.sent) {
+    console.error("[alerts] confirmation email failed:", result.reason);
+    // The record is still saved — treat a send failure as "captured, pending"
+    // rather than losing the interested email.
+    return NextResponse.json({ success: true, status: "saved_pending" });
+  }
+  await prisma.alertSubscription.update({
+    where: { id: sub.id },
+    data: { confirmSentAt: new Date() },
+  });
+  return NextResponse.json({ success: true, status: "confirmation_sent" });
 }

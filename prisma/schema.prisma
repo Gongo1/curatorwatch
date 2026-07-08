@@ -567,6 +567,7 @@ model AlertSubscription {
   curatorIds    String[]  @default([])          // Curator.id values the subscriber watches
   wantsDigest   Boolean   @default(false)       // daily digest email
   confirmedAt   DateTime?                       // double opt-in: null until the confirm link is clicked
+  confirmSentAt DateTime?                       // when a confirmation email was last sent (null = captured but not yet emailed, e.g. signed up before delivery was configured)
   confirmToken  String    @unique
   unsubToken    String    @unique
   lastAlertAt   DateTime  @default(now())       // watermark: alerts detected after this get emailed next run
