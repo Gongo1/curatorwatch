@@ -717,7 +717,7 @@ async function storeReallocations(
           timestamp: new Date(Number(realloc.timestamp) * 1000),
           txHash: realloc.hash,
           type: realloc.type,
-          marketId: realloc.market?.uniqueKey,
+          marketId: realloc.market?.marketId,
           amount: realloc.assets,
         },
       });

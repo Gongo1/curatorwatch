@@ -96,11 +96,11 @@ export async function collectLiquidations(): Promise<{
 
 async function upsertLiquidation(tx: LiquidationTransaction): Promise<"created" | "existing"> {
   const data = tx.data;
-  if (!data?.market?.uniqueKey) return "existing";
+  if (!data?.market?.marketId) return "existing";
 
   const timestamp = new Date(Number(tx.timestamp) * 1000);
   const txHash = tx.hash;
-  const marketUniqueKey = data.market.uniqueKey;
+  const marketUniqueKey = data.market.marketId;
   const borrower = tx.user.address;
 
   const existing = await prisma.liquidation.findUnique({

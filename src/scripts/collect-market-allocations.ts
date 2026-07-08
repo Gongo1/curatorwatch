@@ -32,7 +32,7 @@ const GET_VAULT_MARKET_CAPS = gql`
             ... on MarketV1CapData {
               adapterAddress
               market {
-                uniqueKey
+                marketId
                 loanAsset { symbol address }
                 collateralAsset { symbol address }
                 lltv
@@ -55,7 +55,7 @@ interface MarketCapItem {
   data: {
     adapterAddress?: string;
     market?: {
-      uniqueKey: string;
+      marketId: string;
       loanAsset: { symbol: string; address: string };
       collateralAsset: { symbol: string; address: string } | null;
       lltv: string;
@@ -130,7 +130,7 @@ export async function collectMarketAllocations(): Promise<{
         await prisma.marketAllocation.create({
           data: {
             vaultId: vault.id,
-            marketUniqueKey: market.uniqueKey,
+            marketUniqueKey: market.marketId,
             adapterAddress: cap.data.adapterAddress || "",
             loanAssetSymbol: market.loanAsset.symbol,
             loanAssetAddress: market.loanAsset.address,

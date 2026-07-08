@@ -19,11 +19,11 @@ export interface NewsFeed {
  * source never aborts the run.
  */
 export const NEWS_FEEDS: NewsFeed[] = [
-  { source: "CoinDesk", url: "https://www.coindesk.com/arc/outboundfeeds/rss/" },
+  { source: "CoinDesk", url: "https://www.coindesk.com/arc/outboundfeeds/rss" },
   { source: "The Defiant", url: "https://thedefiant.io/api/feed" },
   { source: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/defi" },
   { source: "Decrypt", url: "https://decrypt.co/feed" },
-  { source: "Blockworks", url: "https://blockworks.co/feed" },
+  { source: "Blockworks", url: "https://blockworks.com/feed" },
   { source: "The Block", url: "https://www.theblock.co/rss.xml" },
   { source: "CryptoSlate", url: "https://cryptoslate.com/feed/" },
 ];
