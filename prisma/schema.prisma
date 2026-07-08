@@ -336,6 +336,7 @@ model PlatformAlert {
   metadata    Json?
   detectedAt  DateTime
   viewed      Boolean  @default(false)
+  tgPostedAt  DateTime? // when this alert was pushed to the Telegram channel (null = not yet)
   createdAt   DateTime @default(now())
 
   @@unique([scope, curatorId, changeType, detectedAt])
@@ -555,4 +556,22 @@ model Digest {
 
   @@index([date])
   @@index([published, date])
+}
+
+// Email alert subscriptions (no accounts — double opt-in by email).
+// A subscriber picks the curators (counterparties) they care about and/or the
+// daily digest. Deliveries run in /api/cron/deliver-alerts.
+model AlertSubscription {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  curatorIds    String[]  @default([])          // Curator.id values the subscriber watches
+  wantsDigest   Boolean   @default(false)       // daily digest email
+  confirmedAt   DateTime?                       // double opt-in: null until the confirm link is clicked
+  confirmToken  String    @unique
+  unsubToken    String    @unique
+  lastAlertAt   DateTime  @default(now())       // watermark: alerts detected after this get emailed next run
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([confirmedAt])
 }

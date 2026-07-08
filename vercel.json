@@ -39,6 +39,14 @@
     {
       "path": "/api/cron/collect-market-data",
       "schedule": "15 4,16 * * *"
+    },
+    {
+      "path": "/api/cron/deliver-alerts",
+      "schedule": "45 */6 * * *"
+    },
+    {
+      "path": "/api/cron/deliver-alerts?digest=true",
+      "schedule": "30 5 * * *"
     }
   ]
 }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { formatTimeAgo } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { AlertSubscribeCard } from "@/components/alerts/AlertSubscribeCard";
 import { usePortfolio } from "@/hooks/usePortfolio";
 
 interface VaultInfo {
@@ -436,6 +437,8 @@ export default function AlertsPage() {
         description={summary ? `${summary.critical} critical \u2022 ${summary.warning} warnings \u2022 ${summary.info} info` : undefined}
         breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Alerts" }]}
       />
+
+      <AlertSubscribeCard />
 
       {/* My Alerts / All Alerts Tabs */}
       <div className="flex items-center gap-2 mb-6">
