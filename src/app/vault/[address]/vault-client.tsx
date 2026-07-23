@@ -17,7 +17,6 @@ import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
 import type { VaultDetail } from "@/lib/types/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { ActivityTab } from "@/components/ActivityTab";
-import { RiskTab } from "@/components/RiskTab";
 import { StrategyIntelligence } from "@/components/StrategyIntelligence";
 import { RecentChanges } from "@/components/RecentChanges";
 import { CuratorSection, CuratorPlaceholder } from "@/components/CuratorSection";
