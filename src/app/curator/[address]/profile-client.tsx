@@ -67,8 +67,6 @@ const netApyOf = (v: CuratorVaultSummary): number => {
   return v.netAPR != null ? v.netAPR / 100 : 0;
 };
 const tvlOf = (v: CuratorVaultSummary): number => v.latestSnapshot?.totalAssetsUsd ?? 0;
-const gradeKey = (g: string | null): "high" | "medium" | "low" | null =>
-  g === "high-grade" ? "high" : g === "medium-grade" ? "medium" : g === "low-grade" ? "low" : null;
 
 interface CuratorProfileViewProps {
   data: CuratorDetailResponse["data"];
@@ -89,14 +87,11 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
     return r ? { grade: r.grade, el: r.elMedian } : null;
   };
   const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
-  const grade = { high: 0, medium: 0, low: 0 };
   const assetMap: Record<string, number> = {};
   const networks = new Set<string>();
   const sources = new Set<string>();
   let annualYield = 0;
   for (const v of vaults) {
-    const k = gradeKey(v.grade);
-    if (k) grade[k]++;
     assetMap[v.asset.symbol] = (assetMap[v.asset.symbol] || 0) + tvlOf(v);
     networks.add(v.chainName ?? "Ethereum");
     sources.add(v.dataSource ?? "morpho");
@@ -118,8 +113,6 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
   const derived = {
     apyDist,
     totalTVL,
-    grade,
-    graded: grade.high + grade.medium + grade.low,
     assets,
     networks: Array.from(networks),
     sources: Array.from(sources),
@@ -132,7 +125,6 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
   const { curator } = data;
   const isTracked = isCuratorTracked(curator.id);
   const name = curator.name || `Curator ${curator.address.slice(0, 6)}`;
-  const g = derived.grade;
 
   const vaultById = new Map(vaults.map((v) => [v.id, v]));
 
@@ -308,23 +300,7 @@ export function CuratorProfileView({ data, engineRating, vaultRatings }: Curator
               </span>
             </button>
           )}
-          <div className="flex justify-between items-baseline mb-1.5">
-            <span className="text-sm text-text-secondary">Vault grade mix</span>
-            {g.low === 0 && derived.graded > 0 && (
-              <span className="font-mono text-xs text-accent-green inline-flex items-center gap-1"><Check className="w-3 h-3" /> No low-grade</span>
-            )}
-          </div>
-          <div className="h-2.5 rounded-md overflow-hidden flex bg-background-elevated" role="img" aria-label={`${g.high} high, ${g.medium} medium, ${g.low} low grade`}>
-            {g.high > 0 && <span className="bg-accent-green" style={{ width: `${(g.high / derived.graded) * 100}%` }} />}
-            {g.medium > 0 && <span className="bg-accent-yellow" style={{ width: `${(g.medium / derived.graded) * 100}%` }} />}
-            {g.low > 0 && <span className="bg-accent-red" style={{ width: `${(g.low / derived.graded) * 100}%` }} />}
-          </div>
-          <div className="flex gap-4 mt-2.5 font-mono text-xs">
-            <span className="text-accent-green">{g.high} High</span>
-            <span className="text-accent-yellow">{g.medium} Medium</span>
-            <span className={g.low ? "text-accent-red" : "text-text-tertiary"}>{g.low} Low</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-border-subtle">
+          <div className="grid grid-cols-2 gap-3 pt-1">
             <Fact k="Networks" v={derived.networks.join(" · ")} />
             <Fact
               k="Top asset"

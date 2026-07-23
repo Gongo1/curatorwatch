@@ -317,26 +317,6 @@ export function CompareClient() {
                 label="Est. annual yield"
                 cells={selected.map((c) => formatCurrency(c.totalAUM * c.avgNetApy))}
               />
-              <tr className="border-t border-border-subtle">
-                <td className="p-4 text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary align-top">Grade mix</td>
-                {selected.map((c) => {
-                  const g = c.gradeDistribution;
-                  const total = g.high + g.medium + g.low || 1;
-                  return (
-                    <td key={c.curatorAddress} className="p-4 align-top">
-                      <div className="h-2 rounded overflow-hidden flex bg-background-elevated max-w-[160px]" role="img" aria-label={`${g.high} high, ${g.medium} medium, ${g.low} low grade vaults`}>
-                        {g.high > 0 && <span className="bg-accent-green" style={{ width: `${(g.high / total) * 100}%` }} />}
-                        {g.medium > 0 && <span className="bg-accent-yellow" style={{ width: `${(g.medium / total) * 100}%` }} />}
-                        {g.low > 0 && <span className="bg-accent-red" style={{ width: `${(g.low / total) * 100}%` }} />}
-                      </div>
-                      <div className="text-[0.62rem] text-text-tertiary mt-1.5 tabular-nums">
-                        <span className="text-accent-green">{g.high}H</span> · <span className="text-accent-yellow">{g.medium}M</span> ·{" "}
-                        <span className={g.low ? "text-accent-red" : ""}>{g.low}L</span>
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
               <Row
                 label="Risk posture"
                 cells={selected.map((c) => `${c.riskScore} · ${c.strategyType}`)}

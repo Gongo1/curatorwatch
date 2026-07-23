@@ -20,7 +20,7 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-type SortKey = "name" | "grade" | "vaults" | "tvl";
+type SortKey = "name" | "vaults" | "tvl";
 type SrcFilter = "all" | "regulated" | "stable";
 
 // A curator counts as "stablecoin-focused" when >= this share of its AUM is in
@@ -58,11 +58,7 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
         return an < bn ? -sortDir : an > bn ? sortDir : 0;
       }
       const score = (c: CuratorDashboardItem) =>
-        sortKey === "grade"
-          ? c.gradeDistribution.high * 2 + c.gradeDistribution.medium
-          : sortKey === "vaults"
-            ? c.vaultCount
-            : c.totalAUM;
+        sortKey === "vaults" ? c.vaultCount : c.totalAUM;
       return (score(a) - score(b)) * sortDir;
     });
   }, [curators, query, filterSrc, sortKey, sortDir]);
@@ -141,10 +137,9 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
       </div>
 
       {/* column header */}
-      <div className="grid grid-cols-[34px_1fr_150px_96px_132px] gap-4 px-3 pb-3 items-center">
+      <div className="grid grid-cols-[34px_1fr_96px_132px] gap-4 px-3 pb-3 items-center">
         <span aria-hidden="true" />
         <Th k="name" className="text-left">Curator</Th>
-        <Th k="grade" className="text-left hidden sm:block">Vault grades</Th>
         <Th k="vaults" className="text-right hidden sm:block">Vaults</Th>
         <Th k="tvl" className="text-right">TVL</Th>
       </div>
@@ -156,14 +151,12 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
         </p>
       ) : (
         shown.map((c, i) => {
-          const g = c.gradeDistribution;
-          const graded = g.high + g.medium + g.low || 1;
           const name = c.name || `Curator ${c.curatorAddress.slice(0, 6)}`;
           return (
             <Link
               key={c.curatorId}
               href={`/curator/${curatorSlug(c.name, c.curatorAddress)}`}
-              className="grid grid-cols-[34px_1fr_150px_96px_132px] gap-4 items-center px-3 py-3 border-t border-border-subtle hover:bg-background-subtle active:translate-y-px transition-colors group"
+              className="grid grid-cols-[34px_1fr_96px_132px] gap-4 items-center px-3 py-3 border-t border-border-subtle hover:bg-background-subtle active:translate-y-px transition-colors group"
             >
               <span className="font-mono text-sm text-text-tertiary text-right tabular-nums">
                 {i + 1}
@@ -208,29 +201,6 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
                       {c.jurisdiction}
                     </div>
                   )}
-                </div>
-              </div>
-              {/* grade mix */}
-              <div className="hidden sm:flex flex-col gap-1.5">
-                <div className="h-1.5 rounded-[3px] overflow-hidden flex bg-background-elevated">
-                  {g.high > 0 && (
-                    <span className="bg-accent-green h-full" style={{ width: `${(g.high / graded) * 100}%` }} />
-                  )}
-                  {g.medium > 0 && (
-                    <span className="bg-accent-yellow h-full" style={{ width: `${(g.medium / graded) * 100}%` }} />
-                  )}
-                  {g.low > 0 && (
-                    <span className="bg-accent-red h-full" style={{ width: `${(g.low / graded) * 100}%` }} />
-                  )}
-                </div>
-                <div className="font-mono text-[10px] text-text-tertiary tabular-nums">
-                  {[
-                    g.high ? `${g.high}H` : "",
-                    g.medium ? `${g.medium}M` : "",
-                    g.low ? `${g.low}L` : "",
-                  ]
-                    .filter(Boolean)
-                    .join(" · ") || "—"}
                 </div>
               </div>
               <span className="hidden sm:block font-mono text-sm text-text-secondary text-right tabular-nums">
