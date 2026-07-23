@@ -5,7 +5,7 @@ import { PortfolioApp } from "./PortfolioApp";
 export const metadata = {
   title: "Portfolio | CuratorWatch",
   description:
-    "Connect a wallet or paste an address to see your DeFi positions, the curators behind them, and their CuratorWatch risk grades.",
+    "Connect a wallet or paste an address to see your DeFi positions and the curators behind them on CuratorWatch.",
 };
 
 // Feature-flagged via NEXT_PUBLIC_FEATURE_PORTFOLIO (mirrors /deposit). 404s until

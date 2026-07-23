@@ -3,10 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Wallet, Search, ExternalLink, ShieldQuestion } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { useEthereum, chainName } from "@/lib/turtle/useEthereum";
 import { formatCurrency, formatTimeAgo } from "@/lib/utils/format";
 import type {
@@ -17,13 +15,6 @@ import type {
 type PortfolioData = PortfolioResponse["data"];
 
 const ADDRESS_RE = /^0x[a-fA-F0-9]{40}$/;
-
-const GRADE_META: Record<string, { label: string; color: string }> = {
-  "high-grade": { label: "High grade", color: "var(--accent-green)" },
-  "medium-grade": { label: "Medium grade", color: "var(--accent-yellow)" },
-  "low-grade": { label: "Low grade", color: "var(--accent-red)" },
-  unrated: { label: "Not rated", color: "var(--text-muted)" },
-};
 
 function shortAddr(a: string): string {
   return a.length > 10 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a;
@@ -103,7 +94,7 @@ export function PortfolioApp() {
     <div>
       <PageHeader
         title="Portfolio"
-        description="See your DeFi positions, the curators behind them, and their CuratorWatch risk grades."
+        description="See your DeFi positions and the curators behind them on CuratorWatch."
         breadcrumbs={[{ label: "CuratorWatch", href: "/" }, { label: "Portfolio" }]}
       />
 
@@ -175,7 +166,7 @@ function EmptyState() {
       <Wallet className="w-8 h-8 text-text-muted mx-auto mb-3" />
       <p className="text-text-secondary text-sm max-w-md mx-auto">
         Connect a wallet or paste any address to see its DeFi positions across protocols —
-        joined to the curator managing each one and that curator&apos;s CuratorWatch risk grade.
+        joined to the curator managing each one.
       </p>
     </div>
   );
@@ -192,8 +183,6 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
 }
 
 function Dashboard({ data }: { data: PortfolioData }) {
-  const grades = data.gradeBreakdown.filter((g) => g.netUsd > 0);
-
   return (
     <div className="space-y-5">
       {/* Summary */}
@@ -229,34 +218,8 @@ function Dashboard({ data }: { data: PortfolioData }) {
           </div>
         </div>
 
-        {/* Right column: risk mix + curator concentration */}
+        {/* Right column: curator concentration */}
         <div className="space-y-5">
-          <div className="rounded-lg border border-border bg-background-elevated p-4">
-            <h2 className="text-sm font-semibold text-text-primary mb-3">Risk grade mix</h2>
-            <div className="h-40">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={grades} dataKey="netUsd" nameKey="key" innerRadius={45} outerRadius={68} paddingAngle={2} stroke="none">
-                    {grades.map((g) => (
-                      <Cell key={g.key} fill={GRADE_META[g.key]?.color ?? "var(--text-muted)"} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="space-y-1.5 mt-2">
-              {grades.map((g) => (
-                <div key={g.key} className="flex items-center justify-between text-xs">
-                  <span className="flex items-center gap-2 text-text-secondary">
-                    <span className="w-2.5 h-2.5 rounded-sm" style={{ background: GRADE_META[g.key]?.color }} />
-                    {GRADE_META[g.key]?.label ?? g.key}
-                  </span>
-                  <span className="text-text-tertiary tabular-nums">{g.pct.toFixed(0)}%</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="rounded-lg border border-border bg-background-elevated p-4">
             <h2 className="text-sm font-semibold text-text-primary mb-3">Top curators</h2>
             <div className="space-y-2">
@@ -308,7 +271,7 @@ function Dashboard({ data }: { data: PortfolioData }) {
 
       <p className="text-xs text-text-muted">
         Positions sourced from the Turtle Earn aggregator across protocols. Coverage and balances
-        depend on that feed; positions not tracked by CuratorWatch show without a grade.
+        depend on that feed; positions not tracked by CuratorWatch show without a curator.
       </p>
     </div>
   );
@@ -320,7 +283,6 @@ function PositionRow({ p }: { p: EnrichedPosition }) {
       <td className="px-4 py-2.5">
         <div className="flex items-center gap-2">
           <span className="text-text-primary font-medium truncate max-w-[180px]">{p.name}</span>
-          {p.vaultGrade && <VaultGradeBadge grade={p.vaultGrade} />}
         </div>
         <div className="text-xs text-text-tertiary mt-0.5">
           {p.protocolName}
