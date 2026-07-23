@@ -11,7 +11,6 @@ import {
 } from "recharts";
 import { calculateVaultEarnings, calculateAnnualEarnings } from "@/lib/utils/calculator";
 import { formatCurrency } from "@/lib/utils/format";
-import { VaultGradeBadge } from "./VaultGradeBadge";
 import { VaultWarningBadge } from "./VaultWarningBadge";
 import { MorphoVerifiedBadge } from "./MorphoVerifiedBadge";
 import type { VaultDetail, VaultData, VaultWarning } from "@/lib/types/api";
@@ -43,8 +42,6 @@ interface ComparisonVault {
   name: string;
   address: string;
   dataSource: string;
-  grade?: string | null;
-  gradeFailures?: string[];
   warnings?: VaultWarning[];
   listed?: boolean;
   assetSymbol: string;
@@ -99,8 +96,6 @@ export function AllocationCalculator({ vault }: { vault: VaultDetail }) {
             name: v.name,
             address: v.address,
             dataSource: v.dataSource,
-            grade: v.grade ?? null,
-            gradeFailures: v.gradeFailures ?? [],
             warnings: v.warnings ?? [],
             listed: v.listed,
             assetSymbol: v.asset.symbol,
@@ -445,7 +440,6 @@ export function AllocationCalculator({ vault }: { vault: VaultDetail }) {
                           >
                             {cv.name}
                           </a>
-                          <VaultGradeBadge grade={cv.grade} failures={cv.gradeFailures} />
                           <VaultWarningBadge warnings={cv.warnings} />
                           <MorphoVerifiedBadge listed={cv.listed} />
                         </div>

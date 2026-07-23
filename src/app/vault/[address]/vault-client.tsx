@@ -26,7 +26,6 @@ import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
-import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
 import type { VaultEngineRating } from "@/lib/curator-engine-rating";
 import { VaultWarningBadge } from "@/components/VaultWarningBadge";
@@ -114,7 +113,6 @@ export function VaultDetailView({ address, vault, engineRating }: VaultDetailVie
                 <VaultEngineGradeBadge rating={engineRating} />
               </span>
             ) : null}
-            <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} atRisk={isResolvUsrExposed(vault.address)} />
             <VaultWarningBadge warnings={vault.warnings} />
             <MorphoVerifiedBadge listed={vault.listed} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
@@ -618,7 +616,7 @@ export function VaultDetailView({ address, vault, engineRating }: VaultDetailVie
           </TabsContent>
 
           <TabsContent value="strategy" className="pt-6">
-            <StrategyIntelligence vaultAddress={vault.address} grade={vault.grade} gradeFailures={vault.gradeFailures} />
+            <StrategyIntelligence vaultAddress={vault.address} />
           </TabsContent>
 
           <TabsContent value="alerts" className="pt-6">

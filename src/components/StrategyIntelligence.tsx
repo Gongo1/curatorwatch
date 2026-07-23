@@ -39,8 +39,6 @@ interface RecentAlert {
 interface StrategyIntelligenceProps {
   vaultAddress: string;
   strategy?: StrategyClassification;
-  grade?: string | null;
-  gradeFailures?: string[];
 }
 
 function curatorSlugFromName(name: string | null, address: string): string {
@@ -53,7 +51,7 @@ function curatorSlugFromName(name: string | null, address: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy, grade, gradeFailures }: StrategyIntelligenceProps) {
+export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }: StrategyIntelligenceProps) {
   const [strategy, setStrategy] = useState<StrategyClassification | null>(initialStrategy || null);
   const [curator, setCurator] = useState<CuratorProfile | null>(null);
   const [collateral, setCollateral] = useState<CollateralAsset[]>([]);
@@ -168,7 +166,7 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy, 
           <ShieldIcon className="w-5 h-5 text-accent-blue" />
           Risk Overview
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <p className="text-xs text-text-tertiary mb-1">Recent Alerts (7d)</p>
             {alertSummary && alertSummary.total > 0 ? (
@@ -216,32 +214,8 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy, 
               <span className="text-sm font-semibold text-accent-red">Unknown</span>
             )}
           </div>
-          <div>
-            <p className="text-xs text-text-tertiary mb-1">Vault Grade</p>
-            {grade === "high-grade" ? (
-              <div className="flex items-center gap-1.5">
-                <ShieldIcon className="w-4 h-4 text-accent-green" />
-                <span className="text-sm font-semibold text-accent-green">High Grade</span>
-              </div>
-            ) : grade === "medium-grade" ? (
-              <div className="flex items-center gap-1.5">
-                <ShieldIcon className="w-4 h-4 text-accent-yellow" />
-                <span className="text-sm font-semibold text-accent-yellow">Medium Grade</span>
-              </div>
-            ) : grade === "low-grade" ? (
-              <div className="flex items-center gap-1.5">
-                <ShieldIcon className="w-4 h-4 text-accent-red" />
-                <span className="text-sm font-semibold text-accent-red">Other</span>
-              </div>
-            ) : (
-              <span className="text-sm font-semibold text-text-muted">N/A</span>
-            )}
-          </div>
         </div>
       </div>
-
-      {/* Institutional Requirements */}
-      <InstitutionalRequirements grade={grade} gradeFailures={gradeFailures ?? []} />
 
       {/* Collateral & Alerts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -358,93 +332,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy, 
   );
 }
 
-// ── Institutional Requirements ──────────────────────────────────────────
-
-const REQUIREMENTS = [
-  { label: "Minimum TVL ($1M+)", pattern: /^TVL/ },
-  { label: "Vault Maturity (90+ days)", pattern: /^Vault age/ },
-  { label: "Legal Entity", pattern: /legal entity/i },
-  { label: "Curator Track Record (6+ months)", pattern: /6.month/i },
-  { label: "Curator AUM ($10M+)", pattern: /^Curator AUM/ },
-  { label: "Zero Bad Debt (Curator)", pattern: /Curator has.*bad debt/ },
-  { label: "Zero Bad Debt (Vault)", pattern: /Vault has bad debt/ },
-  { label: "APR Sanity Check (\u226420%)", pattern: /^APR/ },
-  { label: "Collateral Quality (80%+ institutional)", pattern: /^Collateral/ },
-] as const;
-
-// "No curator assigned" covers requirements 3, 4, 5, 6
-const NO_CURATOR_PATTERNS = [/legal entity/i, /6.month/i, /^Curator AUM/, /Curator has.*bad debt/];
-
-function InstitutionalRequirements({
-  grade,
-  gradeFailures,
-}: {
-  grade?: string | null;
-  gradeFailures: string[];
-}) {
-  if (!grade) return null;
-
-  const hasNoCurator = gradeFailures.some((f) => f === "No curator assigned");
-
-  function isFailing(pattern: RegExp): string | null {
-    // "No curator assigned" maps to multiple requirement patterns
-    if (hasNoCurator && NO_CURATOR_PATTERNS.some((p) => p.source === pattern.source)) {
-      return "No curator assigned";
-    }
-    const match = gradeFailures.find((f) => pattern.test(f));
-    return match ?? null;
-  }
-
-  const passedCount = REQUIREMENTS.filter((r) => !isFailing(r.pattern)).length;
-  const badgeColor =
-    passedCount === 9
-      ? "bg-accent-green/10 text-accent-green border-accent-green/30"
-      : passedCount >= 6
-      ? "bg-accent-yellow/10 text-accent-yellow border-accent-yellow/30"
-      : "bg-accent-red/10 text-accent-red border-accent-red/30";
-
-  return (
-    <div className="bg-background-subtle border border-border rounded-lg p-5">
-      <div className="flex items-center gap-2 mb-4">
-        <ShieldIcon className="w-5 h-5 text-accent-blue" />
-        <h3 className="font-semibold text-text-primary">Institutional Requirements</h3>
-        <span className={`ml-auto px-2 py-0.5 rounded-full text-xs font-medium border ${badgeColor}`}>
-          {passedCount}/9 passed
-        </span>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
-        {REQUIREMENTS.map((req) => {
-          const failure = isFailing(req.pattern);
-          return (
-            <div key={req.label} className="flex items-start gap-2 py-1">
-              {failure ? (
-                <XCircleIcon className="w-4 h-4 text-accent-red flex-shrink-0 mt-0.5" />
-              ) : (
-                <CheckCircleIcon className="w-4 h-4 text-accent-green flex-shrink-0 mt-0.5" />
-              )}
-              <div className="min-w-0">
-                <p className={`text-sm ${failure ? "text-accent-red" : "text-text-primary"}`}>
-                  {req.label}
-                </p>
-                {failure && (
-                  <p className="text-xs text-text-tertiary truncate">{failure}</p>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-4 text-xs text-text-tertiary">
-        {grade === "high-grade"
-          ? "This vault meets all 9 institutional requirements for high-grade classification."
-          : grade === "medium-grade"
-          ? "This vault meets most institutional requirements. Review the failing criteria above."
-          : "This vault does not meet several institutional requirements. Exercise caution."}
-      </p>
-    </div>
-  );
-}
-
 // Helpers
 function formatLargeNumber(n: number): string {
   if (n >= 1e9) return `${(n / 1e9).toFixed(1)}B`;
@@ -468,8 +355,8 @@ function StrategyIntelligenceSkeleton() {
     <div className="space-y-6 animate-pulse">
       <div className="bg-background-subtle rounded-lg border border-border p-5">
         <div className="h-5 w-32 bg-background-elevated rounded mb-4" />
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
             <div key={i}>
               <div className="h-3 w-20 bg-background-elevated/50 rounded mb-2" />
               <div className="h-5 w-24 bg-background-elevated rounded" />
@@ -521,14 +408,6 @@ function ShieldIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-    </svg>
-  );
-}
-
-function XCircleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
   );
 }
