@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { classifyVaultStrategy, BLUE_CHIP_COLLATERAL } from "@/lib/strategy-classifier";
-import { assessVaultRisk, type VaultRiskData } from "@/lib/institutional-risk-assessment";
 import { prisma } from "@/lib/db";
 
 interface RouteParams {
@@ -23,19 +22,11 @@ export async function GET(request: Request, { params }: RouteParams) {
         },
       },
       include: {
-        snapshots: {
-          orderBy: { timestamp: "desc" },
-          take: 1,
-        },
         adapterAllocations: {
           orderBy: { snapshotTime: "desc" },
         },
         marketAllocations: {
           orderBy: { snapshotTime: "desc" },
-        },
-        riskSnapshots: {
-          orderBy: { timestamp: "desc" },
-          take: 1,
         },
         curator: {
           include: {
@@ -47,7 +38,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       },
     });
 
-    let riskMetrics = null;
     let curatorProfile = null;
     let collateral: Array<{ symbol: string; allocationPct: number; isBlueChip: boolean }> = [];
 
@@ -64,59 +54,6 @@ export async function GET(request: Request, { params }: RouteParams) {
             (m) => m.snapshotTime.getTime() === vault.marketAllocations[0].snapshotTime.getTime()
           )
         : [];
-
-      const latestRiskSnapshot = vault.riskSnapshots[0];
-      const latestSnapshot = vault.snapshots[0];
-
-      // Build risk data
-      const riskData: VaultRiskData = {
-        vaultAddress: vault.address,
-        vaultName: vault.name,
-        assetSymbol: vault.assetSymbol,
-        totalAssetsUsd: latestSnapshot?.totalAssetsUsd ?? 0,
-        createdAt: vault.createdAt,
-        adapters: latestAllocations.map((a) => ({
-          type: a.adapterType,
-          allocationPct: a.allocationPct,
-        })),
-        marketAllocations: latestMarketAllocations.map((m) => ({
-          collateralAssetSymbol: m.collateralAssetSymbol,
-          lltv: m.lltv,
-          allocationPct: m.allocationPct,
-          oracleType: m.oracleType ?? undefined,
-        })),
-        topAdapterPercent: latestRiskSnapshot?.topAdapterPercent ?? (latestAllocations[0]?.allocationPct ?? 100),
-        idleAssetsPercent: latestRiskSnapshot?.idleAssetsPercent ?? 0,
-        numActiveAdapters: latestRiskSnapshot?.numActiveAdapters ?? latestAllocations.length,
-        curator: vault.curator
-          ? {
-              name: vault.curator.name,
-              address: vault.curator.address,
-              legalName: vault.curator.legalName,
-              entityType: vault.curator.entityType,
-              jurisdiction: vault.curator.jurisdiction,
-              isRegulated: vault.curator.isRegulated,
-              totalAssetsManaged: vault.curator.totalAssetsManaged ?? 0,
-              vaultCount: vault.curator.vaultCount ?? 0,
-              oldestVaultDate: vault.curator.vaults.length > 0
-                ? vault.curator.vaults.reduce((oldest, v) =>
-                    v.createdAt < oldest ? v.createdAt : oldest,
-                    vault.curator.vaults[0].createdAt
-                  )
-                : undefined,
-            }
-          : null,
-      };
-
-      const riskAssessment = assessVaultRisk(riskData);
-
-      riskMetrics = {
-        smartContract: riskAssessment.categories.smartContract.score,
-        oracle: riskAssessment.categories.oracle.score,
-        collateral: riskAssessment.categories.collateral.score,
-        lltv: riskAssessment.categories.lltv.score,
-        operational: riskAssessment.categories.operational.score,
-      };
 
       // Build full curator profile
       if (vault.curator) {
@@ -217,7 +154,6 @@ export async function GET(request: Request, { params }: RouteParams) {
       success: true,
       data: {
         strategy,
-        riskMetrics,
         curator: curatorProfile,
         collateral,
         alertSummary,

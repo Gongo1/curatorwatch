@@ -57,7 +57,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
   const [collateral, setCollateral] = useState<CollateralAsset[]>([]);
   const [alertSummary, setAlertSummary] = useState<AlertSummary | null>(null);
   const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
-  const [curatorGreenTabs, setCuratorGreenTabs] = useState<number | null>(null);
   const [loading, setLoading] = useState(!initialStrategy);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,31 +80,10 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
       setAlertSummary(data.data.alertSummary ?? null);
       setRecentAlerts(data.data.recentAlerts ?? []);
       setError(null);
-
-      // Fetch curator risk profile for color coding
-      if (data.data.curator?.address) {
-        fetchCuratorRating(data.data.curator.address);
-      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load strategy");
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function fetchCuratorRating(curatorAddress: string) {
-    try {
-      const response = await fetch(`/api/curators/${curatorAddress}/rating`);
-      const data = await response.json();
-      if (data.success && data.data?.factors) {
-        // Count "green" tabs: top or above-avg tiers
-        const greenCount = data.data.factors.filter(
-          (f: { peer: { tier: string } }) => f.peer.tier === "top" || f.peer.tier === "above-avg"
-        ).length;
-        setCuratorGreenTabs(greenCount);
-      }
-    } catch {
-      // Non-critical, silently ignore
     }
   }
 
@@ -130,16 +108,6 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
   const isKnownCurator = !!(curator && curator.name);
   const blueChipCount = collateral.filter((c) => c.isBlueChip).length;
   const exoticCount = collateral.filter((c) => !c.isBlueChip).length;
-
-  // Curator color based on green tabs (top/above-avg factors out of 7)
-  const curatorColor =
-    curatorGreenTabs === null
-      ? "text-text-primary"
-      : curatorGreenTabs >= 5
-      ? "text-accent-green"
-      : curatorGreenTabs >= 3
-      ? "text-accent-yellow"
-      : "text-accent-red";
 
   const curatorHref = isKnownCurator
     ? `/curator/${curatorSlugFromName(curator!.name, curator!.address)}`
@@ -205,7 +173,7 @@ export function StrategyIntelligence({ vaultAddress, strategy: initialStrategy }
               <div className="flex items-center gap-2 flex-wrap">
                 <Link
                   href={curatorHref!}
-                  className={`text-sm font-semibold hover:underline ${curatorColor}`}
+                  className="text-sm font-semibold text-text-primary hover:underline"
                 >
                   {curator!.name}
                 </Link>
