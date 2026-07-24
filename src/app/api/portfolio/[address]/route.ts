@@ -9,7 +9,7 @@ import {
 } from "@/lib/turtle/portfolio-client";
 
 // Portfolio dashboard data: a wallet's cross-protocol positions (from the public
-// Turtle v2 wallet endpoint) joined to CuratorWatch's curator + risk data. Each
+// Turtle v2 wallet endpoint) joined to CuratorWatch's curator data. Each
 // position joins by opportunity_id -> Vault.turtleId (Turtle-tracked vaults) OR
 // pool.id -> Vault.address (Morpho-pipeline vaults), so coverage spans both.
 
@@ -26,9 +26,6 @@ export interface EnrichedPosition {
   matched: boolean;
   curatorAddress: string | null;
   curatorName: string | null;
-  vaultGrade: string | null; // "high-grade" | "medium-grade" | "low-grade"
-  curatorGrade: string | null; // engine letter grade: A+ … E | NR
-  riskScore: number | null;
   supplyTokens: PortfolioToken[];
   rewardTokens: PortfolioToken[];
 }
@@ -51,7 +48,6 @@ export interface PortfolioResponse {
     ratedPct: number; // % of net USD in positions we can attribute to a curator
     positions: EnrichedPosition[];
     curatorConcentration: Concentration[];
-    gradeBreakdown: Concentration[];
     protocolBreakdown: Concentration[];
     activity: WalletActivityItem[];
   };
@@ -61,11 +57,8 @@ export interface PortfolioResponse {
 interface VaultJoinRow {
   address: string;
   turtleId: string | null;
-  grade: string | null;
-  riskScore: number | null;
   curatorAddress: string | null;
   curatorName: string | null;
-  curatorGrade: string | null;
 }
 
 const empty = (address: string): PortfolioResponse["data"] => ({
@@ -76,7 +69,6 @@ const empty = (address: string): PortfolioResponse["data"] => ({
   ratedPct: 0,
   positions: [],
   curatorConcentration: [],
-  gradeBreakdown: [],
   protocolBreakdown: [],
   activity: [],
 });
@@ -120,7 +112,7 @@ export async function GET(
       ),
     ];
 
-    // One case-insensitive query covering both join keys + the engine letter grade.
+    // One case-insensitive query covering both join keys.
     let rows: VaultJoinRow[] = [];
     if (oppIds.length || poolAddrs.length) {
       const byTurtle = oppIds.length
@@ -132,14 +124,10 @@ export async function GET(
       rows = await prisma.$queryRaw<VaultJoinRow[]>(Prisma.sql`
         SELECT v.address,
                v."turtleId"        AS "turtleId",
-               v.grade,
-               v."riskScore"       AS "riskScore",
                c.address           AS "curatorAddress",
-               c.name              AS "curatorName",
-               cr.grade            AS "curatorGrade"
+               c.name              AS "curatorName"
         FROM "Vault" v
         LEFT JOIN "Curator" c ON v."curatorId" = c.id
-        LEFT JOIN "CuratorRating" cr ON lower(cr."curatorAddress") = lower(c.address)
         WHERE ${byTurtle} OR ${byAddr}
       `);
     }
@@ -170,9 +158,6 @@ export async function GET(
           matched: !!match,
           curatorAddress: match?.curatorAddress ?? null,
           curatorName: match?.curatorName ?? null,
-          vaultGrade: match?.grade ?? null,
-          curatorGrade: match?.curatorGrade ?? null,
-          riskScore: match?.riskScore ?? null,
           supplyTokens: p.supplyTokens,
           rewardTokens: p.rewardTokens,
         };
@@ -181,7 +166,6 @@ export async function GET(
 
     // ── Aggregations ──
     const curatorMap = new Map<string, Concentration>();
-    const gradeMap = new Map<string, Concentration>();
     const protocolMap = new Map<string, Concentration>();
     let ratedNet = 0;
 
@@ -201,15 +185,6 @@ export async function GET(
             positionCount: 1,
           } as Concentration);
         }
-      }
-      // grade breakdown (unattributed → "unrated")
-      const gradeKey = p.vaultGrade ?? "unrated";
-      const g = gradeMap.get(gradeKey);
-      if (g) {
-        g.netUsd += p.netUsd;
-        g.positionCount += 1;
-      } else {
-        gradeMap.set(gradeKey, { key: gradeKey, label: gradeKey, netUsd: p.netUsd, positionCount: 1 } as Concentration);
       }
       // protocol breakdown
       const pr = protocolMap.get(p.protocolName);
@@ -234,7 +209,6 @@ export async function GET(
       ratedPct: totalNetUsd > 0 ? (ratedNet / totalNetUsd) * 100 : 0,
       positions,
       curatorConcentration: withPct(curatorMap),
-      gradeBreakdown: withPct(gradeMap),
       protocolBreakdown: withPct(protocolMap),
       activity: activity.items,
     };

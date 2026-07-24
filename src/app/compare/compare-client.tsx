@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X, Plus } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
-import { gradeColor, fmtBps, GRADE_BLURB } from "@/lib/grade-style";
 import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
 import { DisclosureFlag } from "@/components/DisclosureFlag";
 import type { CuratorDashboardItem, CompareVaultItem } from "@/lib/types/api";
@@ -232,17 +231,7 @@ export function CompareClient() {
                       >
                         {c.name || c.curatorAddress.slice(0, 10)}
                       </Link>
-                      {c.engineRating &&
-                        (hasCuratorDisclosure(c.curatorAddress) ? (
-                          <DisclosureFlag />
-                        ) : (
-                          <span
-                            title={GRADE_BLURB[c.engineRating.grade]}
-                            className={`flex-none inline-flex items-center justify-center rounded border px-1.5 py-px font-mono text-[10px] font-semibold ${gradeColor(c.engineRating.grade)}`}
-                          >
-                            {c.engineRating.grade}
-                          </span>
-                        ))}
+                      {hasCuratorDisclosure(c.curatorAddress) && <DisclosureFlag />}
                     </div>
                     <div className="font-mono text-[0.62rem] text-text-tertiary mt-0.5">
                       {c.jurisdiction || "Jurisdiction unknown"}
@@ -252,38 +241,6 @@ export function CompareClient() {
               </tr>
             </thead>
             <tbody className="font-mono text-sm">
-              {selected.some((c) => c.engineRating) && (
-                <tr className="border-t border-border-subtle">
-                  <td className="p-4 text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary align-top">
-                    CuratorWatch rating
-                  </td>
-                  {selected.map((c) => (
-                    <td key={c.curatorAddress} className="p-4 align-top">
-                      {c.engineRating ? (
-                        <>
-                          <div className="flex items-center gap-2">
-                            {hasCuratorDisclosure(c.curatorAddress) ? (
-                              <DisclosureFlag />
-                            ) : (
-                              <span
-                                className={`inline-flex min-w-[2rem] items-center justify-center rounded border px-1.5 py-0.5 text-xs font-semibold ${gradeColor(c.engineRating.grade)}`}
-                              >
-                                {c.engineRating.grade}
-                              </span>
-                            )}
-                            <span className="tabular-nums text-text-secondary">{fmtBps(c.engineRating.elMedian)}</span>
-                          </div>
-                          <p className="text-[0.62rem] normal-case tracking-normal text-text-tertiary mt-1.5 leading-relaxed max-w-[200px]">
-                            {GRADE_BLURB[c.engineRating.grade]}
-                          </p>
-                        </>
-                      ) : (
-                        <span className="text-text-tertiary">Not rated</span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              )}
               <Row label="AUM" cells={selected.map((c) => compactUsd(c.totalAUM))} highlight={best(selected.map((c) => c.totalAUM))} />
               <Row label="Vaults" cells={selected.map((c) => String(c.vaultCount))} />
               <Row
@@ -317,32 +274,9 @@ export function CompareClient() {
                 label="Est. annual yield"
                 cells={selected.map((c) => formatCurrency(c.totalAUM * c.avgNetApy))}
               />
-              <tr className="border-t border-border-subtle">
-                <td className="p-4 text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary align-top">Grade mix</td>
-                {selected.map((c) => {
-                  const g = c.gradeDistribution;
-                  const total = g.high + g.medium + g.low || 1;
-                  return (
-                    <td key={c.curatorAddress} className="p-4 align-top">
-                      <div className="h-2 rounded overflow-hidden flex bg-background-elevated max-w-[160px]" role="img" aria-label={`${g.high} high, ${g.medium} medium, ${g.low} low grade vaults`}>
-                        {g.high > 0 && <span className="bg-accent-green" style={{ width: `${(g.high / total) * 100}%` }} />}
-                        {g.medium > 0 && <span className="bg-accent-yellow" style={{ width: `${(g.medium / total) * 100}%` }} />}
-                        {g.low > 0 && <span className="bg-accent-red" style={{ width: `${(g.low / total) * 100}%` }} />}
-                      </div>
-                      <div className="text-[0.62rem] text-text-tertiary mt-1.5 tabular-nums">
-                        <span className="text-accent-green">{g.high}H</span> · <span className="text-accent-yellow">{g.medium}M</span> ·{" "}
-                        <span className={g.low ? "text-accent-red" : ""}>{g.low}L</span>
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
               <Row
-                label="Risk posture"
-                cells={selected.map((c) => `${c.riskScore} · ${c.strategyType}`)}
-                tones={selected.map((c) =>
-                  c.riskScore === "low" ? "text-accent-green" : c.riskScore === "high" ? "text-accent-red" : "text-accent-yellow"
-                )}
+                label="Strategy"
+                cells={selected.map((c) => c.strategyType)}
               />
               <Row
                 label="Top assets"
@@ -365,7 +299,7 @@ export function CompareClient() {
 
       <p className="font-mono text-xs text-text-tertiary mt-4">
         All figures from the latest 6h snapshot. Open a curator&rsquo;s profile for
-        track record, per-vault grades, and the full change history.
+        track record and the full change history.
       </p>
     </div>
   );

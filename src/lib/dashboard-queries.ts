@@ -39,7 +39,7 @@ export async function fetchAllDashboardData(params: {
   }
 
   // Return the full curated set — the Curators home paginates client-side and
-  // computes reconciled aggregates (asset mix, grade distribution) from this array.
+  // computes reconciled aggregates (asset mix) from this array.
   const curators = {
     success: true,
     data: {
@@ -63,11 +63,8 @@ export async function fetchAllDashboardData(params: {
           vaults: c.vaults,
           protocols: c.protocols,
           networks: c.networks,
-          gradeDistribution: c.gradeDistribution,
-          engineRating: c.engineRating,
           dataSources: c.dataSources,
           lastActive: c.lastActive?.toISOString() ?? null,
-          riskScore: c.riskScore,
           strategyType: c.strategyType,
           tvlChange30d: c.tvlChange30d,
           tvlChangePct30d: c.tvlChangePct30d,

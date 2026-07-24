@@ -5,7 +5,6 @@
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATORS } from "@/lib/curator-aliases";
 import { sanitizeApy, sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
-import { getAllCuratorRatings } from "@/lib/curator-engine-rating";
 import { stablecoinSharePct } from "@/lib/utils/asset-class";
 
 export interface AssetDistribution {
@@ -20,7 +19,6 @@ export interface CompareVault {
   address: string;
   name: string;
   assetSymbol: string;
-  grade: string | null;
   tvl: number;
   netApyPct: number | null;
 }
@@ -55,12 +53,8 @@ export interface CuratorAggregates {
   vaults: CompareVault[];
   protocols: string[];
   networks: string[];
-  gradeDistribution: { high: number; medium: number; low: number };
-  /** Loss-anchored engine grade; null unless the rating feature is enabled and the curator is rated. */
-  engineRating: { grade: string; elMedian: number } | null;
   dataSources: string[];
   lastActive: Date | null;
-  riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";
   tvlChange30d: number;
   tvlChangePct30d: number;
@@ -155,14 +149,6 @@ export async function getPaginatedCuratorAggregates(
   });
   const totalCurators = curators.length;
 
-  // Loss-anchored engine grades, keyed by lowercased curator address. Empty when
-  // the rating feature is off (getAllCuratorRatings returns [] behind the flag),
-  // so this is a no-op until the flag is enabled.
-  const ratingByAddress = new Map<string, { grade: string; elMedian: number }>();
-  for (const r of await getAllCuratorRatings()) {
-    ratingByAddress.set(r.curatorAddress.toLowerCase(), { grade: r.grade, elMedian: r.elMedian });
-  }
-
   // Calculate aggregates
   const aggregates: CuratorAggregates[] = [];
 
@@ -178,16 +164,11 @@ export async function getPaginatedCuratorAggregates(
     const assetMap: Record<string, number> = {};
     const protocolSet = new Set<string>();
     const networkSet = new Set<string>();
-    const gradeDistribution = { high: 0, medium: 0, low: 0 };
     const sourceSet = new Set<string>();
     const vaultRows: CompareVault[] = [];
 
     for (const vault of vaults) {
-      // Vault grade + ingestion source are independent of snapshots.
-      const grade = (vault as Record<string, unknown>).grade as string | null;
-      if (grade === "high-grade") gradeDistribution.high++;
-      else if (grade === "medium-grade") gradeDistribution.medium++;
-      else if (grade === "low-grade") gradeDistribution.low++;
+      // Ingestion source is independent of snapshots.
       sourceSet.add(
         ((vault as Record<string, unknown>).dataSource as string) ?? "morpho"
       );
@@ -206,7 +187,6 @@ export async function getPaginatedCuratorAggregates(
         address: vault.address,
         name: vault.name,
         assetSymbol: vault.assetSymbol,
-        grade,
         tvl,
         netApyPct: vaultNetApyPct(vault.netAPR, snap.avgNetApy),
       });
@@ -226,9 +206,7 @@ export async function getPaginatedCuratorAggregates(
       }))
       .sort((a, b) => b.amountUsd - a.amountUsd);
 
-    // Simplified risk/strategy based on APY
-    const riskScore: "low" | "medium" | "high" =
-      avgNetApy > 0.10 ? "high" : avgNetApy > 0.05 ? "medium" : "low";
+    // Simplified strategy label based on APY
     const strategyType: "Conservative" | "Moderate" | "Aggressive" =
       avgNetApy > 0.10 ? "Aggressive" : avgNetApy > 0.05 ? "Moderate" : "Conservative";
 
@@ -251,11 +229,8 @@ export async function getPaginatedCuratorAggregates(
       vaults: vaultRows,
       protocols: Array.from(protocolSet),
       networks: Array.from(networkSet),
-      gradeDistribution,
-      engineRating: ratingByAddress.get(curator.address.toLowerCase()) ?? null,
       dataSources: Array.from(sourceSet),
       lastActive: null,
-      riskScore,
       strategyType,
       tvlChange30d: 0,
       tvlChangePct30d: 0,
@@ -341,15 +316,10 @@ export async function getCuratorAggregates(
   const assetMap: Record<string, number> = {};
   const protocolSet = new Set<string>();
   const networkSet = new Set<string>();
-  const gradeDistribution = { high: 0, medium: 0, low: 0 };
   const sourceSet = new Set<string>();
   const vaultRows: CompareVault[] = [];
 
   for (const vault of vaults) {
-    const grade = (vault as Record<string, unknown>).grade as string | null;
-    if (grade === "high-grade") gradeDistribution.high++;
-    else if (grade === "medium-grade") gradeDistribution.medium++;
-    else if (grade === "low-grade") gradeDistribution.low++;
     sourceSet.add(
       ((vault as Record<string, unknown>).dataSource as string) ?? "morpho"
     );
@@ -368,7 +338,6 @@ export async function getCuratorAggregates(
       address: vault.address,
       name: vault.name,
       assetSymbol: vault.assetSymbol,
-      grade,
       tvl,
       netApyPct: vaultNetApyPct(vault.netAPR, snap.avgNetApy),
     });
@@ -386,15 +355,8 @@ export async function getCuratorAggregates(
     }))
     .sort((a, b) => b.amountUsd - a.amountUsd);
 
-  const riskScore: "low" | "medium" | "high" =
-    avgNetApy > 0.10 ? "high" : avgNetApy > 0.05 ? "medium" : "low";
   const strategyType: "Conservative" | "Moderate" | "Aggressive" =
     avgNetApy > 0.10 ? "Aggressive" : avgNetApy > 0.05 ? "Moderate" : "Conservative";
-
-  const rating = (await getAllCuratorRatings()).find(
-    (r) => r.curatorAddress.toLowerCase() === curator.address.toLowerCase()
-  );
-  const engineRating = rating ? { grade: rating.grade, elMedian: rating.elMedian } : null;
 
   return {
     curatorId: curator.id,
@@ -415,11 +377,8 @@ export async function getCuratorAggregates(
     vaults: vaultRows,
     protocols: Array.from(protocolSet),
     networks: Array.from(networkSet),
-    gradeDistribution,
-    engineRating,
     dataSources: Array.from(sourceSet),
     lastActive: null,
-    riskScore,
     strategyType,
     tvlChange30d: 0,
     tvlChangePct30d: 0,

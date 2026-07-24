@@ -25,24 +25,15 @@ function classifyStrategy(
     }>;
     reallocations: Array<{ id: string }>;
   }>
-): { strategyType: "Conservative" | "Moderate" | "Aggressive"; riskScore: "low" | "medium" | "high" } {
-  if (vaults.length === 0) return { strategyType: "Moderate", riskScore: "medium" };
+): { strategyType: "Conservative" | "Moderate" | "Aggressive" } {
+  if (vaults.length === 0) return { strategyType: "Moderate" };
 
   const riskScores = vaults
     .map((v) => v.riskSnapshots[0]?.concentrationScore)
     .filter(Boolean);
 
-  // Calculate risk score
   const highRiskCount = riskScores.filter((s) => s === "high").length;
-  const medRiskCount = riskScores.filter((s) => s === "medium").length;
   const lowRiskCount = riskScores.filter((s) => s === "low").length;
-
-  const riskScore: "low" | "medium" | "high" =
-    highRiskCount > vaults.length / 2
-      ? "high"
-      : highRiskCount > 0 || medRiskCount > vaults.length / 2
-        ? "medium"
-        : "low";
 
   // Strategy scoring
   let conservativeScore = 0;
@@ -106,7 +97,7 @@ function classifyStrategy(
         ? "Aggressive"
         : "Moderate";
 
-  return { strategyType, riskScore };
+  return { strategyType };
 }
 
 export interface CuratorDetail {
@@ -162,8 +153,8 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
 
   if (!curator) return null;
 
-  // Calculate strategy and risk score
-  const { strategyType, riskScore } = classifyStrategy(curator.vaults);
+  // Calculate strategy classification
+  const { strategyType } = classifyStrategy(curator.vaults);
 
   // Transform curator data
   const curatorData: CuratorProfile = {
@@ -191,7 +182,6 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
     createdAt: curator.createdAt.toISOString(),
     updatedAt: curator.updatedAt.toISOString(),
     strategyType,
-    riskScore,
   };
 
   // Transform vaults data
@@ -211,8 +201,6 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
       performanceFee: vault.performanceFee ?? 0,
       protocol: vault.protocol ?? "morpho",
       dataSource: vault.dataSource ?? "morpho",
-      grade: vault.grade ?? null,
-      gradeFailures: vault.gradeFailures ?? [],
       warnings: (vault.warnings as Array<{ type: string; level: string }>) ?? [],
       listed: vault.listed ?? true,
       creationTimestamp: vault.creationTimestamp ?? null,
