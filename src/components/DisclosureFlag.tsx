@@ -19,7 +19,7 @@ export function DisclosureFlag({ size = "sm" }: { size?: "sm" | "lg" }) {
   }
   return (
     <span
-      title="Rating withheld — material disclosure. See curator profile."
+      title="Material disclosure — see curator profile."
       className="inline-flex items-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-red-400"
     >
       <Flag className="h-3 w-3" aria-hidden /> Flagged

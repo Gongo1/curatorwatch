@@ -190,7 +190,7 @@ function Dashboard({ data }: { data: PortfolioData }) {
         <StatCard label="Total value" value={formatCurrency(data.totalNetUsd)} />
         <StatCard label="Positions" value={String(data.positionCount)} sub={`${data.matchedCount} on CuratorWatch`} />
         <StatCard label="Curators" value={String(data.curatorConcentration.length)} />
-        <StatCard label="Rated exposure" value={`${data.ratedPct.toFixed(0)}%`} sub="of value attributed to a curator" />
+        <StatCard label="Attributed exposure" value={`${data.ratedPct.toFixed(0)}%`} sub="of value attributed to a curator" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
