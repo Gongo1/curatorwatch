@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { fetchVaultDetail } from "@/lib/vault-detail";
-import { getVaultEngineRating } from "@/lib/curator-engine-rating";
 import { formatCurrency } from "@/lib/utils/format";
 import { VaultDetailView } from "./vault-client";
 
@@ -28,7 +27,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const curator = vault.curator?.name ? ` curated by ${vault.curator.name}` : "";
   return {
     title: `${vault.name} - Vault Intelligence - CuratorWatch`,
-    description: `${vault.name} (${vault.asset.symbol})${curator}: ${formatCurrency(tvl)} TVL, yield history, risk assessment, allocations, and changes on CuratorWatch.`,
+    description: `${vault.name} (${vault.asset.symbol})${curator}: ${formatCurrency(tvl)} TVL, yield history, allocations, and changes on CuratorWatch.`,
   };
 }
 
@@ -79,7 +78,5 @@ export default async function VaultDetailPage({ params }: PageProps) {
     );
   }
 
-  const engineRating = await getVaultEngineRating(vault.chainId, vault.address);
-
-  return <VaultDetailView address={address} vault={vault} engineRating={engineRating} />;
+  return <VaultDetailView address={address} vault={vault} />;
 }

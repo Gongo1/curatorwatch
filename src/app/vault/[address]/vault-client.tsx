@@ -26,8 +26,6 @@ import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
-import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
-import type { VaultEngineRating } from "@/lib/curator-engine-rating";
 import { VaultWarningBadge } from "@/components/VaultWarningBadge";
 import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
 import { PendingConfigBanner } from "@/components/PendingConfigBanner";
@@ -49,7 +47,6 @@ import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
 interface VaultDetailViewProps {
   address: string;
   vault: VaultDetail;
-  engineRating?: VaultEngineRating | null;
 }
 
 // Generate a deterministic color from an address
@@ -68,7 +65,7 @@ function getAddressColor(address: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function VaultDetailView({ address, vault, engineRating }: VaultDetailViewProps) {
+export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
   const [showTrackPrompt, setShowTrackPrompt] = useState(false);
   const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
   const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
@@ -107,12 +104,6 @@ export function VaultDetailView({ address, vault, engineRating }: VaultDetailVie
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
-            {engineRating ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary">
-                <span className="font-mono uppercase tracking-wide text-[0.62rem]">EL grade</span>
-                <VaultEngineGradeBadge rating={engineRating} />
-              </span>
-            ) : null}
             <VaultWarningBadge warnings={vault.warnings} />
             <MorphoVerifiedBadge listed={vault.listed} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
@@ -128,7 +119,6 @@ export function VaultDetailView({ address, vault, engineRating }: VaultDetailVie
                       assetSymbol: vault.asset.symbol,
                       chainName: vault.chainName,
                       estApr: vault.dealEstApr ?? null,
-                      elGrade: engineRating ? { grade: engineRating.grade, el: engineRating.elMedian } : null,
                     },
                   ])
                 }

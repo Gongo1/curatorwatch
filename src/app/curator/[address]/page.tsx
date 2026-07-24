@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { fetchCuratorDetail } from "@/lib/curator-detail";
-import { getCuratorEngineRating, getVaultEngineRatings } from "@/lib/curator-engine-rating";
 import { CuratorProfileView } from "./profile-client";
 
 // ISR aligned to the ingestion cadence: the cron revalidates curator pages on
@@ -30,7 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     tvl >= 1e9 ? `$${(tvl / 1e9).toFixed(2)}B` : `$${(tvl / 1e6).toFixed(1)}M`;
   return {
     title: `${name} - Curator Profile - CuratorWatch`,
-    description: `${name} manages ${data.vaults.length} vaults with ${tvlStr} TVL. Track record, risk signals, managed vaults, and yield intelligence on CuratorWatch.`,
+    description: `${name} manages ${data.vaults.length} vaults with ${tvlStr} TVL. Track record, managed vaults, and yield intelligence on CuratorWatch.`,
   };
 }
 
@@ -56,12 +55,5 @@ export default async function CuratorProfile({ params }: PageProps) {
     );
   }
 
-  // Loss-anchored grades are server-rendered from precomputed DB (flag-gated; empty
-  // when the flag is off or no rating exists). Coexist with the 7-factor profile.
-  const [engineRating, vaultRatings] = await Promise.all([
-    getCuratorEngineRating(data.curator.address),
-    getVaultEngineRatings(data.vaults.map((v) => ({ chainId: v.chainId, address: v.address }))),
-  ]);
-
-  return <CuratorProfileView data={data} engineRating={engineRating} vaultRatings={vaultRatings} />;
+  return <CuratorProfileView data={data} />;
 }
