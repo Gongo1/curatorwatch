@@ -21,11 +21,13 @@ import {
 // Reown AppKit (formerly WalletConnect) wallet-connect modal. Gives the deposit
 // flow injected wallets + WalletConnect QR/deep-link (mobile, Safe multisig) +
 // Coinbase Wallet, replacing the injected-only window.ethereum primitive.
-// Requires a project ID from dashboard.reown.com; when the env var is unset the
-// legacy injected-wallet path in useEthereum.ts is used instead, so prod keeps
-// working before the Vercel env var lands.
+// The project ID (dashboard.reown.com) is a publishable client-side value — it
+// ships in the JS bundle either way — so it's baked in as the default. The env
+// var remains an override: set it to rotate the ID without a code change, or to
+// "" to force the legacy injected-wallet fallback in useEthereum.ts.
 
-export const REOWN_PROJECT_ID = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ?? "";
+export const REOWN_PROJECT_ID =
+  process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ?? "8f4b44e986a882d63192a1acefd13d3d";
 export const REOWN_ENABLED = REOWN_PROJECT_ID.length > 0;
 
 // Chains Turtle deals span (mirrors CHAIN_NAMES in useEthereum). Monad isn't in
