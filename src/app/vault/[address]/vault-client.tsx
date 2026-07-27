@@ -17,7 +17,6 @@ import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
 import type { VaultDetail } from "@/lib/types/api";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/Tabs";
 import { ActivityTab } from "@/components/ActivityTab";
-import { RiskTab } from "@/components/RiskTab";
 import { StrategyIntelligence } from "@/components/StrategyIntelligence";
 import { RecentChanges } from "@/components/RecentChanges";
 import { CuratorSection, CuratorPlaceholder } from "@/components/CuratorSection";
@@ -27,9 +26,6 @@ import { ProtocolBadge } from "@/components/ProtocolBadge";
 import { NetworkBadge } from "@/components/NetworkBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
-import { VaultGradeBadge } from "@/components/VaultGradeBadge";
-import { VaultEngineGradeBadge } from "@/components/VaultEngineGradeBadge";
-import type { VaultEngineRating } from "@/lib/curator-engine-rating";
 import { VaultWarningBadge } from "@/components/VaultWarningBadge";
 import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
 import { PendingConfigBanner } from "@/components/PendingConfigBanner";
@@ -51,7 +47,6 @@ import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
 interface VaultDetailViewProps {
   address: string;
   vault: VaultDetail;
-  engineRating?: VaultEngineRating | null;
 }
 
 // Generate a deterministic color from an address
@@ -70,7 +65,7 @@ function getAddressColor(address: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export function VaultDetailView({ address, vault, engineRating }: VaultDetailViewProps) {
+export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
   const [showTrackPrompt, setShowTrackPrompt] = useState(false);
   const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
   const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
@@ -109,13 +104,6 @@ export function VaultDetailView({ address, vault, engineRating }: VaultDetailVie
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
-            {engineRating ? (
-              <span className="inline-flex items-center gap-1.5 text-xs text-text-tertiary">
-                <span className="font-mono uppercase tracking-wide text-[0.62rem]">EL grade</span>
-                <VaultEngineGradeBadge rating={engineRating} />
-              </span>
-            ) : null}
-            <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} atRisk={isResolvUsrExposed(vault.address)} />
             <VaultWarningBadge warnings={vault.warnings} />
             <MorphoVerifiedBadge listed={vault.listed} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
@@ -131,7 +119,6 @@ export function VaultDetailView({ address, vault, engineRating }: VaultDetailVie
                       assetSymbol: vault.asset.symbol,
                       chainName: vault.chainName,
                       estApr: vault.dealEstApr ?? null,
-                      elGrade: engineRating ? { grade: engineRating.grade, el: engineRating.elMedian } : null,
                     },
                   ])
                 }
@@ -619,7 +606,7 @@ export function VaultDetailView({ address, vault, engineRating }: VaultDetailVie
           </TabsContent>
 
           <TabsContent value="strategy" className="pt-6">
-            <StrategyIntelligence vaultAddress={vault.address} grade={vault.grade} gradeFailures={vault.gradeFailures} />
+            <StrategyIntelligence vaultAddress={vault.address} />
           </TabsContent>
 
           <TabsContent value="alerts" className="pt-6">

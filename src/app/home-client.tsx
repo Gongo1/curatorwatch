@@ -67,8 +67,8 @@ interface CuratorsHomeProps {
 }
 
 export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomeProps) {
-  // Asset mix + ecosystem grade distribution, summed from the curator list so they
-  // reconcile exactly with the tracked-TVL hero (no separate, differently-scoped query).
+  // Asset mix, summed from the curator list so it reconciles exactly with the
+  // tracked-TVL hero (no separate, differently-scoped query).
   const mix = useMemo(() => {
     const map: Record<string, number> = {};
     let total = 0;
@@ -90,16 +90,6 @@ export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomePro
     return { segments, stablePct: total ? (stableAmt / total) * 100 : 0 };
   }, [curators]);
 
-  const grade = useMemo(() => {
-    const g = { high: 0, medium: 0, low: 0 };
-    for (const c of curators) {
-      g.high += c.gradeDistribution.high;
-      g.medium += c.gradeDistribution.medium;
-      g.low += c.gradeDistribution.low;
-    }
-    return g;
-  }, [curators]);
-
   // Single-manager concentration: stablecoins where one curator runs >=84% of the
   // asset's vault TVL — the single points of failure an allocator should see.
   const concFlags = useMemo(
@@ -110,7 +100,6 @@ export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomePro
   const largest = curators.length
     ? curators.reduce((a, b) => (b.totalAUM > a.totalAUM ? b : a))
     : null;
-  const gradedTotal = grade.high + grade.medium + grade.low || 1;
 
   return (
     <div>
@@ -213,9 +202,9 @@ export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomePro
         vault: they pick the lending markets, set exposure caps, and rebalance deposits — LPs
         delegate those decisions in exchange for yield. So the real due-diligence question
         isn&rsquo;t &ldquo;which vault?&rdquo; but &ldquo;whose judgment am I trusting?&rdquo; — this
-        index tracks who curators are, what they manage, and how their products hold up under a{" "}
+        index tracks{" "}
         <Link href="/docs" className="text-accent-blue underline underline-offset-2">
-          10-requirement grading model
+          who curators are, what they manage, and how their products hold up
         </Link>
         .
       </p>
@@ -226,27 +215,6 @@ export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomePro
         <CuratorIndex curators={curators} />
       </section>
 
-      {/* ── Product quality ── */}
-      <section className="mt-12">
-        <SectionHead title="Product quality" meta="grade of every managed vault" />
-        <div className="border border-border rounded-2xl bg-background-subtle p-6">
-          <div className="h-4 rounded-lg overflow-hidden flex bg-background-elevated mb-4">
-            <span className="bg-accent-green h-full" style={{ width: `${(grade.high / gradedTotal) * 100}%` }} />
-            <span className="bg-accent-yellow h-full" style={{ width: `${(grade.medium / gradedTotal) * 100}%` }} />
-            <span className="bg-accent-red h-full" style={{ width: `${(grade.low / gradedTotal) * 100}%` }} />
-          </div>
-          <div className="flex gap-x-8 gap-y-3 flex-wrap font-mono text-sm">
-            <GradeLegend color="bg-accent-green" n={grade.high} pct={(grade.high / gradedTotal) * 100} label="High-grade" sub="pass all 10 requirements" />
-            <GradeLegend color="bg-accent-yellow" n={grade.medium} pct={(grade.medium / gradedTotal) * 100} label="Medium-grade" sub="fail 1–3 requirements" />
-            <GradeLegend color="bg-accent-red" n={grade.low} pct={(grade.low / gradedTotal) * 100} label="Low-grade" sub="fail 4+ requirements" />
-          </div>
-          <p className="font-mono text-xs text-text-tertiary mt-4 leading-relaxed">
-            Across the {gradedTotal} vaults curators actively manage, the model grades each on a
-            10-requirement check. The low-grade tail is where allocator due-diligence concentrates —
-            and what each curator&rsquo;s profile breaks down vault by vault.
-          </p>
-        </div>
-      </section>
     </div>
   );
 }
@@ -269,17 +237,6 @@ function SectionHead({ title, meta }: { title: string; meta: string }) {
       <span className="w-[7px] h-[7px] rounded-sm bg-accent-blue -translate-y-0.5" />
       <span className="font-display font-bold text-xl tracking-tight">{title}</span>
       <span className="font-mono text-xs text-text-tertiary ml-auto text-right">{meta}</span>
-    </div>
-  );
-}
-
-function GradeLegend({ color, n, pct, label, sub }: { color: string; n: number; pct: number; label: string; sub: string }) {
-  return (
-    <div>
-      <span className={`inline-block w-2.5 h-2.5 rounded-sm mr-2 ${color}`} />
-      <span className="font-semibold tabular-nums">{n}</span> {label}{" "}
-      <span className="text-text-tertiary tabular-nums">({Math.round(pct)}%)</span>
-      <div className="text-text-tertiary text-xs mt-0.5">{sub}</div>
     </div>
   );
 }

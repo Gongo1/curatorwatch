@@ -24,7 +24,6 @@ export interface DealContext {
   chainName?: string | null;
   estApr?: number | null;
   tvl?: number | null;
-  elGrade?: { grade: string; el: number } | null; // loss-anchored EL grade for this vault
 }
 
 function shortAddr(a: string): string {
@@ -167,15 +166,6 @@ export function DealDepositDrawer({
                       <span className="text-text-muted">·</span>
                       <span className="text-accent-green">
                         est. {selected.estApr.toFixed(1)}% APR
-                      </span>
-                    </>
-                  )}
-                  {selected.elGrade && (
-                    <>
-                      <span className="text-text-muted">·</span>
-                      <span className="inline-flex items-center gap-1">
-                        <span className="font-semibold text-text-secondary">{selected.elGrade.grade}</span>
-                        <span className="text-text-tertiary">risk grade ({(selected.elGrade.el * 1e4).toFixed(0)} bps EL/yr)</span>
                       </span>
                     </>
                   )}

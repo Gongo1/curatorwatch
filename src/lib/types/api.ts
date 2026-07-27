@@ -47,11 +47,6 @@ export interface VaultAdapter {
   allocationPct: number;
 }
 
-export interface VaultRiskSummary {
-  overallRisk: "Low Risk" | "Moderate Risk" | "High Risk";
-  overallScore: number;
-}
-
 export interface VaultData {
   id: string;
   address: string;
@@ -65,7 +60,6 @@ export interface VaultData {
   yield?: VaultYield;
   latestSnapshot: VaultSnapshot | null;
   adapters: VaultAdapter[];
-  riskAssessment?: VaultRiskSummary;
   turtleId?: string | null;
   protocol: string;
   dataSource: string;
@@ -77,9 +71,6 @@ export interface VaultData {
   dealDepositable?: boolean;
   dealEstApr?: number | null;
   aprBreakdown?: Array<{ source: string; apr: number; type: string }> | null;
-  riskScore?: number | null;
-  grade?: string | null;
-  gradeFailures?: string[];
   warnings?: VaultWarning[];
   listed?: boolean;
   creationTimestamp?: number | null;
@@ -125,8 +116,6 @@ export interface CuratorOtherVault {
   name: string;
   symbol: string;
   dataSource: string;
-  grade: string | null;
-  gradeFailures?: string[];
   warnings?: VaultWarning[];
   listed?: boolean;
   totalAssetsUsd: number;
@@ -158,27 +147,6 @@ export interface VaultCurator {
   otherVaults: CuratorOtherVault[];
 }
 
-// Risk assessment types
-export interface RiskCategory {
-  level: "Low Risk" | "Moderate Risk" | "High Risk";
-  score: number;
-  factors: string[];
-  recommendations: string[];
-}
-
-export interface InstitutionalRiskAssessment {
-  overallRisk: "Low Risk" | "Moderate Risk" | "High Risk";
-  overallScore: number;
-  categories: {
-    smartContract: RiskCategory;
-    oracle: RiskCategory;
-    collateral: RiskCategory;
-    lltv: RiskCategory;
-    operational: RiskCategory;
-  };
-  lastUpdated: string;
-}
-
 // Full vault detail response
 export interface VaultDetail extends VaultData {
   snapshotHistory: SnapshotHistoryEntry[];
@@ -188,7 +156,6 @@ export interface VaultDetail extends VaultData {
   curator: VaultCurator | null;
   createdAt: string;
   pendingConfigs?: Array<{ validAt: number; functionName: string; txHash: string }>;
-  riskAssessment: InstitutionalRiskAssessment;
   liquidations?: LiquidationEvent[];
   liquidationSummary?: {
     total: number;
@@ -231,7 +198,6 @@ export interface CuratorProfile {
   createdAt: string;
   updatedAt: string;
   strategyType?: "Conservative" | "Moderate" | "Aggressive";
-  riskScore?: "low" | "medium" | "high";
 }
 
 export interface CuratorNewsItem {
@@ -256,8 +222,6 @@ export interface CuratorVaultSummary {
   performanceFee: number;
   protocol: string;
   dataSource: string;
-  grade: string | null;
-  gradeFailures?: string[];
   warnings?: VaultWarning[];
   listed?: boolean;
   creationTimestamp?: number | null;
@@ -320,7 +284,6 @@ export interface CompareVaultItem {
   address: string;
   name: string;
   assetSymbol: string;
-  grade: string | null;
   tvl: number;
   netApyPct: number | null;
 }
@@ -346,12 +309,8 @@ export interface CuratorDashboardItem {
   vaults: CompareVaultItem[];
   protocols: string[];
   networks: string[];
-  gradeDistribution: { high: number; medium: number; low: number };
-  /** Loss-anchored engine grade; null unless the rating feature is enabled and the curator is rated. */
-  engineRating: { grade: string; elMedian: number } | null;
   dataSources: string[];
   lastActive: string | null;
-  riskScore: "low" | "medium" | "high";
   strategyType: "Conservative" | "Moderate" | "Aggressive";
   tvlChange30d: number;
   tvlChangePct30d: number;
@@ -391,7 +350,6 @@ export interface CuratorVaultDetail {
   tvl: number;
   apy: number | null;
   netApy: number | null;
-  riskScore: string | null;
   lastActive: string | null;
 }
 

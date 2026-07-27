@@ -14,7 +14,6 @@ import {
 } from "recharts";
 import { calculateVaultEarnings, calculateAnnualEarnings } from "@/lib/utils/calculator";
 import { formatCurrency } from "@/lib/utils/format";
-import { VaultGradeBadge } from "@/components/VaultGradeBadge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
 import type { VaultData } from "@/lib/types/api";
@@ -33,9 +32,6 @@ interface ProcessedVault {
   netAPR: number | null;
   avgNetApy: number | null;
   rate: number;
-  grade: "high-grade" | "medium-grade" | "low-grade";
-  gradeFailures: string[];
-  riskScore: number | null;
   isBlueChip: boolean;
 }
 
@@ -67,9 +63,6 @@ function processVaults(vaults: VaultData[]): ProcessedVault[] {
       netAPR,
       avgNetApy,
       rate,
-      grade: (v.grade === "high-grade" ? "high-grade" : v.grade === "medium-grade" ? "medium-grade" : "low-grade") as ProcessedVault["grade"],
-      gradeFailures: v.gradeFailures ?? [],
-      riskScore: v.riskScore ?? null,
       isBlueChip,
     });
   }
@@ -89,7 +82,6 @@ export default function CalculatorPage() {
   const [depositAmount, setDepositAmount] = useState(1_000_000);
   const [displayAmount, setDisplayAmount] = useState("1,000,000");
   const [isFocused, setIsFocused] = useState(false);
-  const [selectedGrade, setSelectedGrade] = useState<"high-grade" | "medium-grade" | "low-grade" | null>(null);
   const [selectedCollateral, setSelectedCollateral] = useState<"blue-chip" | "all" | null>(null);
   const [selectedCurator, setSelectedCurator] = useState<string | null>(null);
   const [selectedProtocol, setSelectedProtocol] = useState<string | null>(null);
@@ -153,9 +145,6 @@ export default function CalculatorPage() {
 
     let filtered = allVaults;
 
-    if (selectedGrade) {
-      filtered = filtered.filter((v) => v.grade === selectedGrade);
-    }
     if (selectedCollateral === "blue-chip") {
       filtered = filtered.filter((v) => v.isBlueChip);
     }
@@ -179,9 +168,9 @@ export default function CalculatorPage() {
     }
 
     return [...filtered].sort((a, b) => b.rate - a.rate);
-  }, [allVaults, selectedGrade, selectedCollateral, selectedCurator, selectedProtocol, selectedAsset, minAPR, maxAPR, hasSearched]);
+  }, [allVaults, selectedCollateral, selectedCurator, selectedProtocol, selectedAsset, minAPR, maxAPR, hasSearched]);
 
-  const canSearch = selectedGrade !== null && selectedCollateral !== null;
+  const canSearch = selectedCollateral !== null;
   const hasAdvancedFilters = selectedCurator !== null || selectedProtocol !== null || selectedAsset !== null || minAPR !== "" || maxAPR !== "";
 
   function handleSearch() {
@@ -189,7 +178,6 @@ export default function CalculatorPage() {
   }
 
   function resetAllFilters() {
-    setSelectedGrade(null);
     setSelectedCollateral(null);
     setSelectedCurator(null);
     setSelectedProtocol(null);
@@ -231,7 +219,7 @@ export default function CalculatorPage() {
       ) : (
         <>
           {/* ── Filter Row ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
             {/* Column 1: Deposit Amount */}
             <div className="bg-background-subtle rounded-xl border border-border p-5">
               <label className="text-xs font-medium text-text-secondary mb-2 block">
@@ -279,66 +267,7 @@ export default function CalculatorPage() {
               </div>
             </div>
 
-            {/* Column 2: Vault Grade */}
-            <div className="bg-background-subtle rounded-xl border border-border p-5">
-              <label className="text-xs font-medium text-text-secondary mb-2 block">
-                Vault Grade
-              </label>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setSelectedGrade(selectedGrade === "high-grade" ? null : "high-grade")}
-                  className={`w-full p-3 border-2 rounded-lg text-left transition ${
-                    selectedGrade === "high-grade"
-                      ? "border-accent-green bg-accent-green/5"
-                      : "border-border bg-background-elevated hover:border-accent-green/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <svg className="w-4 h-4 text-accent-green" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                    </svg>
-                    <span className="font-semibold text-sm text-text-primary">High Grade</span>
-                  </div>
-                  <p className="text-[11px] text-text-tertiary ml-6">Passes all 9 quality requirements</p>
-                </button>
-
-                <button
-                  onClick={() => setSelectedGrade(selectedGrade === "medium-grade" ? null : "medium-grade")}
-                  className={`w-full p-3 border-2 rounded-lg text-left transition ${
-                    selectedGrade === "medium-grade"
-                      ? "border-accent-yellow bg-accent-yellow/5"
-                      : "border-border bg-background-elevated hover:border-accent-yellow/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <svg className="w-4 h-4 text-accent-yellow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                    </svg>
-                    <span className="font-semibold text-sm text-text-primary">Medium Grade</span>
-                  </div>
-                  <p className="text-[11px] text-text-tertiary ml-6">Fails 1-3 requirements</p>
-                </button>
-
-                <button
-                  onClick={() => setSelectedGrade(selectedGrade === "low-grade" ? null : "low-grade")}
-                  className={`w-full p-3 border-2 rounded-lg text-left transition ${
-                    selectedGrade === "low-grade"
-                      ? "border-accent-red bg-accent-red/5"
-                      : "border-border bg-background-elevated hover:border-accent-red/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <svg className="w-4 h-4 text-accent-red" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span className="font-semibold text-sm text-text-primary">Low Grade</span>
-                  </div>
-                  <p className="text-[11px] text-text-tertiary ml-6">Fails 4+ requirements</p>
-                </button>
-              </div>
-            </div>
-
-            {/* Column 3: Collateral Type */}
+            {/* Column 2: Collateral Type */}
             <div className="bg-background-subtle rounded-xl border border-border p-5">
               <label className="text-xs font-medium text-text-secondary mb-2 block">
                 Collateral Type
@@ -498,7 +427,7 @@ export default function CalculatorPage() {
             </button>
             {!canSearch && (
               <p className="text-xs text-text-muted">
-                Select a vault grade and collateral type to search
+                Select a collateral type to search
               </p>
             )}
             {hasSearched && (
@@ -529,7 +458,7 @@ export default function CalculatorPage() {
               </svg>
               <h3 className="text-lg font-semibold text-text-primary mb-2">Ready to find your perfect vault?</h3>
               <p className="text-sm text-text-secondary max-w-md mx-auto">
-                Select your vault grade and collateral type above, then click <span className="font-semibold text-accent-blue">Find Matching Vaults</span> to see personalized results.
+                Select your collateral type above, then click <span className="font-semibold text-accent-blue">Find Matching Vaults</span> to see personalized results.
               </p>
             </div>
           ) : matchingVaults.length === 0 ? (
@@ -604,7 +533,6 @@ export default function CalculatorPage() {
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-1.5">
                                   <span className="text-sm font-medium text-text-primary">{vault.name}</span>
-                                  <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
                                 </div>
                                 <span className="text-xs text-text-tertiary">{vault.curatorName || "Self-Curated"}</span>
                               </td>
@@ -680,29 +608,11 @@ function VaultCard({
       onClick={onClick}
       className="bg-background-subtle p-5 rounded-xl border-2 border-border hover:border-accent-blue text-left w-full transition-colors group"
     >
-      {/* Rank + badges */}
+      {/* Rank */}
       <div className="flex items-center justify-between mb-3">
         <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold border ${rankColors[rank - 1] || rankColors[2]}`}>
           {rank}
         </span>
-        <div className="flex items-center gap-1.5">
-          {vault.grade === "high-grade" && (
-            <span className="px-2 py-0.5 bg-accent-green/10 text-accent-green text-[10px] rounded font-medium border border-accent-green/20">
-              High Grade
-            </span>
-          )}
-          {vault.grade === "medium-grade" && (
-            <span className="px-2 py-0.5 bg-accent-yellow/10 text-accent-yellow text-[10px] rounded font-medium border border-accent-yellow/20">
-              Medium Grade
-            </span>
-          )}
-          {vault.riskScore != null && (
-            <span className="px-2 py-0.5 bg-background-elevated text-text-muted text-[10px] rounded font-medium border border-border">
-              Score: {vault.riskScore}/100
-            </span>
-          )}
-          <VaultGradeBadge grade={vault.grade} failures={vault.gradeFailures} />
-        </div>
       </div>
 
       {/* Vault Info */}
