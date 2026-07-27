@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { PortfolioApp } from "./PortfolioApp";
+import { PortfolioAppLoader } from "./PortfolioAppLoader";
 
 export const metadata = {
   title: "Portfolio | CuratorWatch",
@@ -17,7 +17,7 @@ export default function PortfolioPage() {
   }
   return (
     <Suspense fallback={<div className="h-[60vh]" />}>
-      <PortfolioApp />
+      <PortfolioAppLoader />
     </Suspense>
   );
 }
