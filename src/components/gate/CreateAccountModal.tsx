@@ -16,6 +16,7 @@ const HEADLINES: Record<string, string> = {
   alerts: "Set your first alert",
   header: "Unlock all of CuratorWatch",
   soft: "Unlock all of CuratorWatch",
+  signin: "Sign in to CuratorWatch",
 };
 
 type Step = "email" | "code" | "handle";
@@ -240,6 +241,9 @@ export function CreateAccountModal({
               >
                 {busy ? "Sending…" : "Send my code →"}
               </button>
+              <p className="text-center font-mono text-[11px] text-text-tertiary">
+                Have an account? Same email — we&rsquo;ll sign you in.
+              </p>
             </>
           )}
 
