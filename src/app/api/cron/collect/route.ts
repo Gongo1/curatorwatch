@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectData, MORPHO_CHAINS } from "@/scripts/collect-data";
 import { updateVaultGrades } from "@/scripts/update-vault-grades";
+import { runLogoBackfill } from "@/scripts/backfill-curator-logos";
 import { updateReturnsMetrics } from "@/scripts/update-returns-metrics";
 import { importRatingsData } from "@/scripts/import-risk-engine-ratings";
 import { ratingsData } from "@/lib/risk-engine-data";
@@ -109,6 +110,20 @@ export async function GET(request: NextRequest) {
         console.log("[CRON] News ingest:", news);
       } catch (newsError) {
         console.error("[CRON] News ingest failed (non-fatal):", newsError);
+      }
+
+      // Curator logos: fill missing logos from first-party sources (Morpho CDN,
+      // Turtle icons) and retire dead unavatar URLs — self-healing, fill-only.
+      try {
+        const logos = await runLogoBackfill(true);
+        console.log("[CRON] Logo backfill:", {
+          set: logos.set,
+          replacedDead: logos.replacedDead,
+          clearedDead: logos.clearedDead,
+          stillMissing: logos.stillMissing.length,
+        });
+      } catch (logoError) {
+        console.error("[CRON] Logo backfill failed (non-fatal):", logoError);
       }
 
       // Disclosure listener: surface possible off-chain legal/regulatory events
