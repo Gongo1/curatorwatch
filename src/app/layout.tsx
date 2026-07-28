@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Geist, JetBrains_Mono } from "next/font/google";
 import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/react";
+import { ClerkProvider } from "@clerk/nextjs";
 import { AppShell } from "@/components/layout/AppShell";
+import { GateProvider } from "@/lib/gate/GateProvider";
+import { GATE_ENABLED } from "@/lib/gate/config";
 import "./globals.css";
 
 // Body sans is now real Geist (the --font-geist-sans alias was previously Inter).
@@ -65,12 +68,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Account gate (flag-dark): ClerkProvider + GateProvider wrap the shell only
+  // when the flag is on, so the dark path ships zero auth JS or behavior change.
+  const shell = (
+    <GateProvider>
+      <AppShell>{children}</AppShell>
+    </GateProvider>
+  );
   return (
     <html lang="en" className="dark">
       <body
         className={`${geist.variable} ${jetbrainsMono.variable} ${cabinetGrotesk.variable} antialiased`}
       >
-        <AppShell>{children}</AppShell>
+        {GATE_ENABLED ? <ClerkProvider>{shell}</ClerkProvider> : shell}
         <Analytics />
       </body>
     </html>

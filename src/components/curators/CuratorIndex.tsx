@@ -8,6 +8,9 @@ import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
 import { DisclosureFlag } from "@/components/DisclosureFlag";
+import { useGate } from "@/lib/gate/GateProvider";
+import { GateTableOverlay } from "@/components/gate/GateTableOverlay";
+import type { RankingGateMeta } from "@/lib/gate/config";
 
 function initials(name: string): string {
   return name
@@ -35,12 +38,26 @@ const CHIPS: { key: SrcFilter; label: string }[] = [
 
 const PAGE = 15;
 
-export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] }) {
+export function CuratorIndex({
+  curators,
+  gate = null,
+}: {
+  curators: CuratorDashboardItem[];
+  gate?: RankingGateMeta | null;
+}) {
   const [query, setQuery] = useState("");
   const [filterSrc, setFilterSrc] = useState<SrcFilter>("all");
   const [sortKey, setSortKey] = useState<SortKey>("tvl");
   const [sortDir, setSortDir] = useState<1 | -1>(-1);
   const [limit, setLimit] = useState(PAGE);
+  const { ready, isSignedIn, openGate } = useGate();
+
+  // Data-driven gating: the payload itself says whether it was truncated. The
+  // overlay renders only once auth state is known AND the viewer is anonymous —
+  // signed-in visitors on the ISR shell see plain rows while the full list
+  // upgrade-fetches (no locked-flash, per the gating spec).
+  const truncated = !!gate?.truncated;
+  const locked = truncated && ready && !isSignedIn;
 
   const rows = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -63,6 +80,10 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
   }, [curators, query, filterSrc, sortKey, sortDir]);
 
   const onSort = (k: SortKey) => {
+    if (truncated) {
+      openGate("tools");
+      return;
+    }
     if (k === sortKey) setSortDir((d) => (d === 1 ? -1 : 1));
     else {
       setSortKey(k);
@@ -87,9 +108,10 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
       type="button"
       onClick={() => onSort(k)}
       aria-pressed={sortKey === k}
+      title={truncated ? "Rank by TVL, vaults, name — free" : undefined}
       className={`font-mono text-[10px] uppercase tracking-[0.1em] hover:text-text-primary transition-colors ${
         sortKey === k ? "text-accent-blue" : "text-text-tertiary"
-      } ${className}`}
+      } ${truncated ? "opacity-40 cursor-not-allowed" : ""} ${className}`}
     >
       {children}
       {sortKey === k ? arrow : ""}
@@ -105,13 +127,20 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
           <input
             type="text"
             value={query}
+            readOnly={truncated}
+            onFocus={truncated ? () => openGate("tools") : undefined}
+            onClick={truncated ? () => openGate("tools") : undefined}
             onChange={(e) => {
+              if (truncated) return;
               setQuery(e.target.value);
               setLimit(PAGE);
             }}
-            placeholder={`Search ${curators.length} curators by name…`}
+            placeholder={`Search ${gate?.totalCount ?? curators.length} curators by name…`}
+            title={truncated ? "Jump straight to any curator — free" : undefined}
             autoComplete="off"
-            className="w-full bg-background-subtle border border-border rounded-[10px] py-2.5 pl-[2.375rem] pr-3.5 text-sm text-text-primary placeholder:text-text-tertiary focus-visible:outline-2 focus-visible:outline focus-visible:outline-accent-blue focus-visible:outline-offset-1 focus:border-accent-blue transition-colors"
+            className={`w-full bg-background-subtle border border-border rounded-[10px] py-2.5 pl-[2.375rem] pr-3.5 text-sm text-text-primary placeholder:text-text-tertiary focus-visible:outline-2 focus-visible:outline focus-visible:outline-accent-blue focus-visible:outline-offset-1 focus:border-accent-blue transition-colors ${
+              truncated ? "opacity-60 cursor-not-allowed" : ""
+            }`}
           />
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -119,7 +148,16 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
             <button
               key={ch.key}
               type="button"
+              title={
+                truncated
+                  ? `Cut ${gate?.totalCount ?? curators.length} curators by focus and jurisdiction — free`
+                  : undefined
+              }
               onClick={() => {
+                if (truncated) {
+                  openGate("tools");
+                  return;
+                }
                 setFilterSrc(ch.key);
                 setLimit(PAGE);
               }}
@@ -127,7 +165,7 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
                 filterSrc === ch.key
                   ? "text-accent-blue border-accent-blue bg-accent-blue/10"
                   : "text-text-secondary border-border bg-background-subtle hover:text-text-primary"
-              }`}
+              } ${truncated ? "opacity-40 cursor-not-allowed" : ""}`}
             >
               {ch.label}
             </button>
@@ -203,7 +241,15 @@ export function CuratorIndex({ curators }: { curators: CuratorDashboardItem[] })
         })
       )}
 
-      {rows.length > limit && (
+      {/* Locked continuation: decoy rows + overlay (anonymous, truncated payloads only) */}
+      {locked && gate && (
+        <GateTableOverlay
+          totalCount={gate.totalCount}
+          teaseNames={(gate.teaseNames ?? []).filter((n): n is string => !!n)}
+        />
+      )}
+
+      {!truncated && rows.length > limit && (
         <button
           type="button"
           onClick={() => setLimit((l) => l + 20)}

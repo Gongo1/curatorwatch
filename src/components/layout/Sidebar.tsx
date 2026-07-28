@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { SidebarNavItem } from "./SidebarNavItem";
+import { AccountCTA } from "@/components/gate/AccountCTA";
 import {
   Users,
   TrendingUp,
@@ -119,6 +120,11 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Account CTA (ambient signup path — renders nothing when the gate is dark) */}
+      <div className="px-2.5 pb-2">
+        <AccountCTA />
+      </div>
 
       {/* Data freshness — the single live indicator */}
       <div className="px-4 py-3.5 border-t border-border">
