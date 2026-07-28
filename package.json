@@ -23,6 +23,7 @@
     "report:unmatched-turtle": "tsx src/scripts/report-unmatched-turtle.ts"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.6.2",
     "@prisma/client": "^6.19.2",
     "@reown/appkit": "^1.8.23",
     "@reown/appkit-adapter-ethers": "^1.8.23",
