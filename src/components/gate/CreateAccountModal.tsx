@@ -26,10 +26,27 @@ interface ClerkErrorLike {
   code?: string;
   longMessage?: string;
   message?: string;
+  /** ClerkAPIResponseError nests the per-field errors (with the real codes,
+   *  e.g. form_identifier_exists) here — the top-level code is a wrapper. */
+  errors?: Array<{ code?: string; longMessage?: string; message?: string }>;
 }
 
 function errMessage(e: ClerkErrorLike | null, fallback: string): string {
-  return e?.longMessage ?? e?.message ?? fallback;
+  const nested = e?.errors?.[0];
+  return (
+    nested?.longMessage ?? nested?.message ?? e?.longMessage ?? e?.message ?? fallback
+  );
+}
+
+/** True when a sign-up error means "this email already has an account" — the
+ *  cue to fall back to the sign-in flow. Checks the wrapper code, the nested
+ *  API error codes, and (belt & braces) the message text. */
+function isIdentifierExists(e: ClerkErrorLike | null): boolean {
+  if (!e) return false;
+  if (e.code === "form_identifier_exists") return true;
+  if (e.errors?.some((x) => x?.code === "form_identifier_exists")) return true;
+  const msg = `${e.longMessage ?? ""} ${e.message ?? ""} ${e.errors?.[0]?.longMessage ?? ""}`.toLowerCase();
+  return msg.includes("taken") || msg.includes("already exists");
 }
 
 export function CreateAccountModal({
@@ -79,7 +96,7 @@ export function CreateAccountModal({
         const sent = await signUp.verifications.sendEmailCode();
         if (sent.error) throw sent.error;
         setMode("signup");
-      } else if (created.error.code === "form_identifier_exists") {
+      } else if (isIdentifierExists(created.error as ClerkErrorLike)) {
         // Existing account — same UX, sign-in code instead.
         const si = await signIn.create({ identifier: email.trim() });
         if (si.error) throw si.error;
