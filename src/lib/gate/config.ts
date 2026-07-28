@@ -13,6 +13,13 @@ export const TEASE_NAMES = 3;
 
 export const HANDLE_RE = /^[a-z0-9-]{3,20}$/;
 
+/** Truncation metadata attached to gated ranking payloads (server-derived). */
+export interface RankingGateMeta {
+  truncated: boolean;
+  totalCount: number;
+  teaseNames: (string | null)[];
+}
+
 /** Derive the pre-filled handle suggestion from an email local part. */
 export function suggestHandle(email: string): string {
   const base = email

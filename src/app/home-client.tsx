@@ -6,9 +6,10 @@ import dynamic from "next/dynamic";
 import { CuratorIndex } from "@/components/curators/CuratorIndex";
 import { ApyDistViz, type ApyDistribution } from "@/components/ApyDistViz";
 import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/api";
-import { isStablecoin } from "@/lib/utils/asset-class";
-import { singleManagerFlags } from "@/lib/concentration";
 import { curatorSlug } from "@/lib/curator-aliases";
+import type { HomeOverview } from "@/lib/home-overview";
+import { useGate } from "@/lib/gate/GateProvider";
+import type { RankingGateMeta } from "@/lib/gate/config";
 import { Newswire } from "@/components/news/Newswire";
 import type { RecentNewsItem } from "@/lib/news/queries";
 
@@ -64,42 +65,46 @@ interface CuratorsHomeProps {
   stats: CuratorDashboardStats;
   apyDist: ApyDistribution | null;
   news: RecentNewsItem[];
+  /** First-viewport aggregates — computed server-side from the FULL curator
+   *  set so the public hero reconciles with total TVL even when the account
+   *  gate truncates the ranking rows below. */
+  overview: HomeOverview;
+  gate?: RankingGateMeta | null;
 }
 
-export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomeProps) {
-  // Asset mix, summed from the curator list so it reconciles exactly with the
-  // tracked-TVL hero (no separate, differently-scoped query).
-  const mix = useMemo(() => {
-    const map: Record<string, number> = {};
-    let total = 0;
-    for (const c of curators)
-      for (const a of c.assetDistribution) {
-        map[a.symbol] = (map[a.symbol] || 0) + a.amountUsd;
-        total += a.amountUsd;
-      }
-    const sorted = Object.entries(map).sort((x, y) => y[1] - x[1]);
-    const top = sorted.slice(0, 6);
-    const otherAmt = sorted.slice(6).reduce((s, [, v]) => s + v, 0);
-    const stableAmt = sorted
-      .filter(([s]) => isStablecoin(s))
-      .reduce((s, [, v]) => s + v, 0);
-    const segments = [
-      ...top.map(([symbol, amount]) => ({ symbol, pct: total ? (amount / total) * 100 : 0 })),
-      ...(otherAmt > 0 ? [{ symbol: "Other", pct: total ? (otherAmt / total) * 100 : 0 }] : []),
-    ];
-    return { segments, stablePct: total ? (stableAmt / total) * 100 : 0 };
-  }, [curators]);
+export function CuratorsHome({ curators, stats, apyDist, news, overview, gate = null }: CuratorsHomeProps) {
+  const { mix, concFlags, largest } = overview;
+  const { enabled: gateOn, ready: gateReady, isSignedIn } = useGate();
 
-  // Single-manager concentration: stablecoins where one curator runs >=84% of the
-  // asset's vault TVL — the single points of failure an allocator should see.
-  const concFlags = useMemo(
-    () => singleManagerFlags(curators, { thresholdPct: 84, minAssetUsd: 50_000_000 }).slice(0, 6),
-    [curators]
-  );
-
-  const largest = curators.length
-    ? curators.reduce((a, b) => (b.totalAUM > a.totalAUM ? b : a))
-    : null;
+  // Signed-in visitors land on the same ISR shell as everyone else (truncated
+  // rows when the gate is on); upgrade to the full ranking client-side. The
+  // /api/dashboard call is authenticated by the session cookie.
+  const [liveCurators, setLiveCurators] = useState(curators);
+  const [liveGate, setLiveGate] = useState(gate);
+  useEffect(() => {
+    setLiveCurators(curators);
+    setLiveGate(gate);
+  }, [curators, gate]);
+  useEffect(() => {
+    if (!gateOn || !gate?.truncated || !gateReady || !isSignedIn) return;
+    let active = true;
+    fetch("/api/dashboard?page=1&pageSize=100&sortBy=aum&sortOrder=desc")
+      .then((r) => r.json())
+      .then((j) => {
+        if (!active) return;
+        const inner = j?.curators?.data;
+        if (Array.isArray(inner?.curators) && inner.curators.length && !inner?.gate?.truncated) {
+          setLiveCurators(
+            (inner.curators as CuratorDashboardItem[]).map((c) => ({ ...c, vaults: [] }))
+          );
+          setLiveGate(null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [gateOn, gateReady, isSignedIn, gate]);
 
   return (
     <div>
@@ -212,7 +217,7 @@ export function CuratorsHome({ curators, stats, apyDist, news }: CuratorsHomePro
       {/* ── Curator index ── */}
       <section>
         <SectionHead title="All curators" meta="ranked by TVL · search & sort" />
-        <CuratorIndex curators={curators} />
+        <CuratorIndex curators={liveCurators} gate={liveGate} />
       </section>
 
     </div>
