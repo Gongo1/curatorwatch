@@ -165,8 +165,17 @@ export async function matchCurator(
           address: `tc:${known.slug}`,
           name: known.name,
           website: known.website || undefined,
+          logoUrl: curatorData?.iconUrl || undefined,
         },
       });
+      // Persist the Turtle-provided icon for rows that predate logo capture —
+      // fill-if-missing only, never clobber an existing logo.
+      if (!c.logoUrl && curatorData?.iconUrl) {
+        await prisma.curator.update({
+          where: { id: c.id },
+          data: { logoUrl: curatorData.iconUrl },
+        });
+      }
       return c.id;
     }
   }
@@ -183,8 +192,18 @@ export async function matchCurator(
       const c = await prisma.curator.upsert({
         where: { address: `tc:${slug}` },
         update: {},
-        create: { address: `tc:${slug}`, name: turtleName },
+        create: {
+          address: `tc:${slug}`,
+          name: turtleName,
+          logoUrl: curatorData?.iconUrl || undefined,
+        },
       });
+      if (!c.logoUrl && curatorData?.iconUrl) {
+        await prisma.curator.update({
+          where: { id: c.id },
+          data: { logoUrl: curatorData.iconUrl },
+        });
+      }
       return c.id;
     }
   }
