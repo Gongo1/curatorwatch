@@ -44,6 +44,11 @@ export async function POST(request: NextRequest) {
   const email = clerkUser.primaryEmailAddress?.emailAddress?.toLowerCase();
   if (!email) return NextResponse.json({ error: "no email on account" }, { status: 422 });
 
+  const isUnique = (e: unknown): e is Prisma.PrismaClientKnownRequestError =>
+    e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+  const uniqueTarget = (e: Prisma.PrismaClientKnownRequestError): string =>
+    Array.isArray(e.meta?.target) ? (e.meta.target as string[]).join(",") : String(e.meta?.target ?? "");
+
   try {
     const user = await prisma.appUser.upsert({
       where: { clerkId: userId },
@@ -52,9 +57,26 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ handle: user.handle });
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
-      return NextResponse.json({ error: "That handle is taken" }, { status: 409 });
+    if (!isUnique(e)) throw e;
+    // Distinguish WHICH constraint fired — reporting every P2002 as a handle
+    // collision produced false "taken" errors.
+    if (uniqueTarget(e).includes("email")) {
+      // Same verified email under a new Clerk identity (retries after failed
+      // sign-ups, dev-instance user resets). The session proves ownership of
+      // the email, so re-link the existing row to the current Clerk user.
+      try {
+        const user = await prisma.appUser.update({
+          where: { email },
+          data: { clerkId: userId, handle },
+        });
+        return NextResponse.json({ handle: user.handle });
+      } catch (e2) {
+        if (isUnique(e2)) {
+          return NextResponse.json({ error: "That handle is taken" }, { status: 409 });
+        }
+        throw e2;
+      }
     }
-    throw e;
+    return NextResponse.json({ error: "That handle is taken" }, { status: 409 });
   }
 }

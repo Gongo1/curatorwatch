@@ -49,13 +49,22 @@ function AccountCTALive() {
   }
 
   return (
-    <button
-      type="button"
-      onClick={() => openGate("header")}
-      className="w-full rounded-lg border border-border px-3 py-2 font-mono text-xs font-semibold text-text-primary hover:border-accent-blue hover:text-accent-blue transition-colors"
-    >
-      Create free account
-    </button>
+    <div className="space-y-1.5">
+      <button
+        type="button"
+        onClick={() => openGate("header")}
+        className="w-full rounded-lg border border-border px-3 py-2 font-mono text-xs font-semibold text-text-primary hover:border-accent-blue hover:text-accent-blue transition-colors"
+      >
+        Create free account
+      </button>
+      <button
+        type="button"
+        onClick={() => openGate("signin")}
+        className="w-full text-center font-mono text-[11px] text-text-tertiary hover:text-text-primary transition-colors"
+      >
+        Sign in
+      </button>
+    </div>
   );
 }
 
