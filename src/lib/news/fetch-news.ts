@@ -15,6 +15,8 @@ import {
   NAME_STOPLIST,
   COMMON_WORDS,
   MIN_SINGLE_TOKEN_LEN,
+  TOP_CURATOR_FEEDS,
+  googleNewsSearchUrl,
   type NewsFeed,
 } from "./sources";
 
@@ -29,6 +31,8 @@ interface FeedItem {
   url: string;
   publishedAt: Date;
   description: string;
+  /** Google News items carry the real outlet in <source>; overrides feed label. */
+  sourceOverride?: string;
 }
 
 interface CuratorMatcher {
@@ -36,7 +40,20 @@ interface CuratorMatcher {
   name: string;
   address: string;
   re: RegExp;
+  /** Single-token names without a hand-vetted alias ("Felix", "Sierra") are
+   *  homonym magnets — headlines must also carry crypto context to match. */
+  requiresContext: boolean;
 }
+
+/** Crypto-context guard for ambiguous names. Deliberately excludes the bare
+ *  word "vault" (pole vault, bank vault, campground vault toilet — all real
+ *  false positives from the first Google News ingest). */
+const RE_CRYPTO_CONTEXT =
+  /\b(defi|crypto|cryptocurrency|stablecoin|onchain|on-chain|protocol|yield|lending|curator|morpho|hyperliquid|ethereum|solana|avalanche|tvl|token|multisig|perps?|blockchain|web3|usd[ct]|dao|treasur)/i;
+
+/** Aggregator/price-tracker pages are listings, not news. */
+const RE_JUNK_TITLE =
+  /\b(price today|price prediction|live \S{0,20} ?price|market data|price chart|price analysis|to usd converter)\b/i;
 
 const xml = new XMLParser({
   ignoreAttributes: false,
@@ -97,11 +114,20 @@ function parseFeed(body: string, source: string): FeedItem[] {
   const out: FeedItem[] = [];
 
   for (const it of rssItems as Record<string, unknown>[]) {
-    const title = stripHtml(text(it.title));
+    let title = stripHtml(text(it.title));
     const url = text(it.link).trim();
     const dateStr = text(it.pubDate) || text(it["dc:date"]);
-    const description = stripHtml(text(it.description)).slice(0, 400);
-    pushItem(out, { title, url, dateStr, description }, cutoff, source);
+    // Google News: <source> holds the real outlet, and titles come suffixed
+    // with " - Outlet" — strip the duplicate suffix for clean display. Their
+    // <description> is a related-articles boilerplate blob (poisons matching —
+    // it almost always contains "crypto" somewhere — and is clutter as a
+    // summary), so Google items carry no description: title-only matching.
+    const sourceOverride = stripHtml(text(it.source)) || undefined;
+    if (sourceOverride && title.endsWith(` - ${sourceOverride}`)) {
+      title = title.slice(0, -(` - ${sourceOverride}`.length)).trim();
+    }
+    const description = sourceOverride ? "" : stripHtml(text(it.description)).slice(0, 400);
+    pushItem(out, { title, url, dateStr, description, sourceOverride }, cutoff, source);
   }
 
   for (const e of atomEntries as Record<string, unknown>[]) {
@@ -119,7 +145,7 @@ function parseFeed(body: string, source: string): FeedItem[] {
 
 function pushItem(
   out: FeedItem[],
-  raw: { title: string; url: string; dateStr: string; description: string },
+  raw: { title: string; url: string; dateStr: string; description: string; sourceOverride?: string },
   cutoff: number,
   source: string
 ): void {
@@ -129,7 +155,13 @@ function pushItem(
   if (!Number.isFinite(ms)) return;
   if (ms < cutoff || ms > Date.now() + 86_400_000) return; // too old / future-dated
   void source;
-  out.push({ title: raw.title, url: raw.url, publishedAt: ts, description: raw.description });
+  out.push({
+    title: raw.title,
+    url: raw.url,
+    publishedAt: ts,
+    description: raw.description,
+    sourceOverride: raw.sourceOverride,
+  });
 }
 
 // ── Curator matchers ───────────────────────────────────────────────────────
@@ -180,9 +212,18 @@ async function loadMatchers(): Promise<CuratorMatcher[]> {
     const terms = matchTerms(c.name!, c.legalName);
     if (terms.length === 0) continue;
     const re = new RegExp(`\\b(?:${terms.map(escapeRe).join("|")})\\b`, "i");
-    matchers.push({ id: c.id, name: c.name!, address: c.address, re });
+    const requiresContext =
+      !MATCH_ALIASES[c.name!] && !/\s/.test(c.name!.trim());
+    matchers.push({ id: c.id, name: c.name!, address: c.address, re, requiresContext });
   }
   return matchers;
+}
+
+/** Does this headline pass the matcher, including the ambiguity guard? */
+function matcherHits(m: CuratorMatcher, hay: string): boolean {
+  if (!m.re.test(hay)) return false;
+  if (m.requiresContext && !RE_CRYPTO_CONTEXT.test(hay)) return false;
+  return true;
 }
 
 // ── Light classification ───────────────────────────────────────────────────
@@ -212,10 +253,74 @@ function classify(title: string, description: string): { sentiment: string | nul
 export interface FetchNewsResult {
   feedsOk: number;
   feedsFailed: number;
+  curatorFeedsOk: number;
+  curatorFeedsFailed: number;
   itemsScanned: number;
   matched: number;
   upserted: number;
   affectedSlugs: string[];
+}
+
+/** One row per (curator, url); updates refresh mutable fields. */
+async function upsertMatched(
+  m: CuratorMatcher,
+  item: FeedItem,
+  source: string
+): Promise<boolean> {
+  try {
+    const existing = await prisma.curatorNews.findFirst({
+      where: { curatorId: m.id, OR: [{ url: item.url }, { title: item.title }] },
+      select: { id: true },
+    });
+    if (existing) {
+      await prisma.curatorNews.update({
+        where: { id: existing.id },
+        data: { title: item.title, source, publishedAt: item.publishedAt },
+      });
+    } else {
+      const { sentiment, category } = classify(item.title, item.description);
+      await prisma.curatorNews.create({
+        data: {
+          curatorId: m.id,
+          title: item.title,
+          summary: item.description || null,
+          url: item.url,
+          source,
+          publishedAt: item.publishedAt,
+          sentiment,
+          category,
+        },
+      });
+    }
+    return true;
+  } catch (e) {
+    console.warn(`[news] upsert failed for ${m.name} / ${item.url}: ${e}`);
+    return false;
+  }
+}
+
+/** Top curators (by AUM) that have a distinctive query phrase — the Google News
+ *  per-curator targets. Phrase preference: hand-vetted alias, else the name
+ *  when it isn't stoplisted. */
+async function loadCuratorFeedTargets(
+  matchers: CuratorMatcher[]
+): Promise<{ matcher: CuratorMatcher; phrase: string }[]> {
+  const byId = new Map(matchers.map((m) => [m.id, m]));
+  const top = await prisma.curator.findMany({
+    where: { name: { not: null }, totalAssetsManaged: { gt: 0 } },
+    orderBy: { totalAssetsManaged: "desc" },
+    take: TOP_CURATOR_FEEDS,
+    select: { id: true, name: true },
+  });
+  const targets: { matcher: CuratorMatcher; phrase: string }[] = [];
+  for (const c of top) {
+    const matcher = byId.get(c.id);
+    if (!matcher || !c.name) continue;
+    const phrase = MATCH_ALIASES[c.name]?.[0] ?? (NAME_STOPLIST.has(c.name) ? null : c.name);
+    if (!phrase || phrase.length < 4) continue;
+    targets.push({ matcher, phrase });
+  }
+  return targets;
 }
 
 /** Fetch + match + classify with NO DB writes — for validating precision. */
@@ -233,7 +338,8 @@ export async function dryRunNews(): Promise<
   for (const { source, item } of items) {
     if (seen.has(item.url)) continue;
     seen.add(item.url);
-    const hits = matchers.filter((m) => m.re.test(`${item.title} ${item.description}`));
+    if (RE_JUNK_TITLE.test(item.title)) continue;
+    const hits = matchers.filter((m) => matcherHits(m, `${item.title} ${item.description}`));
     if (hits.length === 0 || hits.length > MAX_CURATORS_PER_ITEM) continue;
     const { sentiment, category } = classify(item.title, item.description);
     for (const m of hits) out.push({ curator: m.name, source, title: item.title, sentiment, category, url: item.url });
@@ -268,43 +374,56 @@ export async function fetchNews(): Promise<FetchNewsResult> {
   const affected = new Set<string>();
 
   for (const { source, item } of unique) {
+    if (RE_JUNK_TITLE.test(item.title)) continue;
     const hay = `${item.title} ${item.description}`;
-    const hits = matchers.filter((m) => m.re.test(hay));
+    const hits = matchers.filter((m) => matcherHits(m, hay));
     if (hits.length === 0 || hits.length > MAX_CURATORS_PER_ITEM) continue;
     matched++;
 
-    const { sentiment, category } = classify(item.title, item.description);
-
     for (const m of hits) {
-      try {
-        // Dedupe in code (no DB unique needed): one row per (curator, url).
-        const existing = await prisma.curatorNews.findFirst({
-          where: { curatorId: m.id, url: item.url },
-          select: { id: true },
-        });
-        if (existing) {
-          await prisma.curatorNews.update({
-            where: { id: existing.id },
-            data: { title: item.title, source, publishedAt: item.publishedAt, sentiment, category },
-          });
-        } else {
-          await prisma.curatorNews.create({
-            data: {
-              curatorId: m.id,
-              title: item.title,
-              summary: item.description || null,
-              url: item.url,
-              source,
-              publishedAt: item.publishedAt,
-              sentiment,
-              category,
-            },
-          });
-        }
+      if (await upsertMatched(m, item, item.sourceOverride ?? source)) {
         upserted++;
         affected.add(curatorSlug(m.name, m.address));
-      } catch (e) {
-        console.warn(`[news] upsert failed for ${m.name} / ${item.url}: ${e}`);
+      }
+    }
+  }
+
+  // ── Phase B: per-curator Google News query feeds (the recall layer) ──
+  // Items are pre-scoped by the query, but each headline must still pass the
+  // curator's own matcher regex — Google fuzzy-matches queries, and precision
+  // beats recall here.
+  const targets = await loadCuratorFeedTargets(matchers);
+  let curatorFeedsOk = 0;
+  let curatorFeedsFailed = 0;
+  const BATCH = 5;
+  for (let i = 0; i < targets.length; i += BATCH) {
+    const batch = targets.slice(i, i + BATCH);
+    const settled2 = await Promise.allSettled(
+      batch.map((t) =>
+        fetchFeed({ source: "Google News", url: googleNewsSearchUrl(t.phrase) }).then(
+          (items) => ({ t, items })
+        )
+      )
+    );
+    for (let j = 0; j < settled2.length; j++) {
+      const r = settled2[j];
+      if (r.status !== "fulfilled") {
+        curatorFeedsFailed++;
+        console.warn(`[news] curator feed failed: ${batch[j].matcher.name} — ${r.reason}`);
+        continue;
+      }
+      curatorFeedsOk++;
+      const { t, items: feedItems } = r.value;
+      for (const item of feedItems) {
+        if (seen.has(item.url)) continue;
+        seen.add(item.url);
+        if (RE_JUNK_TITLE.test(item.title)) continue;
+        if (!matcherHits(t.matcher, `${item.title} ${item.description}`)) continue;
+        matched++;
+        if (await upsertMatched(t.matcher, item, item.sourceOverride ?? "Google News")) {
+          upserted++;
+          affected.add(curatorSlug(t.matcher.name, t.matcher.address));
+        }
       }
     }
   }
@@ -312,6 +431,8 @@ export async function fetchNews(): Promise<FetchNewsResult> {
   return {
     feedsOk,
     feedsFailed,
+    curatorFeedsOk,
+    curatorFeedsFailed,
     itemsScanned: unique.length,
     matched,
     upserted,

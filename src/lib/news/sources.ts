@@ -23,10 +23,27 @@ export const NEWS_FEEDS: NewsFeed[] = [
   { source: "The Defiant", url: "https://thedefiant.io/api/feed" },
   { source: "Cointelegraph", url: "https://cointelegraph.com/rss/tag/defi" },
   { source: "Decrypt", url: "https://decrypt.co/feed" },
-  { source: "Blockworks", url: "https://blockworks.com/feed" },
+  // Blockworks' RSS returns an empty document on both .com and .co (checked
+  // 2026-07-28) — their stories reach us via the Google News query feeds.
   { source: "The Block", url: "https://www.theblock.co/rss.xml" },
   { source: "CryptoSlate", url: "https://cryptoslate.com/feed/" },
 ];
+
+/**
+ * Per-curator Google News query feeds — the recall layer. Two jobs:
+ * (1) outlets' own RSS endpoints sit behind anti-bot walls that block Vercel's
+ *     datacenter IPs (the pipeline ran dry in prod for 6 weeks while working
+ *     locally); Google News serves RSS to anyone. (2) query feeds surface
+ *     curator coverage from outlets we don't pull directly.
+ * The query is the curator's own distinctive phrase, quoted, plus DeFi-context
+ * terms to suppress homonyms.
+ */
+export const TOP_CURATOR_FEEDS = 40;
+
+export function googleNewsSearchUrl(phrase: string): string {
+  const q = `"${phrase}" (DeFi OR crypto OR vault OR onchain)`;
+  return `https://news.google.com/rss/search?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`;
+}
 
 /**
  * Extra safe match phrases per curator (keyed by the curator's `name`).
@@ -44,6 +61,10 @@ export const MATCH_ALIASES: Record<string, string[]> = {
   Sentora: ["Sentora", "IntoTheBlock"], // rebrand of IntoTheBlock
   "Block Analitica": ["Block Analitica", "BlockAnalitica"],
   "August Digital": ["August Digital"], // never bare "August"
+  // Bare "Felix"/"Sierra" pull in people and places even with crypto context
+  // ("Trust Wallet CEO Felix Fan", "Sierra campground") — phrase-only.
+  Felix: ["Felix Protocol", "feUSD"],
+  Sierra: ["Sierra Protocol"],
 };
 
 /**
@@ -57,6 +78,8 @@ export const NAME_STOPLIST = new Set<string>([
   "AlphaPing",
   "Morpho", // the protocol/org, not a third-party curator — appears in ~every headline
   "Morpho Association",
+  "Felix", // matches via MATCH_ALIASES phrases only
+  "Sierra",
 ]);
 
 /**
