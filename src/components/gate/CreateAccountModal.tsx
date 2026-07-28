@@ -219,6 +219,10 @@ export function CreateAccountModal({
                 placeholder="you@fund.com"
                 className="w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent-blue"
               />
+              {/* Clerk bot-protection mount: custom flows must provide this
+                  element or Clerk falls back to its (unreliable) invisible
+                  CAPTCHA. Renders empty unless a challenge is required. */}
+              <div id="clerk-captcha" />
               <button
                 type="submit"
                 disabled={busy || !email.includes("@")}
