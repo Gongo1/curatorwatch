@@ -19,6 +19,14 @@ import type { TurtleOpportunity } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 100_000; // $100K dust floor
 
+/** TVL plausibility ceiling. Turtle has shipped raw token units in the `tvl`
+ * field (Axis Origin USDx, 2026-07-28: claimed $92B ≈ 10^6× its real ~$92K —
+ * USDT's 6 decimals, likely a missing USDx price feed upstream). The largest
+ * genuine single opportunity in the feed is ~$4.6B (Sky Savings USDS), so $10B
+ * leaves 2× headroom while catching decimals-scale garbage. Offenders are
+ * skipped + reported, never stored. */
+const MAX_TVL_USD = 10_000_000_000;
+
 /** Testnet chains — balances here are not real TVL and must never be counted.
  * NOTE: "pharos" is a real MAINNET in the live Turtle feed (chainId 1672, active —
  * e.g. Axil's ~$8.4M of vaults), not a testnet; it must NOT be denylisted. A future
@@ -37,6 +45,9 @@ export interface TurtleCollectionResult {
   vaultsAttributed: number; // vaults matched to a real curator
   unmatchedHidden: number; // vaults ingested but left unattributed (hidden from the directory)
   hiddenVaults: { name: string; tvl: number }[];
+  // Opportunities whose source-reported TVL exceeds MAX_TVL_USD — skipped as
+  // upstream data errors (e.g. raw token units in the tvl field), reported here.
+  implausibleTvl: { name: string; tvl: number }[];
   // Opportunities whose receipt token matches a Morpho-sourced vault on the same
   // chain — the same on-chain vault seen through both pipelines. New ones are
   // skipped (never stored); ones with a pre-existing Turtle row are reported here
@@ -349,11 +360,22 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     // "hiddenVaults" now holds opportunities SKIPPED (not stored) because they didn't
     // resolve to a curator — denylisted protocols/infra, or no curator name.
     const hiddenVaults: { name: string; tvl: number }[] = [];
+    const implausibleTvl: TurtleCollectionResult["implausibleTvl"] = [];
     const crossSourceOverlaps: TurtleCollectionResult["crossSourceOverlaps"] = [];
 
     for (const opp of filtered) {
       if (fundAdopted.has(`turtle-${opp.id}`)) {
         fundAdoptedSkipped++;
+        continue;
+      }
+      // TVL plausibility guard (sibling of the APY guard on the write path):
+      // source-claimed TVL above the ceiling is an upstream data error — skip
+      // the opportunity entirely so it never reaches a vault row or snapshot.
+      if ((opp.tvl ?? 0) > MAX_TVL_USD) {
+        implausibleTvl.push({ name: opp.name, tvl: opp.tvl ?? 0 });
+        logError(
+          `Implausible TVL from source — skipping ${opp.name}: claims $${((opp.tvl ?? 0) / 1e9).toFixed(1)}B (ceiling $${MAX_TVL_USD / 1e9}B)`
+        );
         continue;
       }
       const result = await upsertTurtleVault(opp, morphoVaultKeys, fundAddresses);
@@ -402,6 +424,12 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     log(`  Snapshots created: ${snapshotsCreated}`);
     log(`  Attributed to a curator: ${vaultsAttributed}`);
     log(`  Skipped (unresolved — denylisted protocols / no curator): ${unmatchedHidden}`);
+    if (implausibleTvl.length > 0) {
+      log(`  ⚠ Skipped (implausible source TVL > $${MAX_TVL_USD / 1e9}B): ${implausibleTvl.length}`);
+      for (const o of implausibleTvl.slice(0, 10)) {
+        log(`    ${o.name} — claimed $${(o.tvl / 1e9).toFixed(1)}B`);
+      }
+    }
     if (fundAdoptedSkipped > 0) {
       log(`  Skipped (adopted by the funds pipeline): ${fundAdoptedSkipped}`);
     }
@@ -425,6 +453,7 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       vaultsAttributed,
       unmatchedHidden,
       hiddenVaults,
+      implausibleTvl,
       crossSourceOverlaps,
       errors,
       duration,
@@ -444,6 +473,7 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       vaultsAttributed: 0,
       unmatchedHidden: 0,
       hiddenVaults: [],
+      implausibleTvl: [],
       crossSourceOverlaps: [],
       errors,
       duration: Date.now() - startTime,
