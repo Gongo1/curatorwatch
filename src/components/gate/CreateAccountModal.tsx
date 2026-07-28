@@ -106,8 +106,18 @@ export function CreateAccountModal({
       if (mode === "signup") {
         const v = await signUp.verifications.verifyEmailCode({ code: code.trim() });
         if (v.error) throw v.error;
-        const fin = await signUp.finalize();
-        if (fin.error) throw fin.error;
+        let fin = await signUp.finalize();
+        if (fin.error) {
+          // Instance config may require a password even though this product is
+          // passwordless (users sign in by email code). Satisfy it with a
+          // random throwaway credential and retry once.
+          const bytes = crypto.getRandomValues(new Uint8Array(24));
+          const throwaway = btoa(String.fromCharCode(...bytes));
+          const upd = await signUp.password({ password: throwaway });
+          if (upd.error) throw fin.error; // surface the original, clearer error
+          fin = await signUp.finalize();
+          if (fin.error) throw fin.error;
+        }
         setStep("handle"); // new account always claims a handle
       } else {
         const v = await signIn.emailCode.verifyCode({ code: code.trim() });
