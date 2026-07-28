@@ -4,8 +4,9 @@
 export const GATE_ENABLED =
   process.env.NEXT_PUBLIC_FEATURE_ACCOUNT_GATE === "true";
 
-/** Rows anonymous users see in the curator ranking. */
-export const FREE_RANKING_ROWS = 10;
+/** Rows anonymous users see in the curator ranking. Hard-wall policy
+ *  (2026-07-28): home + top 3 only; everything else requires an account. */
+export const FREE_RANKING_ROWS = 3;
 
 /** Below-the-fold curator names surfaced as *text* in the gate overlay
  *  ("Sentora, K3 Capital + N more"). Names only — never row data. */

@@ -17,6 +17,7 @@ const HEADLINES: Record<string, string> = {
   header: "Unlock all of CuratorWatch",
   soft: "Unlock all of CuratorWatch",
   signin: "Sign in to CuratorWatch",
+  wall: "Create an account or sign in",
 };
 
 type Step = "email" | "code" | "handle";
