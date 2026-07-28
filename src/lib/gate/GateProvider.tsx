@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
   type ReactNode,
 } from "react";
@@ -38,6 +39,30 @@ export function useGate(): GateApi {
 function GateProviderLive({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded } = useUser();
   const [trigger, setTrigger] = useState<string | null>(null);
+
+  // Wall redirects land on /?join=1 — auto-open the modal once auth resolves
+  // (and strip the param so refreshes/shares don't re-trigger it).
+  useEffect(() => {
+    if (!isLoaded) return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("join") === "1") {
+        params.delete("join");
+        const qs = params.toString();
+        window.history.replaceState(
+          null,
+          "",
+          window.location.pathname + (qs ? `?${qs}` : "")
+        );
+        if (!isSignedIn) {
+          setTrigger("wall");
+          trackGate("modal_open", { trigger: "wall" });
+        }
+      }
+    } catch {
+      // URL APIs unavailable — never break the page for the modal's sake.
+    }
+  }, [isLoaded, isSignedIn]);
 
   const openGate = useCallback(
     (t: string) => {

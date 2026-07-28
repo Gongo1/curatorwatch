@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useGate } from "@/lib/gate/GateProvider";
 import { trackGate } from "@/lib/gate/track";
+import { FREE_RANKING_ROWS } from "@/lib/gate/config";
 
 // The locked continuation of the curator ranking. Six decoy rows that are
 // pixel-identical in geometry to real rows (same grid, avatar, type scale) but
@@ -29,7 +30,7 @@ export function GateTableOverlay({
     }
   }, []);
 
-  const remaining = Math.max(0, totalCount - 10);
+  const remaining = Math.max(0, totalCount - FREE_RANKING_ROWS);
   const tease =
     teaseNames.length > 0
       ? `${teaseNames.slice(0, 2).join(", ")} + ${remaining - Math.min(2, teaseNames.length)} more`
@@ -52,7 +53,7 @@ export function GateTableOverlay({
             className="grid grid-cols-[34px_1fr_96px_132px] gap-4 items-center px-3 py-3 border-t border-border-subtle blur-[5px] opacity-55"
           >
             <span className="font-mono text-sm text-text-tertiary text-right tabular-nums">
-              {11 + i}
+              {FREE_RANKING_ROWS + 1 + i}
             </span>
             <div className="flex items-center gap-3 min-w-0">
               <span className="w-9 h-9 rounded-[9px] flex-none bg-background-elevated border border-border" />
