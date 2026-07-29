@@ -19,6 +19,7 @@ const HEADLINES: Record<string, string> = {
   signin: "Sign in to CuratorWatch",
   wall: "Create an account or sign in",
   digest: "Get the Curator Daily in your inbox",
+  explore: "Create an account to see more data",
 };
 
 type Step = "email" | "code" | "handle";

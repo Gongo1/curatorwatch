@@ -17,6 +17,7 @@ const isPublic = createRouteMatcher([
   "/robots.txt",
   "/sitemap(.*)",
   "/api/dashboard", // anonymous responses are truncated inside the route
+  "/api/stats/aum-growth", // home TVL chart (aggregate top-6 series — part of the public shop window)
   "/api/track-gate",
   "/api/account(.*)",
   "/api/cron(.*)", // secret-protected, sessionless — must never be walled
