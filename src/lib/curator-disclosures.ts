@@ -39,6 +39,19 @@ export const CURATOR_DISCLOSURES: Record<string, CuratorDisclosure[]> = {
       severity: "critical",
     },
   ],
+  // Altura — orderly vault wind-down announced by the CEO, 2026-07-28.
+  "tc:altura": [
+    {
+      title: "Vault wind-down in progress",
+      detail:
+        "On July 28, 2026, Altura announced an orderly wind-down of its vault after processing more than $8.5M USDT in instant redemptions within 24 hours amid sustained withdrawal demand. Per CEO Ranveer Arora's statement, counterparties have been notified and positions are being unwound across exchange allocations, private credit, and real-world-asset strategies; some positions redeem immediately while others follow standard settlement periods, with capital returned to users as underlying positions are redeemed. This is a wind-down announcement, not a reported loss of funds.",
+      date: "2026-07-28",
+      sourceUrl:
+        "https://finance.yahoo.com/markets/crypto/articles/altura-begins-orderly-vault-wind-063003866.html",
+      sourceTitle: "Altura Begins Orderly Vault Wind-Down (CEO statement) — Yahoo Finance",
+      severity: "critical",
+    },
+  ],
 };
 
 export function getCuratorDisclosures(address: string | null | undefined): CuratorDisclosure[] {
