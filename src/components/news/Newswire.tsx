@@ -2,7 +2,10 @@
  * states: default · hover · focus · active · disabled(n/a) · loading(n/a) · error(empty) · success
  * contrast: pass (46-50)
  */
+"use client";
+
 import Link from "next/link";
+import { useGate } from "@/lib/gate/GateProvider";
 
 export interface NewswireRow {
   id: string;
@@ -58,37 +61,57 @@ export function Newswire({
   emptyHint = "No headlines naming this curator yet. We scan major crypto desks every few hours.",
 }: NewswireProps) {
   const rows = limit ? items.slice(0, limit) : items;
+  // Anonymous users can read the strip, but any click nudges toward an account.
+  const { enabled: gateOn, ready: gateReady, isSignedIn, openGate } = useGate();
+  const anonGated = gateOn && gateReady && !isSignedIn;
 
-  // One-line headline bar: the latest item, nothing else. Renders nothing when
-  // there's no news — a bar with an empty-state would defeat its minimalism.
+  // Headline bar: a horizontally scrollable strip of the latest items (newest
+  // first — scroll right for older). Renders nothing when there's no news.
   if (variant === "bar") {
-    const latest = rows[0];
-    if (!latest) return null;
+    if (rows.length === 0) return null;
     return (
-      <div className="border-y border-border-subtle py-2 flex items-center gap-2 font-mono text-xs min-w-0">
+      <div className="border-y border-border-subtle py-2 flex items-center gap-3 font-mono text-xs min-w-0">
         <span className="text-[0.62rem] uppercase tracking-[0.12em] text-text-tertiary flex-none">
           {title}
         </span>
-        <span className={`w-1.5 h-1.5 rounded-full flex-none ${sentimentDot(latest.sentiment)}`} />
-        <a
-          href={latest.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-text-primary hover:text-accent-blue focus-visible:text-accent-blue focus-visible:outline-none transition-colors truncate min-w-0"
-        >
-          {latest.title}
-        </a>
-        <span className="text-text-tertiary flex-none hidden sm:inline">
-          {latest.source} ·{" "}
-          <time dateTime={latest.publishedAt} className="tabular-nums">
-            {compactAge(latest.publishedAt)}
-          </time>
-        </span>
-        {items.length > 1 && (
-          <span className="text-text-muted tabular-nums flex-none ml-auto">
-            +{items.length - 1}
-          </span>
-        )}
+        <div className="flex items-center gap-6 overflow-x-auto min-w-0 pb-0.5 [scrollbar-width:thin]">
+          {rows.map((r) => {
+            const inner = (
+              <>
+                <span className={`w-1.5 h-1.5 rounded-full flex-none ${sentimentDot(r.sentiment)}`} />
+                <span className="text-text-primary group-hover:text-accent-blue transition-colors truncate max-w-[340px]">
+                  {r.title}
+                </span>
+                <span className="text-text-tertiary flex-none hidden sm:inline whitespace-nowrap">
+                  {r.source} ·{" "}
+                  <time dateTime={r.publishedAt} className="tabular-nums">
+                    {compactAge(r.publishedAt)}
+                  </time>
+                </span>
+              </>
+            );
+            return anonGated ? (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => openGate("explore")}
+                className="flex items-center gap-2 flex-none min-w-0 group text-left"
+              >
+                {inner}
+              </button>
+            ) : (
+              <a
+                key={r.id}
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 flex-none min-w-0 group"
+              >
+                {inner}
+              </a>
+            );
+          })}
+        </div>
       </div>
     );
   }
