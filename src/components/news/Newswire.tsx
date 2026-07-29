@@ -52,6 +52,18 @@ function sentimentDot(sentiment?: string | null): string {
   return "bg-text-muted";
 }
 
+/** Short absolute date: "Jul 28" (adds the year when it isn't this year). */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  const sameYear = d.getFullYear() === new Date().getFullYear();
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+    timeZone: "UTC",
+  });
+}
+
 export function Newswire({
   items,
   variant = "rail",
@@ -65,53 +77,64 @@ export function Newswire({
   const { enabled: gateOn, ready: gateReady, isSignedIn, openGate } = useGate();
   const anonGated = gateOn && gateReady && !isSignedIn;
 
-  // Headline bar: a horizontally scrollable strip of the latest items (newest
-  // first — scroll right for older). Renders nothing when there's no news.
+  // Headline table: a compact vertically scrollable list — ~4 full headlines
+  // visible, scroll down for older. Each row: sentiment dot · full headline ·
+  // source · date + age. Renders nothing when there's no news.
   if (variant === "bar") {
     if (rows.length === 0) return null;
     return (
-      <div className="border-y border-border-subtle py-2 flex items-center gap-3 font-mono text-xs min-w-0">
-        <span className="text-[0.62rem] uppercase tracking-[0.12em] text-text-tertiary flex-none">
-          {title}
-        </span>
-        <div className="flex items-center gap-6 overflow-x-auto min-w-0 pb-0.5 [scrollbar-width:thin]">
+      <div className="border border-border rounded-xl bg-background-subtle overflow-hidden">
+        <div className="px-4 py-2 border-b border-border-subtle flex items-center justify-between">
+          <span className="font-mono text-[0.62rem] uppercase tracking-[0.12em] text-text-tertiary">
+            {title}
+          </span>
+          <span className="font-mono text-[0.62rem] text-text-muted tabular-nums">
+            {rows.length} headlines · scroll for older
+          </span>
+        </div>
+        <ul className="divide-y divide-border-subtle max-h-[196px] overflow-y-auto [scrollbar-width:thin]">
           {rows.map((r) => {
             const inner = (
-              <>
-                <span className={`w-1.5 h-1.5 rounded-full flex-none ${sentimentDot(r.sentiment)}`} />
-                <span className="text-text-primary group-hover:text-accent-blue transition-colors truncate max-w-[340px]">
+              <span className="grid grid-cols-[10px_1fr_auto] gap-3 items-baseline px-4 py-2.5 w-full">
+                <span
+                  className={`w-1.5 h-1.5 rounded-full translate-y-[-1px] ${sentimentDot(r.sentiment)}`}
+                />
+                <span className="text-sm text-text-primary leading-snug group-hover:text-accent-blue transition-colors">
                   {r.title}
+                  <span className="font-mono text-xs text-text-tertiary"> — {r.source}</span>
                 </span>
-                <span className="text-text-tertiary flex-none hidden sm:inline whitespace-nowrap">
-                  {r.source} ·{" "}
-                  <time dateTime={r.publishedAt} className="tabular-nums">
-                    {compactAge(r.publishedAt)}
-                  </time>
-                </span>
-              </>
+                <time
+                  dateTime={r.publishedAt}
+                  className="font-mono text-xs text-text-tertiary tabular-nums whitespace-nowrap text-right"
+                >
+                  {shortDate(r.publishedAt)} · {compactAge(r.publishedAt)}
+                </time>
+              </span>
             );
-            return anonGated ? (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => openGate("explore")}
-                className="flex items-center gap-2 flex-none min-w-0 group text-left"
-              >
-                {inner}
-              </button>
-            ) : (
-              <a
-                key={r.id}
-                href={r.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 flex-none min-w-0 group"
-              >
-                {inner}
-              </a>
+            return (
+              <li key={r.id}>
+                {anonGated ? (
+                  <button
+                    type="button"
+                    onClick={() => openGate("explore")}
+                    className="block w-full text-left group hover:bg-background-hover transition-colors"
+                  >
+                    {inner}
+                  </button>
+                ) : (
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block group hover:bg-background-hover transition-colors"
+                  >
+                    {inner}
+                  </a>
+                )}
+              </li>
             );
           })}
-        </div>
+        </ul>
       </div>
     );
   }
