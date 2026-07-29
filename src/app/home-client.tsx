@@ -9,6 +9,7 @@ import type { CuratorDashboardItem, CuratorDashboardStats } from "@/lib/types/ap
 import { curatorSlug } from "@/lib/curator-aliases";
 import type { HomeOverview } from "@/lib/home-overview";
 import { useGate } from "@/lib/gate/GateProvider";
+import { EmailDeliveryCard } from "@/components/gate/EmailDeliveryCard";
 import type { RankingGateMeta } from "@/lib/gate/config";
 import { Newswire } from "@/components/news/Newswire";
 import type { RecentNewsItem } from "@/lib/news/queries";
@@ -165,6 +166,9 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, gate = 
 
       {/* ── Newswire: one-line headline bar ── */}
       {news.length > 0 && <Newswire variant="bar" items={news} title="Newswire" />}
+
+      {/* ── Email delivery: one-click digest opt-in + alerts pointer ── */}
+      <EmailDeliveryCard />
 
       {/* ── Signal strip: APY · largest · single-manager concentration ── */}
       <div className="flex gap-x-10 gap-y-4 items-end flex-wrap py-4 border-b border-border-subtle mb-10">

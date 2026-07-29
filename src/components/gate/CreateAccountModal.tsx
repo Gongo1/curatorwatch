@@ -18,6 +18,7 @@ const HEADLINES: Record<string, string> = {
   soft: "Unlock all of CuratorWatch",
   signin: "Sign in to CuratorWatch",
   wall: "Create an account or sign in",
+  digest: "Get the Curator Daily in your inbox",
 };
 
 type Step = "email" | "code" | "handle";
