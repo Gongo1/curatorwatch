@@ -114,20 +114,32 @@ export function alertsEmail(items: AlertEmailItem[], unsubUrl: string): { subjec
 }
 
 export function digestEmail(d: { slug: string; title: string; summary: string | null; bodyMarkdown: string }, unsubUrl: string): { subject: string; html: string } {
-  // Minimal markdown → email HTML: headings, bold, and paragraphs. The full
-  // rendered edition lives at /digest — the email is the readable summary.
+  // Minimal markdown → email HTML: headings, paragraphs, and fenced code blocks
+  // (the wire-format edition's fixed-width tables — must render monospace with
+  // whitespace preserved or the columns collapse).
+  const PRE_STYLE =
+    "font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.45;color:#33322f;background:#f4f3ef;border:1px solid #e4e2db;border-radius:6px;padding:10px 12px;margin:10px 0;overflow-x:auto;white-space:pre;";
+  const renderText = (segment: string): string =>
+    segment
+      .split(/\n{2,}/)
+      .map((block) => {
+        const b = block.trim();
+        if (!b) return "";
+        if (/^#{1,3}\s/.test(b)) {
+          return `<div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-top:18px;">${b.replace(/^#{1,3}\s+/, "")}</div>`;
+        }
+        return `<p style="font-size:13px;line-height:1.6;color:#33322f;margin:8px 0;">${b
+          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          .replace(/\n/g, "<br/>")}</p>`;
+      })
+      .join("");
+  // Split on ``` fences (escaping first — esc() leaves backticks intact);
+  // odd-indexed segments are code.
   const body = esc(d.bodyMarkdown)
-    .split(/\n{2,}/)
-    .slice(0, 14)
-    .map((block) => {
-      const b = block.trim();
-      if (/^#{1,3}\s/.test(b)) {
-        return `<div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-top:18px;">${b.replace(/^#{1,3}\s+/, "")}</div>`;
-      }
-      return `<p style="font-size:13px;line-height:1.6;color:#33322f;margin:8px 0;">${b
-        .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-        .replace(/\n/g, "<br/>")}</p>`;
-    })
+    .split(/^```[a-z]*\n?|^```\s*$/m)
+    .map((segment, i) =>
+      i % 2 === 1 ? `<pre style="${PRE_STYLE}">${segment.replace(/\n+$/, "")}</pre>` : renderText(segment)
+    )
     .join("");
   return {
     subject: d.title,
