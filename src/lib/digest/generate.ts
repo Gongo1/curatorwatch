@@ -11,6 +11,7 @@
  */
 
 import type { DigestData } from "./types";
+import { DESK_EDITOR_PROMPT } from "./editor-prompt";
 
 const MODEL = process.env.DIGEST_LLM_MODEL ?? "claude-opus-4-8";
 
@@ -23,16 +24,13 @@ export function digestLlmEnabled(): boolean {
   return process.env.DIGEST_LLM_ENABLED === "true" && !!process.env.ANTHROPIC_API_KEY;
 }
 
-function buildPrompt(data: DigestData): string {
+export function buildUserTurn(data: DigestData): string {
   return [
-    "You are the writer of CuratorWatch's daily \"Curator Daily\" digest about DeFi vault curators (the risk teams behind lending vaults).",
-    "Voice: Bloomberg-meets-crypto-Twitter — metric-driven, dry wit, opinionated but never hype. 350–550 words. Markdown.",
-    "Rules: every claim must be grounded in the JSON below — do NOT invent numbers. Lead with the single biggest story. Reference curators/vaults by name. End with a one-line 'Watching:' forward-look and a 'not investment advice' note.",
-    "Here is today's structured data (the source of truth):",
+    "Today's payload (the sole source of truth):",
     "```json",
     JSON.stringify(data, null, 2),
     "```",
-    "Write only the digest body in markdown. No preamble.",
+    "Write today's edition now.",
   ].join("\n");
 }
 
@@ -49,13 +47,23 @@ export async function generateDigestProse(data: DigestData): Promise<GeneratedDi
       },
       body: JSON.stringify({
         model: MODEL,
-        max_tokens: 1600,
-        messages: [{ role: "user", content: buildPrompt(data) }],
+        max_tokens: 4000,
+        thinking: { type: "adaptive" },
+        // Stable system prompt first (prompt-cacheable), volatile payload in
+        // the user turn.
+        system: [
+          {
+            type: "text",
+            text: DESK_EDITOR_PROMPT,
+            cache_control: { type: "ephemeral" },
+          },
+        ],
+        messages: [{ role: "user", content: buildUserTurn(data) }],
       }),
     });
     if (!res.ok) return null;
-    const json = (await res.json()) as { content?: { text?: string }[] };
-    const text = json?.content?.[0]?.text;
+    const json = (await res.json()) as { content?: { type?: string; text?: string }[] };
+    const text = json?.content?.find((b) => b.type === "text")?.text;
     if (typeof text !== "string" || !text.trim()) return null;
     return { bodyMarkdown: text.trim(), generatedBy: MODEL };
   } catch {
