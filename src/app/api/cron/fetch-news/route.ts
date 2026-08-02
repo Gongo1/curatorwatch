@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchNews } from "@/lib/news/fetch-news";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 /**
- * Standalone newswire ingest. Also runs as a step inside /api/cron/collect;
- * this route exists for independent, on-demand runs and testing.
+ * Newswire ingest — its own cron (vercel.json, every 6h). Formerly a step in
+ * /api/cron/collect's alt lane, where its ~40 feed fetches + per-item upserts
+ * blew the shared budget (FUNCTION_INVOCATION_TIMEOUT) and silently starved
+ * the steps behind it.
  */
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
