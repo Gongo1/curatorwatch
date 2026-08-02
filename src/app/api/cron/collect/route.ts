@@ -6,7 +6,6 @@ import { updateReturnsMetrics } from "@/scripts/update-returns-metrics";
 import { importRatingsData } from "@/scripts/import-risk-engine-ratings";
 import { ratingsData } from "@/lib/risk-engine-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
-import { fetchNews } from "@/lib/news/fetch-news";
 import { detectDisclosureCandidates } from "@/lib/news/disclosure-listener";
 import { storePlatformAlerts } from "@/lib/curator-alert-detector";
 
@@ -104,13 +103,10 @@ export async function GET(request: NextRequest) {
         console.error("[CRON] EL rating import failed (non-fatal):", ratingError);
       }
 
-      // Newswire: pull free RSS feeds and tag headlines to tracked curators.
-      try {
-        const news = await fetchNews();
-        console.log("[CRON] News ingest:", news);
-      } catch (newsError) {
-        console.error("[CRON] News ingest failed (non-fatal):", newsError);
-      }
+      // Newswire ingest moved to its own cron (/api/cron/fetch-news, vercel.json):
+      // ~40 external feed fetches + per-item upserts overran this lane's budget
+      // and silently killed the steps below (news was dead Jul 28–Aug 2 with no
+      // signal). Isolated, it gets its own 300s budget and visible failures.
 
       // Curator logos: fill missing logos from first-party sources (Morpho CDN,
       // Turtle icons) and retire dead unavatar URLs — self-healing, fill-only.

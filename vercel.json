@@ -33,6 +33,10 @@
       "schedule": "15 */6 * * *"
     },
     {
+      "path": "/api/cron/fetch-news",
+      "schedule": "25 */6 * * *"
+    },
+    {
       "path": "/api/cron/collect-hyperliquid",
       "schedule": "15 3,15 * * *"
     },
