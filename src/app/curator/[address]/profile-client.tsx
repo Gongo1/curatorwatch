@@ -15,6 +15,7 @@ const DealDepositDrawer = dynamic(
   { ssr: false }
 );
 import { Newswire } from "@/components/news/Newswire";
+import { CuratorBlurb } from "@/components/curators/CuratorBlurb";
 import { CuratorDisclosureBanner } from "@/components/CuratorDisclosureBanner";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { ApyDistViz, buildApyDistribution } from "@/components/ApyDistViz";
@@ -261,6 +262,9 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
           </div>
         </div>
       </header>
+
+      {/* ── About: computed figures + curated dossier facts ── */}
+      <CuratorBlurb curator={curator} vaults={vaults} />
 
       {/* ── Verdict: TVL at a glance ── */}
       <div className="max-w-md mb-8">
