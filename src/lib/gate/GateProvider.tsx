@@ -5,11 +5,12 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import { useUser } from "@clerk/nextjs";
-import { GATE_ENABLED } from "./config";
+import { GATE_ENABLED, safeNextPath } from "./config";
 import { trackGate } from "./track";
 import { CreateAccountModal } from "@/components/gate/CreateAccountModal";
 
@@ -39,15 +40,21 @@ export function useGate(): GateApi {
 function GateProviderLive({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded } = useUser();
   const [trigger, setTrigger] = useState<string | null>(null);
+  const [dest, setDest] = useState<string | null>(null);
+  const triggerRef = useRef<string | null>(null);
+  triggerRef.current = trigger;
 
-  // Wall redirects land on /?join=1 — auto-open the modal once auth resolves
-  // (and strip the param so refreshes/shares don't re-trigger it).
+  // Wall redirects land on /?join=1&next=<original page> — auto-open the modal
+  // once auth resolves (and strip the params so refreshes/shares don't
+  // re-trigger it). `next` is where the flow returns the user on completion.
   useEffect(() => {
     if (!isLoaded) return;
     try {
       const params = new URLSearchParams(window.location.search);
       if (params.get("join") === "1") {
+        const next = safeNextPath(params.get("next"));
         params.delete("join");
+        params.delete("next");
         const qs = params.toString();
         window.history.replaceState(
           null,
@@ -55,6 +62,7 @@ function GateProviderLive({ children }: { children: ReactNode }) {
           window.location.pathname + (qs ? `?${qs}` : "")
         );
         if (!isSignedIn) {
+          setDest(next);
           setTrigger("wall");
           trackGate("modal_open", { trigger: "wall" });
         }
@@ -62,6 +70,25 @@ function GateProviderLive({ children }: { children: ReactNode }) {
     } catch {
       // URL APIs unavailable — never break the page for the modal's sake.
     }
+  }, [isLoaded, isSignedIn]);
+
+  // OAuth signups never pass the modal's handle step — when a signed-in user
+  // has no handle yet, reopen the modal directly on the claim step (also
+  // catches returning users who dismissed it before claiming).
+  useEffect(() => {
+    if (!isLoaded || !isSignedIn) return;
+    let active = true;
+    fetch("/api/account/handle")
+      .then((r) => r.json())
+      .then((j) => {
+        if (!active || j?.handle || triggerRef.current !== null) return;
+        setTrigger("handle");
+        trackGate("modal_open", { trigger: "handle" });
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, [isLoaded, isSignedIn]);
 
   const openGate = useCallback(
@@ -80,7 +107,12 @@ function GateProviderLive({ children }: { children: ReactNode }) {
     >
       {children}
       {trigger !== null && (
-        <CreateAccountModal trigger={trigger} onClose={() => setTrigger(null)} />
+        <CreateAccountModal
+          trigger={trigger}
+          dest={dest}
+          initialStep={trigger === "handle" ? "handle" : "email"}
+          onClose={() => setTrigger(null)}
+        />
       )}
     </GateContext.Provider>
   );
