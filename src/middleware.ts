@@ -14,6 +14,7 @@ const isPublic = createRouteMatcher([
   "/",
   "/docs(.*)",
   "/changelog(.*)",
+  "/sso-callback", // Clerk OAuth landing — completes before a session exists
   "/robots.txt",
   "/sitemap(.*)",
   "/api/dashboard", // anonymous responses are truncated inside the route
@@ -36,8 +37,9 @@ export default gateEnabled
         );
       }
       const url = req.nextUrl.clone();
+      const next = req.nextUrl.pathname + req.nextUrl.search;
       url.pathname = "/";
-      url.search = "?join=1";
+      url.search = `?join=1&next=${encodeURIComponent(next)}`;
       return NextResponse.redirect(url);
     })
   : () => NextResponse.next();
