@@ -261,41 +261,68 @@ export interface FetchNewsResult {
   affectedSlugs: string[];
 }
 
-/** One row per (curator, url); updates refresh mutable fields. */
-async function upsertMatched(
-  m: CuratorMatcher,
-  item: FeedItem,
-  source: string
-): Promise<boolean> {
-  try {
-    const existing = await prisma.curatorNews.findFirst({
-      where: { curatorId: m.id, OR: [{ url: item.url }, { title: item.title }] },
-      select: { id: true },
+/** In-memory dedupe + batched writes. The old per-item findFirst/update flow
+ *  cost 2-3 pooler round-trips per matched item (~700/run) and blew the
+ *  serverless budget from Vercel; one read + one createMany replaces it.
+ *  First write wins — rows are immutable once ingested. */
+class NewsCollector {
+  private known = new Set<string>();
+  private creates: {
+    curatorId: string;
+    title: string;
+    summary: string | null;
+    url: string;
+    source: string;
+    publishedAt: Date;
+    sentiment: string | null;
+    category: string | null;
+  }[] = [];
+
+  static async load(): Promise<NewsCollector> {
+    const c = new NewsCollector();
+    const rows = await prisma.curatorNews.findMany({
+      select: { curatorId: true, url: true, title: true },
     });
-    if (existing) {
-      await prisma.curatorNews.update({
-        where: { id: existing.id },
-        data: { title: item.title, source, publishedAt: item.publishedAt },
-      });
-    } else {
-      const { sentiment, category } = classify(item.title, item.description);
-      await prisma.curatorNews.create({
-        data: {
-          curatorId: m.id,
-          title: item.title,
-          summary: item.description || null,
-          url: item.url,
-          source,
-          publishedAt: item.publishedAt,
-          sentiment,
-          category,
-        },
-      });
+    for (const r of rows) {
+      c.known.add(`${r.curatorId} u:${r.url}`);
+      c.known.add(`${r.curatorId} t:${r.title}`);
     }
+    return c;
+  }
+
+  /** Returns true when the item is new for this curator (queued for insert). */
+  add(m: CuratorMatcher, item: FeedItem, source: string): boolean {
+    const kUrl = `${m.id} u:${item.url}`;
+    const kTitle = `${m.id} t:${item.title}`;
+    if (this.known.has(kUrl) || this.known.has(kTitle)) return false;
+    this.known.add(kUrl);
+    this.known.add(kTitle);
+    const { sentiment, category } = classify(item.title, item.description);
+    this.creates.push({
+      curatorId: m.id,
+      title: item.title,
+      summary: item.description || null,
+      url: item.url,
+      source,
+      publishedAt: item.publishedAt,
+      sentiment,
+      category,
+    });
     return true;
-  } catch (e) {
-    console.warn(`[news] upsert failed for ${m.name} / ${item.url}: ${e}`);
-    return false;
+  }
+
+  async flush(): Promise<number> {
+    let written = 0;
+    for (let i = 0; i < this.creates.length; i += 200) {
+      const chunk = this.creates.slice(i, i + 200);
+      try {
+        const r = await prisma.curatorNews.createMany({ data: chunk });
+        written += r.count;
+      } catch (e) {
+        console.warn(`[news] createMany chunk failed (${chunk.length} rows): ${e}`);
+      }
+    }
+    return written;
   }
 }
 
@@ -349,6 +376,7 @@ export async function dryRunNews(): Promise<
 
 export async function fetchNews(): Promise<FetchNewsResult> {
   const matchers = await loadMatchers();
+  const collector = await NewsCollector.load();
 
   const settled = await Promise.allSettled(NEWS_FEEDS.map((f) => fetchFeed(f).then((items) => ({ f, items }))));
   let feedsOk = 0;
@@ -370,7 +398,6 @@ export async function fetchNews(): Promise<FetchNewsResult> {
   const unique = items.filter(({ item }) => (seen.has(item.url) ? false : (seen.add(item.url), true)));
 
   let matched = 0;
-  let upserted = 0;
   const affected = new Set<string>();
 
   for (const { source, item } of unique) {
@@ -381,8 +408,7 @@ export async function fetchNews(): Promise<FetchNewsResult> {
     matched++;
 
     for (const m of hits) {
-      if (await upsertMatched(m, item, item.sourceOverride ?? source)) {
-        upserted++;
+      if (collector.add(m, item, item.sourceOverride ?? source)) {
         affected.add(curatorSlug(m.name, m.address));
       }
     }
@@ -420,13 +446,14 @@ export async function fetchNews(): Promise<FetchNewsResult> {
         if (RE_JUNK_TITLE.test(item.title)) continue;
         if (!matcherHits(t.matcher, `${item.title} ${item.description}`)) continue;
         matched++;
-        if (await upsertMatched(t.matcher, item, item.sourceOverride ?? "Google News")) {
-          upserted++;
+        if (collector.add(t.matcher, item, item.sourceOverride ?? "Google News")) {
           affected.add(curatorSlug(t.matcher.name, t.matcher.address));
         }
       }
     }
   }
+
+  const upserted = await collector.flush();
 
   return {
     feedsOk,
