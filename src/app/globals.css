@@ -59,9 +59,9 @@
   --color-accent-yellow: var(--accent-yellow);
   --color-accent-yellow-muted: var(--accent-yellow-muted);
 
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-sans-face);
   --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-cabinet), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {

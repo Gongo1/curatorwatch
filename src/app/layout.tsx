@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, JetBrains_Mono } from "next/font/google";
-import localFont from "next/font/local";
+import { Open_Sans, JetBrains_Mono, Libre_Franklin } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { AppShell } from "@/components/layout/AppShell";
@@ -8,9 +7,9 @@ import { GateProvider } from "@/lib/gate/GateProvider";
 import { GATE_ENABLED } from "@/lib/gate/config";
 import "./globals.css";
 
-// Body sans is now real Geist (the --font-geist-sans alias was previously Inter).
-const geist = Geist({
-  variable: "--font-geist-sans",
+// Body / UI sans — Open Sans, the body face in the J.P. Morgan type model.
+const openSans = Open_Sans({
+  variable: "--font-sans-face",
   subsets: ["latin"],
   display: "swap",
 });
@@ -21,14 +20,12 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-// Display face self-hosted (was a render-blocking Fontshare stylesheet).
-const cabinetGrotesk = localFont({
-  // Only the weights actually used (font-display is only ever bold/extrabold).
-  src: [
-    { path: "../fonts/cabinet-grotesk-700.woff2", weight: "700" },
-    { path: "../fonts/cabinet-grotesk-800.woff2", weight: "800" },
-  ],
-  variable: "--font-cabinet",
+// Display / headings — Libre Franklin, a Franklin Gothic revival standing in
+// for J.P. Morgan's Amplitude (licensed, so unavailable here). It's a variable
+// font, so the bold/extrabold headings come from the one downloaded file.
+const libreFranklin = Libre_Franklin({
+  variable: "--font-display-face",
+  subsets: ["latin"],
   display: "swap",
 });
 
@@ -78,7 +75,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geist.variable} ${jetbrainsMono.variable} ${cabinetGrotesk.variable} antialiased`}
+        className={`${openSans.variable} ${jetbrainsMono.variable} ${libreFranklin.variable} antialiased`}
       >
         {GATE_ENABLED ? <ClerkProvider>{shell}</ClerkProvider> : shell}
         <Analytics />
