@@ -2,18 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import dynamic from "next/dynamic";
-import { ExternalLink, Plus, Check, Globe, GitCompare, Wallet } from "lucide-react";
-import type { DealContext } from "@/components/deposit/DealDepositDrawer";
-
-// Wallet + deposit code loads only when a deal is first opened.
-const DealDepositDrawer = dynamic(
-  () =>
-    import("@/components/deposit/DealDepositDrawer").then(
-      (m) => m.DealDepositDrawer
-    ),
-  { ssr: false }
-);
+import { ExternalLink, Plus, Check, Globe, GitCompare } from "lucide-react";
 import { Newswire } from "@/components/news/Newswire";
 import { CuratorBlurb } from "@/components/curators/CuratorBlurb";
 import { CuratorDisclosureBanner } from "@/components/CuratorDisclosureBanner";
@@ -38,9 +27,6 @@ function initials(name: string): string {
     .toUpperCase();
 }
 type VSortKey = "name" | "asset" | "protocol" | "tvl" | "apy" | "fee";
-
-// Deal links route into /deposit, which 404s unless the flag is on.
-const DEPOSIT_ENABLED = process.env.NEXT_PUBLIC_FEATURE_TURTLE_DEPOSIT === "true";
 
 // Absolute UTC freshness stamp, e.g. "Jun 11, 12:04 UTC".
 function fmtAsOf(iso: string): string {
@@ -73,7 +59,6 @@ interface CuratorProfileViewProps {
 export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const { isCuratorTracked, trackCurator, untrackCurator } = usePortfolio();
   const [vsort, setVsort] = useState<{ k: VSortKey; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
-  const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
 
   const { vaults } = data;
   const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
@@ -117,56 +102,6 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const name = curator.name || `Curator ${curator.address.slice(0, 6)}`;
 
   const vaultById = new Map(vaults.map((v) => [v.id, v]));
-
-  // Depositable deals, fetched LIVE from Turtle's distributor opportunities
-  // (not the 12h-synced DB), so removing a deal on the dashboard removes it here
-  // in real time, and TVL/APR come from the opportunity itself. null = loading.
-  const [liveDeals, setLiveDeals] = useState<DealContext[] | null>(null);
-  useEffect(() => {
-    if (!DEPOSIT_ENABLED) {
-      setLiveDeals([]);
-      return;
-    }
-    let active = true;
-    setLiveDeals(null);
-    fetch(`/api/curators/${encodeURIComponent(curator.address)}/deals`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (!active) return;
-        const deals: DealContext[] = (j.deals ?? []).map(
-          (d: {
-            opportunityId: string;
-            vaultId: string;
-            vaultName: string;
-            assetSymbol: string | null;
-            chainName: string | null;
-            estApr: number | null;
-            tvl: number | null;
-          }) => ({
-            opportunityId: d.opportunityId,
-            vaultId: d.vaultId,
-            vaultName: d.vaultName,
-            curatorName: name,
-            assetSymbol: d.assetSymbol,
-            chainName: d.chainName,
-            estApr: d.estApr,
-            tvl: d.tvl,
-          })
-        );
-        setLiveDeals(deals);
-      })
-      .catch(() => active && setLiveDeals([]));
-    return () => {
-      active = false;
-    };
-    // curator.address is the stable identity; deals refresh on profile load.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [curator.address]);
-
-  const curatorDeals = liveDeals ?? [];
-  const canDeposit = curatorDeals.length > 0;
-  const dealForVault = (v: CuratorVaultSummary): DealContext | null =>
-    liveDeals?.find((d) => d.vaultId === v.id) ?? null;
 
   const creds: { label: string; muted?: boolean }[] = [];
   if (curator.jurisdiction) creds.push({ label: curator.jurisdiction });
@@ -273,18 +208,6 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
           <div className="font-mono font-semibold text-3xl tracking-tight tabular-nums mt-0.5 mb-3">
             {formatCurrency(derived.totalTVL)} <span className="text-text-tertiary text-sm font-normal">· {vaults.length} vaults</span>
           </div>
-          {canDeposit && (
-            <button
-              type="button"
-              onClick={() => setDrawerDeals(curatorDeals)}
-              className="w-full mb-4 inline-flex items-center justify-center gap-2 text-sm font-semibold rounded-lg px-4 py-2.5 bg-cyan-500 text-[#06120f] hover:opacity-90 transition-opacity active:translate-y-px"
-            >
-              <Wallet className="w-4 h-4" /> Deposit into this curator
-              <span className="font-mono text-xs font-normal opacity-75">
-                · {curatorDeals.length} {curatorDeals.length === 1 ? "deal" : "deals"}
-              </span>
-            </button>
-          )}
           <div className="grid grid-cols-2 gap-3 pt-1">
             <Fact k="Networks" v={derived.networks.join(" · ")} />
             <Fact
@@ -320,7 +243,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
       </Section>
 
       {/* ── Vaults managed ── */}
-      <Section title="Vaults managed" meta="sortable — fees · live deals">
+      <Section title="Vaults managed" meta="sortable — fees · yields">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse min-w-[520px]">
             <thead>
@@ -331,7 +254,6 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                 <VTh k="tvl" sort={vsort} onSort={onVSort} className="text-right">TVL</VTh>
                 <VTh k="apy" sort={vsort} onSort={onVSort} className="text-right">Net APY</VTh>
                 <VTh k="fee" sort={vsort} onSort={onVSort} className="text-right">Perf fee</VTh>
-                <th className="font-mono text-[0.62rem] uppercase tracking-[0.1em] font-medium pb-3 px-3 text-right text-text-tertiary">Deal</th>
               </tr>
             </thead>
             <tbody>
@@ -352,32 +274,12 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                     <td className="py-3 px-3 text-right font-mono text-sm tabular-nums text-text-secondary">
                       {v.performanceFee != null ? `${(v.performanceFee * 100).toFixed(0)}%` : "—"}
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      {(() => {
-                        const deal = dealForVault(v);
-                        return deal ? (
-                          <button
-                            type="button"
-                            onClick={() => setDrawerDeals([deal])}
-                            className="font-mono text-xs text-cyan-500 underline underline-offset-2 hover:text-cyan-400 transition-colors whitespace-nowrap"
-                          >
-                            Deposit{deal.estApr != null ? ` · ${deal.estApr.toFixed(1)}%` : ""}
-                          </button>
-                        ) : (
-                          <span className="font-mono text-xs text-text-tertiary" title="Not currently a distributor deal">—</span>
-                        );
-                      })()}
-                    </td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
-        <p className="font-mono text-xs text-text-tertiary mt-4 leading-relaxed">
-          Deal links open the deposit flow for vaults this curator currently offers through Turtle,
-          with TVL and APR pulled live from the opportunity.
-        </p>
       </Section>
 
       {/* ── Asset distribution (concentration of the holdings above) ── */}
@@ -474,14 +376,6 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
           emptyHint={`No headlines naming ${name} yet. We scan major crypto desks every few hours.`}
         />
       </aside>
-
-      {drawerDeals && (
-        <DealDepositDrawer
-          deals={drawerDeals}
-          curatorName={name}
-          onClose={() => setDrawerDeals(null)}
-        />
-      )}
     </div>
   );
 }

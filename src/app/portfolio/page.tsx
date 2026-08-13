@@ -8,7 +8,7 @@ export const metadata = {
     "Connect a wallet or paste an address to see your DeFi positions and the curators behind them on CuratorWatch.",
 };
 
-// Feature-flagged via NEXT_PUBLIC_FEATURE_PORTFOLIO (mirrors /deposit). 404s until
+// Feature-flagged via NEXT_PUBLIC_FEATURE_PORTFOLIO. 404s until
 // the flag is "true", so it ships dark. PortfolioApp reads ?address= for shareable
 // links, hence the Suspense boundary around useSearchParams.
 export default function PortfolioPage() {

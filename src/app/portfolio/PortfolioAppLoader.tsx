@@ -3,7 +3,8 @@
 import dynamic from "next/dynamic";
 
 // Client-only mount for the portfolio dashboard (it uses the wallet hook).
-// AppKit must never evaluate during SSR — see DepositAppLoader.
+// AppKit must never evaluate during SSR — its Coinbase connector breaks the
+// SSR bundle, so the whole wallet UI loads with ssr:false.
 const PortfolioApp = dynamic(
   () => import("./PortfolioApp").then((m) => m.PortfolioApp),
   { ssr: false, loading: () => <div className="h-[60vh]" /> }

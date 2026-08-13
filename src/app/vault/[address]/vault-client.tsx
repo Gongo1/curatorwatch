@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import type { DealContext } from "@/components/deposit/DealDepositDrawer";
 import {
   formatCurrency,
   formatPercentage,
@@ -36,11 +35,6 @@ const AllocationCalculator = dynamic(() => import("@/components/AllocationCalcul
   loading: () => <div className="h-64 bg-background-elevated rounded-xl animate-pulse" />,
 });
 
-// Wallet + deposit code loads only when the deal drawer is first opened.
-const DealDepositDrawer = dynamic(
-  () => import("@/components/deposit/DealDepositDrawer").then((m) => m.DealDepositDrawer),
-  { ssr: false }
-);
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
 
@@ -67,7 +61,6 @@ function getAddressColor(address: string): string {
 
 export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
   const [showTrackPrompt, setShowTrackPrompt] = useState(false);
-  const [drawerDeals, setDrawerDeals] = useState<DealContext[] | null>(null);
   const { isVaultTracked, trackVault, untrackVault } = usePortfolio();
 
   const isTracked = isVaultTracked(address);
@@ -76,14 +69,6 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
   const curatorName = vault.curator?.name || null;
   const curatorAddress = vault.curatorAddress;
   const isTurtleVault = vault.dataSource === "turtle";
-  // Phase 3c: when this vault is mapped to a distributor deal, offer our own
-  // attributed deposit flow ahead of the external protocol link.
-  const dealUrl =
-    process.env.NEXT_PUBLIC_FEATURE_TURTLE_DEPOSIT === "true" &&
-    vault.dealDepositable &&
-    vault.dealOpportunityId
-      ? `/deposit?opportunity=${vault.dealOpportunityId}`
-      : null;
 
   const breadcrumbs = curatorAddress
     ? [
@@ -107,26 +92,6 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
             <VaultWarningBadge warnings={vault.warnings} />
             <MorphoVerifiedBadge listed={vault.listed} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />
-            {dealUrl && (
-              <button
-                type="button"
-                onClick={() =>
-                  setDrawerDeals([
-                    {
-                      opportunityId: vault.dealOpportunityId as string,
-                      vaultName: vault.name,
-                      curatorName,
-                      assetSymbol: vault.asset.symbol,
-                      chainName: vault.chainName,
-                      estApr: vault.dealEstApr ?? null,
-                    },
-                  ])
-                }
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors bg-cyan-500/10 border border-cyan-500/20 text-cyan-500 hover:bg-cyan-500/15"
-              >
-                Deposit{vault.dealEstApr != null ? ` · ${vault.dealEstApr.toFixed(1)}%` : ""}
-              </button>
-            )}
             <a
               href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
               target="_blank"
@@ -632,14 +597,6 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
         open={showTrackPrompt}
         onClose={() => setShowTrackPrompt(false)}
       />
-
-      {drawerDeals && (
-        <DealDepositDrawer
-          deals={drawerDeals}
-          curatorName={curatorName}
-          onClose={() => setDrawerDeals(null)}
-        />
-      )}
     </>
   );
 }
