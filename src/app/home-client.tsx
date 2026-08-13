@@ -212,19 +212,6 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
         <ChartWhenVisible />
       </section>
 
-      {/* ── What a curator is ── */}
-      <p className="text-sm text-text-secondary leading-relaxed max-w-[760px] mt-12 mb-6">
-        A <span className="text-text-primary font-medium">curator</span> is the risk team behind a
-        vault: they pick the lending markets, set exposure caps, and rebalance deposits — LPs
-        delegate those decisions in exchange for yield. So the real due-diligence question
-        isn&rsquo;t &ldquo;which vault?&rdquo; but &ldquo;whose judgment am I trusting?&rdquo; — this
-        index tracks{" "}
-        <Link href="/docs" className="text-accent-blue underline underline-offset-2">
-          who curators are, what they manage, and how their products hold up
-        </Link>
-        .
-      </p>
-
       {/* ── Curator index ── */}
       <section>
         <SectionHead title="All curators" meta="ranked by TVL · search & sort" />
