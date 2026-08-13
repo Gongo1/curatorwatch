@@ -1,6 +1,7 @@
 import { fetchAllDashboardData } from "@/lib/dashboard-queries";
 import { fetchRecentNews } from "@/lib/news/queries";
 import { computeHomeOverview } from "@/lib/home-overview";
+import { getStressHistory } from "@/lib/digest/read";
 import { GATE_ENABLED, FREE_RANKING_ROWS, TEASE_NAMES } from "@/lib/gate/config";
 import { CuratorsHome } from "./home-client";
 
@@ -9,7 +10,7 @@ import { CuratorsHome } from "./home-client";
 export const revalidate = 21600;
 
 export default async function Page() {
-  const [data, news] = await Promise.all([
+  const [data, news, stress] = await Promise.all([
     fetchAllDashboardData({
       page: 1,
       pageSize: 100,
@@ -17,6 +18,7 @@ export default async function Page() {
       sortOrder: "desc",
     }),
     fetchRecentNews(12),
+    getStressHistory(8),
   ]);
 
   const full = data.curators.data.curators;
@@ -44,6 +46,7 @@ export default async function Page() {
       apyDist={data.apyDistribution ?? null}
       news={news}
       overview={overview}
+      stress={stress}
       gate={gate}
     />
   );

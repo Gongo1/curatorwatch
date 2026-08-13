@@ -5,7 +5,7 @@
 
 import Link from "next/link";
 import type { DigestData } from "@/lib/digest/types";
-import type { StressBand } from "@/lib/stress-index";
+import { BAND_STYLE } from "@/lib/stress-band-style";
 
 function usd(n: number): string {
   const a = Math.abs(n);
@@ -18,14 +18,6 @@ function usd(n: number): string {
 function signedPct(n: number, d = 1): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(d)}%`;
 }
-
-const BAND_STYLE: Record<StressBand, string> = {
-  Calm: "text-accent-green border-accent-green/40 bg-accent-green/10",
-  Normal: "text-accent-green border-accent-green/40 bg-accent-green/10",
-  Elevated: "text-accent-yellow border-accent-yellow/40 bg-accent-yellow/10",
-  Stressed: "text-accent-yellow border-accent-yellow/40 bg-accent-yellow/10",
-  Critical: "text-accent-red border-accent-red/40 bg-accent-red/10",
-};
 
 function SectionHead({ title, meta }: { title: string; meta?: string }) {
   return (
