@@ -147,6 +147,60 @@ export function DigestView({
         </section>
       )}
 
+      {/* Newswire — fresh curator-tagged coverage (digests since 2026-08-13) */}
+      {(data.news?.length ?? 0) > 0 && (
+        <section>
+          <SectionHead title="Newswire" meta="48h · curator-tagged press" />
+          <div className="divide-y divide-border-subtle border border-border rounded-xl overflow-hidden">
+            {data.news!.map((n, i) => (
+              <a
+                key={i}
+                href={n.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block px-3.5 py-2.5 bg-background-subtle hover:bg-background-elevated transition-colors"
+              >
+                <span className="text-sm text-text-primary">{n.title}</span>
+                <span className="font-mono text-[11px] text-text-tertiary ml-2">
+                  {[n.curator, n.source].filter(Boolean).join(" · ")}
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Curator spotlight — daily rotation through the vetted dossier set */}
+      {data.spotlight && (
+        <section>
+          <SectionHead title="Curator spotlight" meta={data.spotlight.name} />
+          <div className="rounded-xl border border-border bg-background-subtle px-4 py-3.5">
+            <p className="text-sm leading-relaxed text-text-secondary">
+              {data.spotlight.sentences.join(" ")}
+            </p>
+            {data.spotlight.quote && (
+              <p className="text-sm italic text-text-primary mt-2.5">
+                “{data.spotlight.quote.text}”{" "}
+                <a
+                  href={data.spotlight.quote.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="not-italic font-mono text-[11px] text-text-tertiary hover:text-accent-blue"
+                >
+                  — {data.spotlight.quote.source}
+                </a>
+              </p>
+            )}
+            <a
+              href={`/curator/${data.spotlight.slug}`}
+              className="inline-block font-mono text-xs text-accent-blue mt-2.5"
+            >
+              Full profile →
+            </a>
+          </div>
+        </section>
+      )}
+
       {/* Incidents + alerts */}
       <section>
         <SectionHead title="Incidents & alerts" meta="24h" />

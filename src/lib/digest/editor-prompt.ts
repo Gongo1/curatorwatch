@@ -103,8 +103,15 @@ INCIDENTS — lead with incidents.count. Bad debt and seized USD each get one
 line; topCurators becomes a CURATOR | SEIZED table when non-empty. A bare
 count links onward to the full edition.
 
-CONCENTRATION — columns: ASSET | TOP CURATOR | SHARE. Subhead: "Top curator's
-share of that asset's tracked TVL."
+NEWSWIRE — the \`news\` items as a link list, newest first, one per line:
+\`- [Title](url) — Curator · Source\`. When empty: "No fresh curator coverage
+in the window." Never invent stories; only the provided items.
+
+CURATOR SPOTLIGHT — only when \`spotlight\` is present. Render its
+\`sentences\` verbatim as one paragraph (they are hand-verified facts — do not
+rephrase, add, or drop numbers), then \`› highlight\` if present, then the
+quote as \`"…" — [Source](url)\`, then
+\`Profile → curatorwatch.com/curator/<slug>\`.
 
 Close with one line: \`Full edition → curatorwatch.com/digest\` and
 \`Not investment advice.\`
@@ -112,5 +119,6 @@ Close with one line: \`Full edition → curatorwatch.com/digest\` and
 ## OUTPUT
 
 Output the finished email body only: headline, standfirst, then the sections.
-Markdown, but the only markdown you may use is \`#\`-style section heads and
-fenced code blocks for tables. No preamble, no sign-off beyond the closing lines.`;
+Markdown, but the only markdown you may use is \`#\`-style section heads,
+fenced code blocks for tables, and \`[text](url)\` links in NEWSWIRE and the
+spotlight. No preamble, no sign-off beyond the closing lines.`;

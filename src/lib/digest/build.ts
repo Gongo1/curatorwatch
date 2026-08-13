@@ -15,7 +15,15 @@ import { computeStressIndex, type StressFlow } from "@/lib/stress-index";
 import { isStablecoin } from "@/lib/utils/asset-class";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
-import type { DigestData, DigestFlowItem, DigestYieldMover } from "./types";
+import { CURATOR_DOSSIERS, getCuratorDossier } from "@/lib/curator-dossier";
+import { composeBlurbSentences } from "@/lib/curator-blurb-text";
+import type {
+  DigestData,
+  DigestFlowItem,
+  DigestNewsItem,
+  DigestSpotlight,
+  DigestYieldMover,
+} from "./types";
 
 const HOUR = 60 * 60 * 1000;
 
@@ -219,6 +227,97 @@ export async function buildDigest(now: Date): Promise<DigestData> {
     else alertCounts.info++;
   }
 
+  // 7. Newswire — fresh curator-tagged coverage (48h window: press is slower
+  // than on-chain data), newest first, one story per URL.
+  const newsRows = await prisma.curatorNews.findMany({
+    where: { publishedAt: { gte: new Date(now.getTime() - 48 * HOUR) } },
+    orderBy: { publishedAt: "desc" },
+    select: {
+      title: true,
+      url: true,
+      source: true,
+      publishedAt: true,
+      curator: { select: { name: true } },
+    },
+    take: 30,
+  });
+  const seenUrls = new Set<string>();
+  const news: DigestNewsItem[] = [];
+  for (const n of newsRows) {
+    if (seenUrls.has(n.url)) continue;
+    seenUrls.add(n.url);
+    news.push({
+      title: n.title,
+      url: n.url,
+      source: n.source,
+      curator: n.curator?.name ?? null,
+      publishedAt: n.publishedAt.toISOString(),
+    });
+    if (news.length >= 5) break;
+  }
+
+  // 8. Curator spotlight — deterministic daily rotation through the dossier
+  // registry (top curators with hand-verified facts), skipping any address not
+  // currently in the directory. Blurb sentences come from the same shared
+  // composer as the profile About card.
+  let spotlight: DigestSpotlight | null = null;
+  const dossierKeys = Object.keys(CURATOR_DOSSIERS).sort();
+  const dayIndex = Math.floor(now.getTime() / (24 * HOUR));
+  const aggByAddress = new Map(curators.map((c) => [c.curatorAddress.toLowerCase(), c]));
+  for (let i = 0; i < dossierKeys.length && !spotlight; i++) {
+    const addr = dossierKeys[(dayIndex + i) % dossierKeys.length];
+    const c = aggByAddress.get(addr);
+    if (!c) continue;
+    const spotVaults = await prisma.vault.findMany({
+      where: { curator: { address: addr }, active: true },
+      select: {
+        chainId: true,
+        protocol: true,
+        assetSymbol: true,
+        creationTimestamp: true,
+        snapshots: { orderBy: { timestamp: "desc" }, take: 1, select: { totalAssetsUsd: true } },
+      },
+    });
+    if (spotVaults.length === 0) continue;
+    const byAsset = new Map<string, number>();
+    for (const v of spotVaults) {
+      byAsset.set(
+        v.assetSymbol,
+        (byAsset.get(v.assetSymbol) ?? 0) + (v.snapshots[0]?.totalAssetsUsd ?? 0)
+      );
+    }
+    const inceptions = spotVaults
+      .map((v) => v.creationTimestamp)
+      .filter((t): t is number => typeof t === "number" && t > 0);
+    const dossier = getCuratorDossier(addr);
+    const sentences = composeBlurbSentences(
+      {
+        name: c.name ?? "This curator",
+        vaultCount: spotVaults.length,
+        tvlUsd: spotVaults.reduce((s, v) => s + (v.snapshots[0]?.totalAssetsUsd ?? 0), 0),
+        chainCount: new Set(spotVaults.map((v) => v.chainId)).size,
+        protocolCount: new Set(spotVaults.map((v) => v.protocol ?? "morpho")).size,
+        assetCount: byAsset.size,
+        stables: [...byAsset.entries()]
+          .filter(([sym]) => isStablecoin(sym))
+          .sort((a, b) => b[1] - a[1])
+          .map(([sym]) => sym),
+        sinceYear: inceptions.length
+          ? new Date(Math.min(...inceptions) * 1000).getUTCFullYear()
+          : null,
+      },
+      dossier
+    );
+    const q = dossier?.quotes?.[0];
+    spotlight = {
+      name: c.name ?? "This curator",
+      slug: curatorSlug(c.name, c.curatorAddress),
+      sentences,
+      highlight: dossier?.highlights?.[0] ?? null,
+      quote: q ? { text: q.text, source: q.source, url: q.url } : null,
+    };
+  }
+
   const slug = now.toISOString().slice(0, 10); // YYYY-MM-DD (UTC)
 
   return {
@@ -242,5 +341,7 @@ export async function buildDigest(now: Date): Promise<DigestData> {
     yieldMovers,
     incidents: { count: liqs.length, badDebtUsd, seizedUsd, topCurators },
     alertCounts,
+    news,
+    spotlight,
   };
 }

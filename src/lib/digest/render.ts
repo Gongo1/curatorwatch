@@ -239,38 +239,34 @@ export function renderMarkdown(d: DigestData): string {
   }
   L.push("");
 
-  // ── CONCENTRATION ──
-  L.push("## CONCENTRATION");
+  // ── NEWSWIRE — fresh curator-tagged coverage as links ──
+  // (Replaced CONCENTRATION 2026-08-13 — that table barely changed day to day.)
+  L.push("## NEWSWIRE");
   L.push("");
-  const conc = [...d.concentration].sort((x, y) => y.topCuratorPct - x.topCuratorPct);
-  if (conc.length === 0) {
-    L.push(EMPTY);
+  const news = d.news ?? [];
+  if (news.length === 0) {
+    L.push("No fresh curator coverage in the window.");
   } else {
-    L.push(
-      `${conc.length} tracked stable${conc.length === 1 ? " carries" : "s carry"} a dominant manager. ` +
-        `Top curator's share of that asset's tracked TVL.`
-    );
+    L.push(`${news.length} stor${news.length === 1 ? "y" : "ies"} named tracked curators in the last 48h.`);
     L.push("");
-    L.push(
-      ...table(
-        ["ASSET", "TOP CURATOR", "SHARE % OF ASSET TVL"],
-        conc.slice(0, ROW_CAP).map((c) => [
-          c.symbol,
-          clipName(c.topCurator, 14),
-          `${c.topCuratorPct.toFixed(1)}%`,
-        ]),
-        ["l", "l", "r"]
-      )
-    );
-    const solo = conc.find((c) => c.curatorCount === 1 && c.topCuratorPct >= 100);
-    if (solo) {
-      L.push(
-        "",
-        `${solo.symbol}'s 100.0% is a single-manager asset — one tracked curator, not a shift.`
-      );
+    for (const n of news) {
+      const tag = [n.curator, n.source].filter(Boolean).join(" · ");
+      L.push(`- [${n.title}](${n.url})${tag ? ` — ${tag}` : ""}`);
     }
   }
   L.push("");
+
+  // ── CURATOR SPOTLIGHT — daily rotation through the vetted dossier set ──
+  if (d.spotlight) {
+    const s = d.spotlight;
+    L.push("## CURATOR SPOTLIGHT");
+    L.push("");
+    L.push(s.sentences.join(" "));
+    if (s.highlight) L.push("", `› ${s.highlight}`);
+    if (s.quote) L.push("", `"${s.quote.text}" — [${s.quote.source}](${s.quote.url})`);
+    L.push("", `Profile → curatorwatch.com/curator/${s.slug}`);
+    L.push("");
+  }
 
   L.push("Full edition → curatorwatch.com/digest");
   L.push("Not investment advice.");
