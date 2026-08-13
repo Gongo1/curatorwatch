@@ -55,9 +55,9 @@ export const networkById = new Map<number, AppKitNetwork>(
 let appKit: ReturnType<typeof createAppKit> | undefined;
 
 /** Idempotent; must run before AppKit hooks first render. The whole wallet UI
- *  is mounted client-only (DepositAppLoader / PortfolioAppLoader / the drawer's
- *  dynamic ssr:false), so this module never evaluates during SSR — AppKit's
- *  Coinbase connector pulls server-only deps that break the SSR bundle. */
+ *  is mounted client-only (PortfolioAppLoader's dynamic ssr:false), so this
+ *  module never evaluates during SSR — AppKit's Coinbase connector pulls
+ *  server-only deps that break the SSR bundle. */
 export function ensureAppKit(): void {
   if (appKit || !REOWN_ENABLED) return;
   appKit = createAppKit({
