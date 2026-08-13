@@ -130,6 +130,12 @@ export function digestEmail(d: { slug: string; title: string; summary: string | 
         }
         return `<p style="font-size:13px;line-height:1.6;color:#33322f;margin:8px 0;">${b
           .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+          // [text](url) → anchor (NEWSWIRE + spotlight links). esc() has run,
+          // so hrefs keep &amp;-escaped query strings — valid HTML.
+          .replace(
+            /\[([^\]]+)\]\((https?:[^)\s]+)\)/g,
+            '<a href="$2" style="color:#2456c6;">$1</a>'
+          )
           .replace(/\n/g, "<br/>")}</p>`;
       })
       .join("");

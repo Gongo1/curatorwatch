@@ -83,10 +83,11 @@ export async function GET(request: NextRequest) {
       sections: {
         inflows: data.topInflows.length,
         outflows: data.topOutflows.length,
-        concentrationFlags: data.concentration.length,
         newVaults: data.newVaults.length,
         yieldMovers: data.yieldMovers.length,
         incidents: data.incidents.count,
+        news: data.news?.length ?? 0,
+        spotlight: data.spotlight?.name ?? null,
       },
     });
   } catch (error) {

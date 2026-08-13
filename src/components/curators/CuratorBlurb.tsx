@@ -1,9 +1,9 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import { formatCurrency } from "@/lib/utils/format";
 import { isStablecoin } from "@/lib/utils/asset-class";
 import { getCuratorDossier } from "@/lib/curator-dossier";
+import { composeBlurbSentences } from "@/lib/curator-blurb-text";
 import type { CuratorProfile, CuratorVaultSummary } from "@/lib/types/api";
 
 // The profile "About" blurb: one paragraph of live computed figures (every
@@ -46,40 +46,26 @@ export function CuratorBlurb({
     ? new Date(Math.min(...inceptions) * 1000).getUTCFullYear()
     : null;
 
-  const sentences: string[] = [];
-  sentences.push(
-    `${name} curates ${vaults.length} tracked vault${vaults.length === 1 ? "" : "s"} managing ${formatCurrency(tvl)} across ${chains} chain${chains === 1 ? "" : "s"} and ${protocols} protocol${protocols === 1 ? "" : "s"}.`
+  // Sentence assembly is shared with the Curator Daily spotlight
+  // (curator-blurb-text.ts) so the two surfaces never drift.
+  const sentences = composeBlurbSentences(
+    {
+      name,
+      vaultCount: vaults.length,
+      tvlUsd: tvl,
+      chainCount: chains,
+      protocolCount: protocols,
+      assetCount,
+      stables,
+      sinceYear,
+    },
+    enrich,
+    {
+      foundedYear: curator.foundedYear,
+      legalName: curator.legalName,
+      headquarters: curator.headquarters,
+    }
   );
-  if (stables.length > 0) {
-    sentences.push(
-      `The book spans ${assetCount} asset${assetCount === 1 ? "" : "s"}, ${
-        stables.length === assetCount ? "all" : stables.length
-      } of them stablecoins${stables.length > 1 ? ` led by ${stables.slice(0, 4).join(", ")}` : ` (${stables[0]})`}.`
-    );
-  }
-  if (sinceYear) {
-    sentences.push(`On-chain vault track record since ${sinceYear}.`);
-  }
-
-  // ── Curated facts (registry first, sparse DB dossier fields as fallback) ──
-  const foundedYear = enrich?.foundedYear ?? curator.foundedYear;
-  const entity = enrich?.entity ?? curator.legalName;
-  const hq = enrich?.hq ?? curator.headquarters;
-  const idParts = [
-    foundedYear ? `Founded ${foundedYear}` : null,
-    entity,
-    hq,
-  ].filter(Boolean);
-  if (idParts.length) sentences.push(`${idParts.join(" · ")}.`);
-
-  const registrations = enrich?.registrations ?? [];
-  if (registrations.length) sentences.push(`${registrations.join("; ")}.`);
-
-  if (enrich?.fundingNote) {
-    sentences.push(`${enrich.fundingNote}.`.replace(/\.\.$/, "."));
-  } else if (enrich?.backers?.length) {
-    sentences.push(`Backed by ${enrich.backers.slice(0, 4).join(", ")}.`);
-  }
 
   const quote = enrich?.quotes?.[0] ?? null;
 

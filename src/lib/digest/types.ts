@@ -35,6 +35,23 @@ export interface DigestIncidents {
   topCurators: { curator: string; seizedUsd: number }[];
 }
 
+export interface DigestNewsItem {
+  title: string;
+  url: string;
+  source: string;
+  curator: string | null;
+  publishedAt: string; // ISO
+}
+
+/** Daily rotating curator feature, composed from the dossier registry + live stats. */
+export interface DigestSpotlight {
+  name: string;
+  slug: string;
+  sentences: string[];
+  highlight: string | null;
+  quote: { text: string; source: string; url: string } | null;
+}
+
 /** The machine-readable digest body — the source of truth the prose renders from. */
 export interface DigestData {
   slug: string; // "2026-06-15"
@@ -57,4 +74,7 @@ export interface DigestData {
   yieldMovers: DigestYieldMover[];
   incidents: DigestIncidents;
   alertCounts: { critical: number; warning: number; info: number };
+  /** Optional — absent on digests stored before 2026-08-13. */
+  news?: DigestNewsItem[];
+  spotlight?: DigestSpotlight | null;
 }
