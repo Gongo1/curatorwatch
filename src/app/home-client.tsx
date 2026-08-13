@@ -13,6 +13,8 @@ import { EmailDeliveryCard } from "@/components/gate/EmailDeliveryCard";
 import type { RankingGateMeta } from "@/lib/gate/config";
 import { Newswire } from "@/components/news/Newswire";
 import type { RecentNewsItem } from "@/lib/news/queries";
+import { StressStrip } from "@/components/home/StressStrip";
+import type { StressPoint } from "@/lib/stress-trend";
 
 export type { ApyDistribution };
 
@@ -70,10 +72,12 @@ interface CuratorsHomeProps {
    *  set so the public hero reconciles with total TVL even when the account
    *  gate truncates the ranking rows below. */
   overview: HomeOverview;
+  /** 7-day stress readings from stored digests; null until the first edition. */
+  stress?: { points: StressPoint[]; drivers: string[] } | null;
   gate?: RankingGateMeta | null;
 }
 
-export function CuratorsHome({ curators, stats, apyDist, news, overview, gate = null }: CuratorsHomeProps) {
+export function CuratorsHome({ curators, stats, apyDist, news, overview, stress = null, gate = null }: CuratorsHomeProps) {
   const { mix, concFlags, largest } = overview;
   const { enabled: gateOn, ready: gateReady, isSignedIn } = useGate();
 
@@ -163,6 +167,9 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, gate = 
           </div>
         </div>
       </header>
+
+      {/* ── Curator stress: today's read + 7-day trend ── */}
+      {stress && <StressStrip points={stress.points} drivers={stress.drivers} />}
 
       {/* ── Newswire: one-line headline bar ── */}
       {news.length > 0 && <Newswire variant="bar" items={news} title="Newswire" />}
