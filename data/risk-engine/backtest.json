@@ -3,14 +3,14 @@
   "cutoff_month": "2025-11",
   "trained_with_zero_events": true,
   "train_vault_months": 2041,
-  "test_vault_months": 2959,
+  "test_vault_months": 2967,
   "test_events": 8,
-  "auc": 0.694,
-  "top_quartile_lift": 2.5,
+  "auc": 0.69,
+  "top_quartile_lift": 2.0,
   "brier": 0.0027,
   "divergences": 0,
-  "max_rhat": 1.004,
-  "panel_vault_months": 5000,
+  "max_rhat": 1.009,
+  "panel_vault_months": 5008,
   "methodology_version": "v1 (curatorwatch-risk-methodology-v1.md)",
-  "generated_at": "2026-08-10"
+  "generated_at": "2026-08-17"
 }
