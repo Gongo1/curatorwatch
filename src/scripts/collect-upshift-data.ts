@@ -44,6 +44,12 @@ import { matchCurator } from "../lib/turtle/curator-matcher";
 import { fetchTurtleOpportunities } from "../lib/turtle/client";
 import { resolveChainId, canonicalChainName, getChainNameById } from "../lib/turtle/chain-mapper";
 import { sanitizeApyPct } from "../lib/utils/sanitize-apy";
+import { assessPhantom, type PhantomBaseline } from "../lib/data-quality/phantom";
+import {
+  fetchPhantomBaselines,
+  finalizeCollection,
+  recordSnapshotWritten,
+} from "../lib/data-quality/maintenance";
 
 const MIN_TVL_USD = 50_000;
 
@@ -74,7 +80,8 @@ function logError(message: string, error?: unknown) {
 
 async function upsertUpshiftVault(
   vault: UpshiftVault,
-  curatorId: string
+  curatorId: string,
+  baselines: Map<string, PhantomBaseline>
 ): Promise<{ upserted: boolean; skipped?: boolean; error?: string }> {
   try {
     const chainId = vault.chainId;
@@ -146,6 +153,17 @@ async function upsertUpshiftVault(
         avgNetApy: aprDecimal,
       },
     });
+    // Phantom test on the RAW source values (the stored APY is sanitized).
+    const phantomReason = assessPhantom({
+      apy: vault.apyDisplay?.isTargetOnly || vault.apy == null ? null : vault.apy / 100,
+      sharePrice,
+      assetSymbol: vault.depositAsset?.symbol ?? "UNKNOWN",
+      totalAssets,
+      totalSupply: vault.totalSupplyRaw ?? null,
+      baseline: baselines.get(row.id) ?? null,
+    });
+    if (phantomReason) log(`  ⚠ Phantom accrual, not counted in totals: ${vault.name} (${phantomReason})`);
+    await recordSnapshotWritten(row.id, phantomReason);
 
     return { upserted: true };
   } catch (error) {
@@ -153,33 +171,6 @@ async function upsertUpshiftVault(
       upserted: false,
       error: error instanceof Error ? error.message : String(error),
     };
-  }
-}
-
-/** Refresh vaultCount + AUM for curators that own Upshift-sourced vaults. */
-async function updateUpshiftCuratorStats() {
-  const curators = await prisma.curator.findMany({
-    where: { vaults: { some: { dataSource: "upshift" } } },
-    select: { id: true },
-  });
-  for (const curator of curators) {
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId: curator.id },
-      select: { id: true },
-    });
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) totalAssets += snapshot.totalAssetsUsd;
-    }
-    await prisma.curator.update({
-      where: { id: curator.id },
-      data: { vaultCount: vaultIds.length, totalAssetsManaged: totalAssets },
-    });
   }
 }
 
@@ -202,6 +193,7 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
   try {
     const vaults = await fetchUpshiftVaults();
     totalFetched = vaults.length;
+    const phantomBaselines = await fetchPhantomBaselines("upshift");
     log(`Fetched ${vaults.length} vaults from the Upshift platform`);
 
     // Identities owned by other ACTIVE non-Turtle rows (Morpho/Euler real
@@ -298,7 +290,7 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       }
 
       kept.add(`${addressLower}:${vault.chainId}`);
-      const result = await upsertUpshiftVault(vault, curatorId);
+      const result = await upsertUpshiftVault(vault, curatorId, phantomBaselines);
       if (result.upserted) {
         vaultsUpserted++;
       } else if (result.error) {
@@ -327,7 +319,9 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
           ).count
         : 0;
 
-    await updateUpshiftCuratorStats();
+    // Totals hygiene: exclusion flags, then curator stats over counted vaults.
+    const hygiene = await finalizeCollection();
+    log(`  Exclusion flags changed: ${hygiene.changed} (${JSON.stringify(hygiene.excludedByReason)})`);
 
     const duration = Date.now() - startTime;
     log("-".repeat(60));

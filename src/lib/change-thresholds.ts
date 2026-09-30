@@ -25,6 +25,7 @@ export const ALERT_TYPES = {
 
   // Ecosystem-level (stored in PlatformAlert)
   ECOSYSTEM_AUM_DROP: "ECOSYSTEM_AUM_DROP", // Total platform AUM fell >3% in 24h
+  TOTALS_RESTATED: "TOTALS_RESTATED",     // Counting rules changed; AUM baselines before this are not comparable
 } as const;
 
 export type AlertType = (typeof ALERT_TYPES)[keyof typeof ALERT_TYPES];
@@ -177,6 +178,12 @@ export const ALERT_METADATA: Record<
     color: "red",
     description:
       "Alerts when total platform AUM drops >3% in 24h. Indicates broad-based outflows.",
+  },
+  TOTALS_RESTATED: {
+    label: "Totals Restated",
+    color: "blue",
+    description:
+      "The rules for which vaults count toward totals changed. AUM before this point is not directly comparable, so AUM alerts restart from here.",
   },
 };
 

@@ -37,6 +37,7 @@ import {
 } from "../lib/funds/client";
 import { matchCurator } from "../lib/turtle/curator-matcher";
 import { canonicalChainName } from "../lib/turtle/chain-mapper";
+import { finalizeCollection, recordSnapshotWritten } from "../lib/data-quality/maintenance";
 
 const MIN_TVL_USD = 50_000;
 
@@ -189,6 +190,9 @@ async function upsertFund(fund: FundRecord): Promise<{
         avgNetApy: null,
       },
     });
+    // No APY or share-price data from fund sources: nothing to test for
+    // phantom accrual, just stamp freshness.
+    await recordSnapshotWritten(vaultId, null);
 
     return { adopted, siblingsUnlinked };
   } catch (error) {
@@ -197,33 +201,6 @@ async function upsertFund(fund: FundRecord): Promise<{
       siblingsUnlinked,
       error: error instanceof Error ? error.message : String(error),
     };
-  }
-}
-
-/** Refresh vaultCount + AUM for curators that own fund rows. */
-async function updateFundCuratorStats() {
-  const curators = await prisma.curator.findMany({
-    where: { vaults: { some: { dataSource: "fund" } } },
-    select: { id: true },
-  });
-  for (const curator of curators) {
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId: curator.id },
-      select: { id: true },
-    });
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) totalAssets += snapshot.totalAssetsUsd;
-    }
-    await prisma.curator.update({
-      where: { id: curator.id },
-      data: { vaultCount: vaultIds.length, totalAssetsManaged: totalAssets },
-    });
   }
 }
 
@@ -379,7 +356,9 @@ export async function collectFundsData(): Promise<FundsCollectionResult> {
       }
     }
 
-    await updateFundCuratorStats();
+    // Totals hygiene: exclusion flags, then curator stats over counted vaults.
+    const hygiene = await finalizeCollection();
+    log(`  Exclusion flags changed: ${hygiene.changed} (${JSON.stringify(hygiene.excludedByReason)})`);
 
     const duration = Date.now() - startTime;
     log("-".repeat(60));
