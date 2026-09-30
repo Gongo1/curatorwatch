@@ -78,8 +78,20 @@ export interface CollectionResult {
   platformAlertsDetected: number;
   curatorSnapshotsCreated: number;
   errors: string[];
+  // Source-level failures (a whole chain/generation failed to fetch, came back
+  // empty while the DB tracks it, or every vault failed to process). Any entry
+  // here means the run did NOT collect what it was asked to — the cron route
+  // turns this into a non-200. Per-vault hiccups stay in `errors` only.
+  sourceErrors: string[];
   duration: number;
 }
+
+export type MorphoGeneration = "v1" | "v2";
+
+// A chain/generation that returns zero vaults while the DB still tracks more
+// than this many active vaults for it is treated as a broken source, not an
+// empty market.
+const EMPTY_SOURCE_DB_THRESHOLD = 10;
 
 export interface CollectionOptions {
   fetchAll?: boolean; // Fetch all vaults (default: true)
@@ -93,6 +105,9 @@ export interface CollectionOptions {
   // the vault count and must finish within the function budget, so the other
   // chains run in their own invocation). Default: all MORPHO_CHAINS.
   chainIds?: number[];
+  // Restrict the run to these vault generations (cron lanes: Ethereum V1 and
+  // V2 each run in their own invocation). Default: both.
+  generations?: MorphoGeneration[];
 }
 
 function log(message: string) {
@@ -212,6 +227,10 @@ export async function fetchAllVaults(
       }
     } catch (error) {
       logError(`Failed to fetch vaults batch at skip=${skip} (chain ${chain.chainId})`, error);
+      // First page failing means the query itself is broken (schema drift) or
+      // the API is down — rethrow so the run fails loudly instead of quietly
+      // collecting zero vaults (V2 was silently frozen Aug 26 -> Sep 30 this way).
+      if (skip === 0) throw error;
       hasMore = false;
     }
   }
@@ -268,6 +287,8 @@ export async function fetchAllVaultsV1(
       }
     } catch (error) {
       logError(`Failed to fetch V1 vaults batch at skip=${skip} (chain ${chain.chainId})`, error);
+      // First-page failure: fail loudly (see fetchAllVaults).
+      if (skip === 0) throw error;
       hasMore = false;
     }
   }
@@ -533,11 +554,13 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
     }
   }
 
-  // Sanity check: reject absurd APY values from the Morpho API
-  const sanitizedAvgApy = sanitizeApyForStorage(vault.avgApy);
+  // Sanity check: reject absurd APY values from the Morpho API. avgApy is no
+  // longer served for V2 (undefined) — normalize so it isn't logged as "bad".
+  const rawAvgApy = vault.avgApy ?? null;
+  const sanitizedAvgApy = sanitizeApyForStorage(rawAvgApy);
   const sanitizedAvgNetApy = sanitizeApyForStorage(vault.avgNetApy);
 
-  if (sanitizedAvgApy !== vault.avgApy || sanitizedAvgNetApy !== vault.avgNetApy) {
+  if (sanitizedAvgApy !== rawAvgApy || sanitizedAvgNetApy !== vault.avgNetApy) {
     log(`  ⚠ Rejected bad APY for ${vaultId}: avgApy=${vault.avgApy}, avgNetApy=${vault.avgNetApy}`);
   }
 
@@ -730,50 +753,45 @@ async function storeReallocations(
   return stored;
 }
 
+/**
+ * Recompute Curator.vaultCount / totalAssetsManaged in ONE set-based statement.
+ *
+ * Semantics are unchanged from the old per-curator loop: every vault linked to
+ * the curator counts (no active/listed filter), TVL is the sum of each vault's
+ * latest snapshot (vaults with no snapshot add 0), and curators with no vaults
+ * are left untouched. The loop did ~1,500 sequential round trips (~8 min at
+ * connection_limit=1) and pushed the core lane past its 900s cap; this runs in
+ * tens of milliseconds. Latest-snapshot lookup is a LATERAL LIMIT 1 on the
+ * (vaultId, timestamp) index — a DISTINCT ON over the whole snapshot table
+ * measured ~6s on prod vs ~22ms for this form.
+ */
 async function updateCuratorStats() {
   log("Updating curator statistics...");
 
-  const curators = await prisma.curator.findMany({
-    select: { id: true, name: true, address: true },
-  });
+  const updated = await prisma.$executeRaw`
+    UPDATE "Curator" c
+    SET "vaultCount" = agg.vault_count,
+        "totalAssetsManaged" = agg.total_assets,
+        "updatedAt" = NOW()
+    FROM (
+      SELECT v."curatorId",
+             COUNT(*)::int AS vault_count,
+             COALESCE(SUM(latest."totalAssetsUsd"), 0) AS total_assets
+      FROM "Vault" v
+      LEFT JOIN LATERAL (
+        SELECT s."totalAssetsUsd"
+        FROM "VaultSnapshot" s
+        WHERE s."vaultId" = v.id
+        ORDER BY s."timestamp" DESC
+        LIMIT 1
+      ) latest ON true
+      WHERE v."curatorId" IS NOT NULL
+      GROUP BY v."curatorId"
+    ) agg
+    WHERE c.id = agg."curatorId"
+  `;
 
-  for (const curator of curators) {
-    // Count vaults
-    const vaultCount = await prisma.vault.count({
-      where: { curatorId: curator.id },
-    });
-
-    // Skip curators with no vaults
-    if (vaultCount === 0) continue;
-
-    // Get total assets from latest snapshots
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId: curator.id },
-      select: { id: true },
-    });
-
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) {
-        totalAssets += snapshot.totalAssetsUsd;
-      }
-    }
-
-    await prisma.curator.update({
-      where: { id: curator.id },
-      data: {
-        vaultCount,
-        totalAssetsManaged: totalAssets,
-      },
-    });
-
-    log(`  ${curator.name || curator.address.slice(0, 10)}: ${vaultCount} vaults, $${(totalAssets / 1e6).toFixed(2)}M`);
-  }
+  log(`  Curator stats updated: ${updated} curators`);
 }
 
 async function createRiskSnapshot(
@@ -991,9 +1009,26 @@ async function processVaultsBatch(
  * Main data collection function.
  * Fetches all vaults from Morpho API and stores snapshots, transactions, and risk data.
  */
+/**
+ * Active Morpho vaults the DB tracks for one chain + generation. Vault has no
+ * generation column; V2 is told apart by its risk snapshots (only V2 vaults get
+ * them — see processVault). Only called when a source comes back empty.
+ */
+async function countTrackedVaults(chainId: number, isV1: boolean): Promise<number> {
+  return prisma.vault.count({
+    where: {
+      dataSource: "morpho",
+      active: true,
+      chainId,
+      riskSnapshots: isV1 ? { none: {} } : { some: {} },
+    },
+  });
+}
+
 export async function collectData(options: CollectionOptions = {}): Promise<CollectionResult> {
   const startTime = Date.now();
   const errors: string[] = [];
+  const sourceErrors: string[] = [];
   const minTvlUsd = options.minTvlUsd ?? MIN_TVL_USD;
 
   log("=".repeat(60));
@@ -1026,7 +1061,9 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       const chainName = canonicalChainName(chain.chainId);
       const chainMinTvl = effectiveMinTvl(chain, options);
 
+      const generations = options.generations ?? ["v2", "v1"];
       for (const isV1 of [false, true]) {
+        if (!generations.includes(isV1 ? "v1" : "v2")) continue;
         const ctx: ChainContext = { chainId: chain.chainId, chainName, isV1, curatorRegistry };
         const label = `${chainName} ${isV1 ? "V1" : "V2"}`;
 
@@ -1050,11 +1087,25 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
           }
           totalValid += validVaults.length;
 
-          if (validVaults.length === 0) continue;
+          if (validVaults.length === 0) {
+            // An empty answer for a chain we track is a broken source (e.g. a
+            // query that "succeeds" with nothing), not an empty market.
+            const tracked = await countTrackedVaults(chain.chainId, isV1);
+            if (tracked > EMPTY_SOURCE_DB_THRESHOLD) {
+              const msg = `${label}: API returned 0 vaults but DB tracks ${tracked} active`;
+              logError(msg);
+              errors.push(msg);
+              sourceErrors.push(msg);
+            }
+            continue;
+          }
           log(`Processing ${validVaults.length} ${label} vaults...`);
 
           const batchResult = await processVaultsBatch(validVaults, snapshotTime, options, ctx);
           errors.push(...batchResult.errors);
+          if (batchResult.processed === 0) {
+            sourceErrors.push(`${label}: all ${validVaults.length} vaults failed processing`);
+          }
           result.processed += batchResult.processed;
           result.curatorsCreated += batchResult.curatorsCreated;
           result.txCollected += batchResult.txCollected;
@@ -1064,6 +1115,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
           const msg = `${label} collection failed: ${error instanceof Error ? error.message : error}`;
           logError(msg);
           errors.push(msg);
+          sourceErrors.push(msg);
         }
       }
     }
@@ -1188,12 +1240,14 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       platformAlertsDetected,
       curatorSnapshotsCreated,
       errors,
+      sourceErrors,
       duration,
     };
   } catch (error) {
     const errorMsg = `Critical error during collection: ${error}`;
     logError(errorMsg);
     errors.push(errorMsg);
+    sourceErrors.push(errorMsg);
 
     return {
       success: false,
@@ -1208,6 +1262,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       platformAlertsDetected: 0,
       curatorSnapshotsCreated: 0,
       errors,
+      sourceErrors,
       duration: Date.now() - startTime,
     };
   }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { collectData, MORPHO_CHAINS } from "@/scripts/collect-data";
+import { collectData, MORPHO_CHAINS, type MorphoGeneration } from "@/scripts/collect-data";
 import { updateVaultGrades } from "@/scripts/update-vault-grades";
 import { runLogoBackfill } from "@/scripts/backfill-curator-logos";
 import { updateReturnsMetrics } from "@/scripts/update-returns-metrics";
@@ -35,16 +35,24 @@ export async function GET(request: NextRequest) {
   // Check if this is a full collection request
   const fullCollection = request.nextUrl.searchParams.get("full") === "true";
 
-  // Cron lanes: the default lane collects Ethereum (the big one — it must
-  // finish inside the function budget on its own); the "alt" lane collects
-  // every other Morpho chain in a separate invocation. The 2026-07-07 18:00
-  // run proved one invocation can't do both: it timed out at ~834s five
-  // vaults into Base V1, and the chains after Base never ran.
-  const lane = request.nextUrl.searchParams.get("lane") === "alt" ? "alt" : "core";
+  // Cron lanes. Ethereum is split by vault generation — "core-v2" and
+  // "core-v1" each run in their own invocation — and the "alt" lane collects
+  // every other Morpho chain (both generations). One invocation can't hold
+  // Ethereum V1 + V2: V2 alone took 400-675s and V1 ~250-340s per run in late
+  // Aug 2026, against a 900s cap (the 2026-07-07 run also timed out at ~834s
+  // five vaults into Base V1). No lane param = legacy "core" (Ethereum, both
+  // generations) for manual runs only — it does not fit the budget.
+  const laneParam = request.nextUrl.searchParams.get("lane");
+  const lane =
+    laneParam === "alt" || laneParam === "core-v1" || laneParam === "core-v2"
+      ? laneParam
+      : "core";
   const laneChainIds =
     lane === "alt"
       ? MORPHO_CHAINS.filter((c) => c.chainId !== 1).map((c) => c.chainId)
       : [1];
+  const laneGenerations: MorphoGeneration[] =
+    lane === "core-v1" ? ["v1"] : lane === "core-v2" ? ["v2"] : ["v2", "v1"];
 
   try {
     console.log(`[CRON] Starting ${fullCollection ? "full" : "light"} data collection (lane: ${lane})...`);
@@ -53,6 +61,7 @@ export async function GET(request: NextRequest) {
       fetchAll: true,
       minTvlUsd: 1000,
       chainIds: laneChainIds,
+      generations: laneGenerations,
       // Light collection: skip heavy operations for speed
       skipTransactions: !fullCollection,
       skipReallocations: !fullCollection,
@@ -136,20 +145,41 @@ export async function GET(request: NextRequest) {
 
     revalidateDataPages();
 
+    const summary = {
+      lane,
+      vaultsProcessed: result.vaultsProcessed,
+      vaultsSkipped: result.vaultsSkipped,
+      curatorsCreated: result.curatorsCreated,
+      snapshotsCreated: result.snapshotsCreated,
+      transactionsCollected: result.transactionsCollected,
+      changesDetected: result.changesDetected,
+      platformAlertsDetected: result.platformAlertsDetected,
+      curatorSnapshotsCreated: result.curatorSnapshotsCreated,
+      errorCount: result.errors.length,
+      duration: result.duration,
+    };
+
+    // Fail loud: a chain/generation that failed to fetch, came back empty
+    // while the DB tracks it, or failed wholesale must NOT read as success —
+    // V2 sat frozen for 5 weeks behind HTTP 200s. Whatever did collect is
+    // already written (and pages revalidated) above.
+    if (result.sourceErrors.length > 0) {
+      console.error("[CRON] Collection source failures:", result.sourceErrors);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Collection failed for ${result.sourceErrors.length} source(s): ${result.sourceErrors.join("; ")}`,
+          sourceErrors: result.sourceErrors,
+          result: summary,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: "Data collected successfully",
-      result: {
-        vaultsProcessed: result.vaultsProcessed,
-        vaultsSkipped: result.vaultsSkipped,
-        curatorsCreated: result.curatorsCreated,
-        snapshotsCreated: result.snapshotsCreated,
-        transactionsCollected: result.transactionsCollected,
-        changesDetected: result.changesDetected,
-        platformAlertsDetected: result.platformAlertsDetected,
-        curatorSnapshotsCreated: result.curatorSnapshotsCreated,
-        duration: result.duration,
-      },
+      result: summary,
     });
   } catch (error) {
     console.error("[CRON] Collection failed:", error);

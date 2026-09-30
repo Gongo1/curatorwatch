@@ -42,7 +42,7 @@ export interface MorphoVaultV2 {
   liquidity: string | null; // BigInt as string - available for withdrawal
   apy: number | null;
   netApy: number | null;
-  avgApy: number | null;
+  avgApy?: number | null; // no longer served by the Morpho API (VaultV2.avgApy removed 2026-08)
   avgNetApy: number | null;
   performanceFee: number;
   managementFee: number;
