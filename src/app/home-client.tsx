@@ -14,6 +14,7 @@ import type { RankingGateMeta } from "@/lib/gate/config";
 import { Newswire } from "@/components/news/Newswire";
 import type { RecentNewsItem } from "@/lib/news/queries";
 import { StressStrip } from "@/components/home/StressStrip";
+import { DataAsOf } from "@/components/DataAsOf";
 import type { StressPoint } from "@/lib/stress-trend";
 
 export type { ApyDistribution };
@@ -130,6 +131,7 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
             <span className="text-text-muted mx-2">·</span>
             updated every 6h
           </div>
+          <DataAsOf className="mt-2" />
         </div>
         <div>
           <div className="flex justify-between items-baseline mb-2">

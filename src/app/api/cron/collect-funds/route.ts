@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectFundsData } from "@/scripts/collect-funds-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
+  return withCronRun("collect-funds", async () => {
     console.log("[CRON] Starting tokenized-funds collection...");
 
     const result = await collectFundsData();
@@ -38,27 +39,13 @@ export async function GET(request: NextRequest) {
 
     revalidateDataPages();
 
-    // Fail loud: the collector catches source/upsert/totals-hygiene errors and
-    // returns success:false; that must not be a 200.
-    return NextResponse.json(
-      {
-        success: result.success,
-        message: result.success
-          ? "Tokenized funds collected successfully"
-          : "Tokenized funds collection failed",
-        result,
-      },
-      { status: result.success ? 200 : 500 }
-    );
-  } catch (error) {
-    console.error("[CRON] Funds collection failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Funds collection failed",
-      },
-      { status: 500 }
-    );
-  }
+    // Fail loud: the collector catches per-fund errors and reports them here.
+    return {
+      rowsWritten: result.snapshotsCreated,
+      ...(result.success
+        ? {}
+        : { stepErrors: { collect: `${result.errors.length} error(s): ${result.errors[0] ?? "unknown"}` } }),
+      body: { message: "Tokenized funds collected", result },
+    };
+  });
 }

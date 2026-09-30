@@ -76,6 +76,26 @@ export function DigestView({
         </div>
       </div>
 
+      {/* Per-source as-of (digests since 2026-09-30) */}
+      {data.asOf && data.asOf.some((s) => s.lastAt) && (
+        <div className="font-mono text-[11px] text-text-tertiary mt-3 flex flex-wrap gap-x-3 gap-y-1">
+          <span className="uppercase tracking-[0.08em]">Data as of</span>
+          {data.asOf
+            .filter((s) => s.lastAt)
+            .map((s) => (
+              <span key={s.key} className="whitespace-nowrap">
+                <span className="text-text-secondary">{s.label}</span> {s.lastAt!.slice(5, 16).replace("T", " ")} UTC
+                {s.stale && <span className="text-accent-yellow"> · stale</span>}
+              </span>
+            ))}
+        </div>
+      )}
+      {(data.excludedSources?.length ?? 0) > 0 && (
+        <p className="font-mono text-[11px] text-accent-yellow mt-1">
+          Not shown in the tables (data past SLA): {data.excludedSources!.join(", ")}.
+        </p>
+      )}
+
       {/* Flows */}
       {(data.topInflows.length > 0 || data.topOutflows.length > 0) && (
         <section>
@@ -197,7 +217,9 @@ export function DigestView({
       <section>
         <SectionHead title="Incidents & alerts" meta="24h" />
         <p className="font-mono text-sm text-text-secondary">
-          {data.incidents.count > 0 ? (
+          {data.incidents.stale ? (
+            "Liquidation feed past its SLA: incidents omitted."
+          ) : data.incidents.count > 0 ? (
             <>
               {data.incidents.count} liquidation{data.incidents.count === 1 ? "" : "s"}, {usd(data.incidents.seizedUsd)} seized
               {data.incidents.badDebtUsd > 0 ? <>, <b className="text-accent-red">{usd(data.incidents.badDebtUsd)} bad debt</b></> : ", no bad debt"}.

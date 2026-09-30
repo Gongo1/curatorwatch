@@ -38,6 +38,7 @@ const AllocationCalculator = dynamic(() => import("@/components/AllocationCalcul
 
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { TrackVaultPrompt } from "@/components/TrackVaultPrompt";
+import { DataAsOf } from "@/components/DataAsOf";
 
 interface VaultDetailViewProps {
   address: string;
@@ -121,6 +122,8 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
           </div>
         }
       />
+
+        <DataAsOf sources={[vault.dataSource]} className="mb-4" />
 
         {/* Resolv USR Warning Banner */}
         {isResolvUsrExposed(vault.address) && (

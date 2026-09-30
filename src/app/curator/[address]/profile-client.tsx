@@ -7,6 +7,7 @@ import { Newswire } from "@/components/news/Newswire";
 import { CuratorBlurb } from "@/components/curators/CuratorBlurb";
 import { CuratorDisclosureBanner } from "@/components/CuratorDisclosureBanner";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
+import { DataAsOf } from "@/components/DataAsOf";
 import { ApyDistViz, buildApyDistribution } from "@/components/ApyDistViz";
 import { NotCountedNote } from "@/components/NotCountedNote";
 import { usePortfolio } from "@/hooks/usePortfolio";
@@ -172,6 +173,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                   </span>
                 ))}
               </div>
+              <DataAsOf sources={derived.sources} className="mt-3" />
               <div className="flex flex-wrap gap-2 mt-4">
                 <button
                   onClick={() => (isTracked ? untrackCurator(curator.id) : trackCurator(curator.id, name))}

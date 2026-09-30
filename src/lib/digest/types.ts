@@ -33,6 +33,16 @@ export interface DigestIncidents {
   badDebtUsd: number;
   seizedUsd: number;
   topCurators: { curator: string; seizedUsd: number }[];
+  /** True when the liquidation feed was past its SLA: incidents omitted, not zero. */
+  stale?: boolean;
+}
+
+/** One source's newest data at build time (digests since 2026-09-30). */
+export interface DigestSourceAsOf {
+  key: string;
+  label: string;
+  lastAt: string | null; // ISO
+  stale: boolean;
 }
 
 export interface DigestNewsItem {
@@ -77,4 +87,8 @@ export interface DigestData {
   /** Optional — absent on digests stored before 2026-08-13. */
   news?: DigestNewsItem[];
   spotlight?: DigestSpotlight | null;
+  /** Optional — absent on digests stored before 2026-09-30. */
+  asOf?: DigestSourceAsOf[];
+  /** Vault sources left out of the tables because they were past SLA. */
+  excludedSources?: string[];
 }

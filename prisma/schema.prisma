@@ -610,3 +610,23 @@ model GateEvent {
 
   @@index([event, createdAt])
 }
+
+// One row per cron invocation (src/lib/cron-run.ts withCronRun). Written
+// "running" at start and finished with ok | partial | error; a row still
+// "running" well past the function's maxDuration means Vercel killed it
+// (timeout / 504). Read by the health checks (src/lib/health/*). Job
+// "alert-email" rows (lane = breach key) dedupe the health cron's admin
+// emails to once per key per UTC day.
+model CronRun {
+  id          String    @id @default(cuid())
+  job         String                          // "collect", "collect-turtle", "digest", "health", ...
+  lane        String?                         // collect lane ("core-v2" | "core-v1" | "alt"), deliver mode, ...
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  status      String    @default("running")   // running | ok | partial | error
+  rowsWritten Int?
+  stepErrors  Json?                           // { step: message } for non-fatal step failures
+  error       String?   @db.Text              // fatal error, or the joined step errors of a partial run
+
+  @@index([job, startedAt(sort: Desc)])
+}
