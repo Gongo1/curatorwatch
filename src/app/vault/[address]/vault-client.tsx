@@ -27,6 +27,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { InfoTooltip } from "@/components/Tooltip";
 import { VaultWarningBadge } from "@/components/VaultWarningBadge";
 import { MorphoVerifiedBadge } from "@/components/MorphoVerifiedBadge";
+import { NotCountedNote } from "@/components/NotCountedNote";
 import { PendingConfigBanner } from "@/components/PendingConfigBanner";
 import { isResolvUsrExposed, RESOLV_USR_WARNING } from "@/lib/resolv-usr-warning";
 
@@ -89,6 +90,7 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
         breadcrumbs={breadcrumbs}
         actions={
           <div className="flex items-center gap-3">
+            <NotCountedNote counting={vault.counting} />
             <VaultWarningBadge warnings={vault.warnings} />
             <MorphoVerifiedBadge listed={vault.listed} />
             <NetworkBadge network={vault.chainName ?? "Ethereum"} size="md" />

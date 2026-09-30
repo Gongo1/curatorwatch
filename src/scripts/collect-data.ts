@@ -34,6 +34,12 @@ import {
 } from "../lib/utils/extract-curator-name";
 import { sanitizeApyForStorage } from "../lib/utils/sanitize-apy";
 import { canonicalChainName } from "../lib/turtle/chain-mapper";
+import { assessPhantom, type PhantomBaseline } from "../lib/data-quality/phantom";
+import {
+  fetchPhantomBaselines,
+  finalizeCollection,
+  recordSnapshotWritten,
+} from "../lib/data-quality/maintenance";
 
 /**
  * Chains the Morpho pipeline ingests, both vault generations (V1 MetaMorpho +
@@ -77,6 +83,8 @@ export interface CollectionResult {
   changesDetected: number;
   platformAlertsDetected: number;
   curatorSnapshotsCreated: number;
+  // Vaults whose snapshot this run flagged as phantom accrual (not counted).
+  phantomFlagged: number;
   errors: string[];
   // Source-level failures (a whole chain/generation failed to fetch, came back
   // empty while the DB tracks it, or every vault failed to process). Any entry
@@ -449,6 +457,8 @@ interface ChainContext {
   chainName: string;
   isV1: boolean; // V1 has no adapters/transactions endpoints — skip those steps
   curatorRegistry: Map<string, MorphoCanonicalCurator>;
+  // ~30-day-old snapshot per vault id, for the phantom-accrual test.
+  phantomBaselines: Map<string, PhantomBaseline>;
 }
 
 async function upsertVault(
@@ -554,7 +564,12 @@ function calculateSharePrice(vault: MorphoVaultV2): number {
   return Number(totalAssets) / Number(totalSupply);
 }
 
-async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
+/** Writes the snapshot; returns the phantom reason (null = looks real). */
+async function createSnapshot(
+  vaultId: string,
+  vault: MorphoVaultV2,
+  baseline: PhantomBaseline | null
+): Promise<string | null> {
   const sharePrice = calculateSharePrice(vault);
 
   // Calculate liquidityUsd from liquidity (raw asset units) and price
@@ -579,6 +594,23 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
   if (sanitizedAvgApy !== rawAvgApy || sanitizedAvgNetApy !== vault.avgNetApy) {
     log(`  ⚠ Rejected bad APY for ${vaultId}: avgApy=${vault.avgApy}, avgNetApy=${vault.avgNetApy}`);
   }
+  // Same guard for the instantaneous APYs (a market stuck at 100% utilization
+  // reports the IRM ceiling, 2979.96 = e^8 - 1).
+  const sanitizedApy = sanitizeApyForStorage(vault.apy);
+  const sanitizedNetApy = sanitizeApyForStorage(vault.netApy);
+
+  const phantomReason = assessPhantom({
+    apy: vault.apy,
+    netApy: vault.netApy,
+    sharePrice,
+    assetSymbol: vault.asset.symbol,
+    totalAssets: vault.totalAssets != null ? String(vault.totalAssets) : null,
+    totalSupply: vault.totalSupply != null ? String(vault.totalSupply) : null,
+    baseline,
+  });
+  if (phantomReason) {
+    log(`  ⚠ Phantom accrual, not counted in totals: ${vault.name} (${phantomReason})`);
+  }
 
   await prisma.vaultSnapshot.create({
     data: {
@@ -589,12 +621,14 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
       sharePrice,
       liquidity: vault.liquidity ? String(vault.liquidity) : null,
       liquidityUsd,
-      apy: vault.apy,
-      netApy: vault.netApy,
+      apy: sanitizedApy,
+      netApy: sanitizedNetApy,
       avgApy: sanitizedAvgApy,
       avgNetApy: sanitizedAvgNetApy,
     },
   });
+  await recordSnapshotWritten(vaultId, phantomReason);
+  return phantomReason;
 }
 
 async function storeAdapterAllocations(
@@ -769,47 +803,6 @@ async function storeReallocations(
   return stored;
 }
 
-/**
- * Recompute Curator.vaultCount / totalAssetsManaged in ONE set-based statement.
- *
- * Semantics are unchanged from the old per-curator loop: every vault linked to
- * the curator counts (no active/listed filter), TVL is the sum of each vault's
- * latest snapshot (vaults with no snapshot add 0), and curators with no vaults
- * are left untouched. The loop did ~1,500 sequential round trips (~8 min at
- * connection_limit=1) and pushed the core lane past its 900s cap; this runs in
- * tens of milliseconds. Latest-snapshot lookup is a LATERAL LIMIT 1 on the
- * (vaultId, timestamp) index — a DISTINCT ON over the whole snapshot table
- * measured ~6s on prod vs ~22ms for this form.
- */
-async function updateCuratorStats() {
-  log("Updating curator statistics...");
-
-  const updated = await prisma.$executeRaw`
-    UPDATE "Curator" c
-    SET "vaultCount" = agg.vault_count,
-        "totalAssetsManaged" = agg.total_assets,
-        "updatedAt" = NOW()
-    FROM (
-      SELECT v."curatorId",
-             COUNT(*)::int AS vault_count,
-             COALESCE(SUM(latest."totalAssetsUsd"), 0) AS total_assets
-      FROM "Vault" v
-      LEFT JOIN LATERAL (
-        SELECT s."totalAssetsUsd"
-        FROM "VaultSnapshot" s
-        WHERE s."vaultId" = v.id
-        ORDER BY s."timestamp" DESC
-        LIMIT 1
-      ) latest ON true
-      WHERE v."curatorId" IS NOT NULL
-      GROUP BY v."curatorId"
-    ) agg
-    WHERE c.id = agg."curatorId"
-  `;
-
-  log(`  Curator stats updated: ${updated} curators`);
-}
-
 async function createRiskSnapshot(
   vaultId: string,
   vault: MorphoVaultV2,
@@ -878,17 +871,18 @@ async function processVault(
   txCount: number;
   reallocCount: number;
   changesDetected: number;
+  phantom: boolean;
   error?: string;
 }> {
   try {
     // Upsert vault record
     const { vaultId, curatorCreated, skipped } = await upsertVault(vault, ctx);
     if (skipped) {
-      return { success: true, curatorCreated: false, txCount: 0, reallocCount: 0, changesDetected: 0 };
+      return { success: true, curatorCreated: false, txCount: 0, reallocCount: 0, changesDetected: 0, phantom: false };
     }
 
-    // Create snapshot
-    await createSnapshot(vaultId, vault);
+    // Create snapshot (+ stamp lastSnapshotAt, set/clear the phantom flag)
+    const phantomReason = await createSnapshot(vaultId, vault, ctx.phantomBaselines.get(vaultId) ?? null);
 
     // Store adapter allocations (V1 has no adapters — allocation is market-level)
     const allocations = ctx.isV1
@@ -940,6 +934,9 @@ async function processVault(
         assetSymbol: vault.asset.symbol,
         assetDecimals: vault.asset.decimals,
         curatorAddress: vault.curator?.address ?? "",
+        creationTimestamp: vault.creationTimestamp
+          ? parseInt(String(vault.creationTimestamp), 10)
+          : null,
       };
 
       const changes = await detectChanges(vaultData, currentSnapshot);
@@ -950,7 +947,7 @@ async function processVault(
       // Changes detection is non-critical, continue
     }
 
-    return { success: true, curatorCreated, txCount, reallocCount, changesDetected };
+    return { success: true, curatorCreated, txCount, reallocCount, changesDetected, phantom: phantomReason !== null };
   } catch (error) {
     return {
       success: false,
@@ -958,6 +955,7 @@ async function processVault(
       txCount: 0,
       reallocCount: 0,
       changesDetected: 0,
+      phantom: false,
       error: error instanceof Error ? error.message : String(error),
     };
   }
@@ -977,9 +975,11 @@ async function processVaultsBatch(
   txCollected: number;
   reallocsCollected: number;
   changesDetected: number;
+  phantomFlagged: number;
   errors: string[];
 }> {
   let processed = 0;
+  let phantomFlagged = 0;
   let curatorsCreated = 0;
   let txCollected = 0;
   let reallocsCollected = 0;
@@ -1003,6 +1003,7 @@ async function processVaultsBatch(
         txCollected += result.txCount;
         reallocsCollected += result.reallocCount;
         changesDetected += result.changesDetected;
+        if (result.phantom) phantomFlagged++;
       } else {
         errors.push(`${vault.name}: ${result.error}`);
       }
@@ -1018,7 +1019,7 @@ async function processVaultsBatch(
     }
   }
 
-  return { processed, curatorsCreated, txCollected, reallocsCollected, changesDetected, errors };
+  return { processed, curatorsCreated, txCollected, reallocsCollected, changesDetected, phantomFlagged, errors };
 }
 
 /**
@@ -1063,10 +1064,14 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       txCollected: 0,
       reallocsCollected: 0,
       changesDetected: 0,
+      phantomFlagged: 0,
     };
 
     // Canonical curator identities, fetched once and shared by every chain
     const curatorRegistry = await fetchMorphoCuratorRegistry();
+
+    // ~30-day-old snapshots for the phantom-accrual test (one query per run)
+    const phantomBaselines = await fetchPhantomBaselines("morpho");
 
     // Each chain is fetched and processed independently: one chain's API
     // trouble must not take down the whole collection run.
@@ -1080,7 +1085,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       const generations = options.generations ?? ["v2", "v1"];
       for (const isV1 of [false, true]) {
         if (!generations.includes(isV1 ? "v1" : "v2")) continue;
-        const ctx: ChainContext = { chainId: chain.chainId, chainName, isV1, curatorRegistry };
+        const ctx: ChainContext = { chainId: chain.chainId, chainName, isV1, curatorRegistry, phantomBaselines };
         const label = `${chainName} ${isV1 ? "V1" : "V2"}`;
 
         try {
@@ -1136,6 +1141,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
           result.txCollected += batchResult.txCollected;
           result.reallocsCollected += batchResult.reallocsCollected;
           result.changesDetected += batchResult.changesDetected;
+          result.phantomFlagged += batchResult.phantomFlagged;
         } catch (error) {
           const msg = `${label} collection failed: ${error instanceof Error ? error.message : error}`;
           logError(msg);
@@ -1147,8 +1153,12 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
 
     log(`Processed: ${result.processed}/${totalValid} vaults across ${chains.length} chain(s)`);
 
-    // Update curator statistics
-    await updateCuratorStats();
+    // Totals hygiene: wrapper/bridged/nested/cross-source flags, then
+    // curator stats over counted vaults only.
+    log("Applying exclusion rules + updating curator statistics...");
+    const hygiene = await finalizeCollection();
+    log(`  Exclusion flags changed: ${hygiene.changed} (${JSON.stringify(hygiene.excludedByReason)})`);
+    log(`  Curator stats updated: ${hygiene.curatorsUpdated} curators`);
 
     // Curator & ecosystem-level alert detection
     let platformAlertsDetected = 0;
@@ -1225,6 +1235,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
     log(`  Transactions collected: ${result.txCollected}`);
     log(`  Reallocations collected: ${result.reallocsCollected}`);
     log(`  Changes detected: ${result.changesDetected}`);
+    log(`  Phantom accrual flagged (not counted): ${result.phantomFlagged}`);
     log(`  Platform alerts detected: ${platformAlertsDetected}`);
     log(`  Curator snapshots created: ${curatorSnapshotsCreated}`);
     log("-".repeat(60));
@@ -1264,6 +1275,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       changesDetected: result.changesDetected,
       platformAlertsDetected,
       curatorSnapshotsCreated,
+      phantomFlagged: result.phantomFlagged,
       errors,
       sourceErrors,
       duration,
@@ -1286,6 +1298,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       changesDetected: 0,
       platformAlertsDetected: 0,
       curatorSnapshotsCreated: 0,
+      phantomFlagged: 0,
       errors,
       sourceErrors,
       duration: Date.now() - startTime,

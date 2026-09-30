@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { countedVaultWhere } from "@/lib/data-quality/counting";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
@@ -21,6 +22,7 @@ export async function GET() {
     // Get all vaults with their latest snapshots
     const vaults = await prisma.vault.findMany({
       where: {
+        ...countedVaultWhere(),
         ...EXCLUDED_CURATOR_VAULT_FILTER,
       },
       select: {

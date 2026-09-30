@@ -15,7 +15,9 @@ import { extractProtocol } from "../lib/turtle/protocol-extractor";
 import { matchCurator } from "../lib/turtle/curator-matcher";
 import { resolveChainId, canonicalChainName } from "../lib/turtle/chain-mapper";
 import { sanitizeApyPct } from "../lib/utils/sanitize-apy";
-import type { TurtleOpportunity } from "../lib/turtle/types";
+import { assessPhantom } from "../lib/data-quality/phantom";
+import { finalizeCollection, recordSnapshotWritten } from "../lib/data-quality/maintenance";
+import type { TurtleOpportunity, TurtleToken } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 100_000; // $100K dust floor
 
@@ -68,6 +70,17 @@ function logError(message: string, error?: unknown) {
 }
 
 /**
+ * The chain an opportunity's position lives on: the RECEIPT token's chain,
+ * falling back to the first deposit token's, then the opportunity's. Lido
+ * wstETH lists WETH on Ethereum as the deposit token for every L2 wstETH
+ * opportunity, so reading the deposit chain labeled 11 L2 rows "Ethereum"
+ * (with L2 contract addresses).
+ */
+function opportunityChain(opp: TurtleOpportunity): TurtleToken["chain"] | undefined {
+  return opp.receiptToken?.chain ?? opp.depositTokens?.[0]?.chain ?? opp.chain;
+}
+
+/**
  * Filter Turtle opportunities to managed vaults we care about.
  */
 function filterOpportunities(
@@ -84,11 +97,7 @@ function filterOpportunities(
     if (protocol === "morpho") return false;
 
     // Exclude testnets — testnet balances are not real TVL
-    const chainSlug = (
-      opp.depositTokens?.[0]?.chain?.slug ??
-      opp.chain?.slug ??
-      "ethereum"
-    ).toLowerCase();
+    const chainSlug = (opportunityChain(opp)?.slug ?? "ethereum").toLowerCase();
     if (TESTNET_CHAINS.has(chainSlug)) return false;
 
     return true;
@@ -116,7 +125,7 @@ async function upsertTurtleVault(
     // Extract chain info. Prefer Turtle's authoritative numeric chainId (present on
     // every chain object) over the slug→id map, so chains we haven't enumerated are
     // never silently mislabeled as Ethereum (chainId 1). Skip + log if neither resolves.
-    const chainObj = opp.depositTokens?.[0]?.chain ?? opp.chain;
+    const chainObj = opportunityChain(opp);
     const chainSlug = (chainObj?.slug ?? "ethereum").toLowerCase();
     const chainId = resolveChainId(chainObj?.chainId, chainSlug);
     if (chainId === null) {
@@ -154,11 +163,12 @@ async function upsertTurtleVault(
     const onchainAddress = opp.receiptToken?.address?.toLowerCase() ?? null;
     const onchainSymbol = opp.receiptToken?.symbol ?? null;
 
-    // Cross-source guard: if the Morpho pipeline already tracks this exact vault
-    // (same on-chain address + chain), don't create a second row for it. If a
-    // Turtle row already exists from before, keep refreshing it but flag the
-    // overlap in the run report so it can be reviewed and merged deliberately —
-    // never auto-unlinked (no silent drops).
+    // Cross-source guard: if a native pipeline (Morpho, Euler, Upshift, funds)
+    // already tracks this exact vault (same on-chain address + chain), don't
+    // create a second row for it. If a Turtle row already exists from before,
+    // keep refreshing it and flag the overlap in the run report; the exclusion
+    // rules mark it cross_source_dup (not counted) while the native row is
+    // fresh — never auto-unlinked (no silent drops).
     const isOverlap =
       onchainAddress !== null &&
       (morphoVaultKeys.has(`${onchainAddress}:${chainId}`) ||
@@ -245,6 +255,12 @@ async function upsertTurtleVault(
         avgNetApy: aprDecimal,
       },
     });
+    // Phantom test on the RAW source APR (the stored value is sanitized).
+    const phantomReason = assessPhantom({
+      apy: opp.estimatedApr != null ? opp.estimatedApr / 100 : null,
+      assetSymbol,
+    });
+    await recordSnapshotWritten(vault.id, phantomReason);
 
     return {
       upserted: true,
@@ -260,46 +276,6 @@ async function upsertTurtleVault(
       curatorName: opp.curator?.name ?? opp.name,
       error: msg,
     };
-  }
-}
-
-/**
- * Update curator stats for curators that have Turtle-sourced vaults.
- */
-async function updateTurtleCuratorStats() {
-  const turtleCurators = await prisma.curator.findMany({
-    where: {
-      vaults: { some: { dataSource: "turtle" } },
-    },
-    select: { id: true, name: true, address: true },
-  });
-
-  for (const curator of turtleCurators) {
-    const vaultCount = await prisma.vault.count({
-      where: { curatorId: curator.id },
-    });
-
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId: curator.id },
-      select: { id: true },
-    });
-
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) {
-        totalAssets += snapshot.totalAssetsUsd;
-      }
-    }
-
-    await prisma.curator.update({
-      where: { id: curator.id },
-      data: { vaultCount, totalAssetsManaged: totalAssets },
-    });
   }
 }
 
@@ -322,11 +298,11 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     const filtered = filterOpportunities(allOpportunities);
     log(`Filtered to ${filtered.length} opportunities (TVL>=$100K, non-Morpho, non-testnet)`);
 
-    // Snapshot of vault identities owned by the native pipelines (Morpho +
-    // Euler rows store the real contract in `address`) for the cross-source
-    // guard. Built once per run.
+    // Snapshot of vault identities owned by the native pipelines (Morpho,
+    // Euler and Upshift rows store the real contract in `address`) for the
+    // cross-source guard. Built once per run.
     const morphoVaults = await prisma.vault.findMany({
-      where: { dataSource: { in: ["morpho", "euler"] } },
+      where: { dataSource: { in: ["morpho", "euler", "upshift"] } },
       select: { address: true, chainId: true },
     });
     const morphoVaultKeys = new Set(
@@ -411,8 +387,10 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       }
     }
 
-    // 4. Update curator stats
-    await updateTurtleCuratorStats();
+    // 4. Totals hygiene (exclusion flags incl. cross-source duplicates of
+    // existing Turtle rows), then curator stats over counted vaults.
+    const hygiene = await finalizeCollection();
+    log(`  Exclusion flags changed: ${hygiene.changed} (${JSON.stringify(hygiene.excludedByReason)})`);
 
     const duration = Date.now() - startTime;
 

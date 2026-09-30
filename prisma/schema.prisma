@@ -24,6 +24,16 @@ model Vault {
   managementFee   Float    @default(0)
   active          Boolean  @default(true)  // For marking inactive vaults
 
+  // Totals hygiene (see src/lib/data-quality). A row stays visible on its pages
+  // but is left out of every aggregate when countInTotals=false, with an
+  // excludeReason of 'wrapper' | 'bridged' | 'nested' | 'cross_source_dup' |
+  // 'phantom' | 'unlisted'. Every collector stamps lastSnapshotAt when it writes
+  // a snapshot; a row whose last snapshot is older than 7 days is stale and is
+  // not counted either.
+  countInTotals   Boolean   @default(true)
+  excludeReason   String?
+  lastSnapshotAt  DateTime?
+
   // Multi-protocol fields
   protocol        String   @default("morpho")  // "morpho", "aave", "euler", "compound", "spark", etc.
   turtleId        String?  @unique             // Turtle opportunity ID for dedup

@@ -12,6 +12,7 @@ import { prisma } from "./db";
 import type { Prisma } from "@prisma/client";
 import { ALERT_TYPES, THRESHOLDS, type Severity } from "./change-thresholds";
 import { EXCLUDED_CURATORS } from "./curator-aliases";
+import { ensureTotalsEpoch, getTotalsEpoch } from "./data-quality/maintenance";
 
 export interface PlatformAlertEvent {
   scope: "curator" | "ecosystem";
@@ -42,6 +43,10 @@ function formatCurrency(value: number): string {
  * Called once per collection run (hourly) to build AUM history.
  */
 export async function createCuratorSnapshots(): Promise<number> {
+  // First snapshot on new counting rules marks the restatement, so AUM alerts
+  // and digest flows never compare across it (see TOTALS_RULES_VERSION).
+  await ensureTotalsEpoch();
+
   const curators = await prisma.curator.findMany({
     where: {
       vaultCount: { gt: 0 },
@@ -77,6 +82,8 @@ export async function createCuratorSnapshots(): Promise<number> {
 export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
   const alerts: PlatformAlertEvent[] = [];
   const now = new Date();
+  // Baselines from before a totals restatement are not comparable.
+  const epoch = await getTotalsEpoch();
 
   const curators = await prisma.curator.findMany({
     where: {
@@ -98,7 +105,7 @@ export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
     if (currentAUM <= 0) continue;
 
     // 24h comparison
-    const snapshot24h = await getClosestCuratorSnapshot(curator.id, now, 24);
+    const snapshot24h = await getClosestCuratorSnapshot(curator.id, now, 24, epoch);
     if (snapshot24h) {
       const pctChange24h = ((currentAUM - snapshot24h.totalAssetsUsd) / snapshot24h.totalAssetsUsd) * 100;
 
@@ -158,7 +165,7 @@ export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
     }
 
     // 72h comparison (sustained outflow detection)
-    const snapshot72h = await getClosestCuratorSnapshot(curator.id, now, 72);
+    const snapshot72h = await getClosestCuratorSnapshot(curator.id, now, 72, epoch);
     if (snapshot72h) {
       const pctChange72h = ((currentAUM - snapshot72h.totalAssetsUsd) / snapshot72h.totalAssetsUsd) * 100;
 
@@ -217,13 +224,17 @@ export async function detectEcosystemAlerts(): Promise<PlatformAlertEvent[]> {
   // Get the latest snapshot per curator from the 22-26h window
   const twentyTwoHoursAgo = new Date(now.getTime() - 22 * 60 * 60 * 1000);
   const twentySixHoursAgo = new Date(now.getTime() - 26 * 60 * 60 * 1000);
+  // Baselines from before a totals restatement are not comparable.
+  const epoch = await getTotalsEpoch();
+  const windowStart =
+    epoch && epoch > twentySixHoursAgo ? epoch : twentySixHoursAgo;
 
   const oldSnapshots = await prisma.$queryRaw<{ total: number }[]>`
     SELECT COALESCE(SUM(s."totalAssetsUsd"), 0) as total
     FROM (
       SELECT DISTINCT ON ("curatorId") "totalAssetsUsd"
       FROM "CuratorSnapshot"
-      WHERE "timestamp" >= ${twentySixHoursAgo}
+      WHERE "timestamp" >= ${windowStart}
         AND "timestamp" <= ${twentyTwoHoursAgo}
       ORDER BY "curatorId", "timestamp" DESC
     ) s
@@ -325,10 +336,12 @@ export async function cleanupOldCuratorSnapshots(): Promise<number> {
 async function getClosestCuratorSnapshot(
   curatorId: string,
   now: Date,
-  hoursAgo: number
+  hoursAgo: number,
+  epoch: Date | null = null
 ): Promise<{ totalAssetsUsd: number; timestamp: Date } | null> {
   const targetTime = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
-  const windowStart = new Date(targetTime.getTime() - 2 * 60 * 60 * 1000);
+  const earliest = new Date(targetTime.getTime() - 2 * 60 * 60 * 1000);
+  const windowStart = epoch && epoch > earliest ? epoch : earliest;
   const windowEnd = new Date(targetTime.getTime() + 2 * 60 * 60 * 1000);
 
   return prisma.curatorSnapshot.findFirst({

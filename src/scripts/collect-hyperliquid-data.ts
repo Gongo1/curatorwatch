@@ -14,6 +14,8 @@ import { fetchHlp, HLP_VAULT_ADDRESS } from "../lib/hyperliquid/client";
 import { matchCurator } from "../lib/turtle/curator-matcher";
 import { canonicalChainName, getChainId } from "../lib/turtle/chain-mapper";
 import { sanitizeApyPct } from "../lib/utils/sanitize-apy";
+import { assessPhantom } from "../lib/data-quality/phantom";
+import { finalizeCollection, recordSnapshotWritten } from "../lib/data-quality/maintenance";
 
 export interface HyperliquidCollectionResult {
   success: boolean;
@@ -96,25 +98,14 @@ export async function collectHyperliquidData(): Promise<HyperliquidCollectionRes
         avgNetApy: aprDecimal,
       },
     });
+    // Phantom test on the RAW source APR (the stored value is sanitized).
+    await recordSnapshotWritten(
+      row.id,
+      assessPhantom({ apy: hlp.aprPct != null ? hlp.aprPct / 100 : null, assetSymbol: "USDC" })
+    );
 
-    // Refresh the Hyperliquid curator's stats
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId },
-      select: { id: true },
-    });
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) totalAssets += snapshot.totalAssetsUsd;
-    }
-    await prisma.curator.update({
-      where: { id: curatorId },
-      data: { vaultCount: vaultIds.length, totalAssetsManaged: totalAssets },
-    });
+    // Totals hygiene: exclusion flags, then curator stats over counted vaults.
+    await finalizeCollection();
 
     const duration = Date.now() - startTime;
     log(`  HLP upserted: $${(hlp.tvlUsd / 1e6).toFixed(1)}M, APR ${estTotalAPR?.toFixed(2) ?? "—"}%`);

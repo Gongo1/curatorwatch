@@ -36,11 +36,16 @@ export async function GET(request: NextRequest) {
 
     revalidateDataPages();
 
-    return NextResponse.json({
-      success: result.success,
-      message: "Hyperliquid HLP collected",
-      result,
-    });
+    // Fail loud: the collector catches its own errors (source fetch, snapshot
+    // write, totals hygiene) and returns success:false; that must not be a 200.
+    return NextResponse.json(
+      {
+        success: result.success,
+        message: result.success ? "Hyperliquid HLP collected" : "Hyperliquid collection failed",
+        result,
+      },
+      { status: result.success ? 200 : 500 }
+    );
   } catch (error) {
     console.error("[CRON] Hyperliquid collection failed:", error);
 

@@ -50,6 +50,8 @@ import { matchCurator } from "../lib/turtle/curator-matcher";
 import { fetchTurtleOpportunities } from "../lib/turtle/client";
 import { resolveChainId, canonicalChainName } from "../lib/turtle/chain-mapper";
 import { sanitizeApyPct } from "../lib/utils/sanitize-apy";
+import { assessPhantom } from "../lib/data-quality/phantom";
+import { finalizeCollection, recordSnapshotWritten } from "../lib/data-quality/maintenance";
 
 const MIN_TVL_USD = 50_000;
 
@@ -151,6 +153,12 @@ async function upsertEulerVault(
         avgNetApy: aprDecimal,
       },
     });
+    // Phantom test on the RAW source APY (the stored value is sanitized).
+    const phantomReason = assessPhantom({
+      apy: vault.supplyApy != null ? vault.supplyApy / 100 : null,
+      assetSymbol: vault.asset?.symbol ?? "UNKNOWN",
+    });
+    await recordSnapshotWritten(row.id, phantomReason);
 
     return { upserted: true };
   } catch (error) {
@@ -158,36 +166,6 @@ async function upsertEulerVault(
       upserted: false,
       error: error instanceof Error ? error.message : String(error),
     };
-  }
-}
-
-/** Refresh vaultCount + AUM for curators that own Euler-sourced vaults. */
-async function updateEulerCuratorStats() {
-  const curators = await prisma.curator.findMany({
-    where: { vaults: { some: { dataSource: "euler" } } },
-    select: { id: true },
-  });
-
-  for (const curator of curators) {
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId: curator.id },
-      select: { id: true },
-    });
-
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) totalAssets += snapshot.totalAssetsUsd;
-    }
-
-    await prisma.curator.update({
-      where: { id: curator.id },
-      data: { vaultCount: vaultIds.length, totalAssetsManaged: totalAssets },
-    });
   }
 }
 
@@ -477,7 +455,9 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
       errors.push("0 Euler vaults upserted — source returned nothing usable");
     }
 
-    await updateEulerCuratorStats();
+    // Totals hygiene: exclusion flags, then curator stats over counted vaults.
+    const hygiene = await finalizeCollection();
+    log(`  Exclusion flags changed: ${hygiene.changed} (${JSON.stringify(hygiene.excludedByReason)})`);
 
     const duration = Date.now() - startTime;
     log("-".repeat(60));
