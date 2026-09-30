@@ -8,17 +8,30 @@
  * to Morpho.
  *
  * Policy (mirrors the Euler pipeline):
- *  - Respect the platform's own flags: `isVisible && status === "active"`
- *    only — Upshift hides wound-down/pre-launch vaults and cross-chain
- *    mirrors, and hidden rows include exact duplicates that would double
- *    count. Skipped-invisible TVL is reported, never silent.
+ *  - Respect the platform's own listing: the pools endpoint returns only the
+ *    vaults the app lists (Upshift hides wound-down/pre-launch vaults and
+ *    cross-chain mirrors, and hidden rows include exact duplicates that
+ *    would double count); of those, `status === "active"` only. Skipped
+ *    non-active TVL is reported, never silent.
+ *  - The platform reports no fees: existing fee values are left untouched
+ *    (never overwritten with 0). A target-only APY is not stored as realized.
  *  - EVM chains our registry can name; Stellar/other-VM vaults skipped + reported.
  *  - $50k TVL floor. Strategist attribution required (matchCurator: existing
  *    rows first, else a clean `tc:<slug>` from the strategist name); vaults
  *    with no strategist are skipped + reported.
- *  - Cross-source guard: DB rows of other pipelines + the LIVE Turtle feed's
- *    receipt tokens (Turtle lists 7 Upshift opportunities — the incumbent
- *    keeps them).
+ *  - Cross-source guard (one active row per vault, never two):
+ *      · an active non-Turtle row (Morpho, Euler, fund) owns the vault → skip;
+ *      · an active Turtle row that the LIVE Turtle feed still lists owns it →
+ *        skip (Turtle keeps refreshing it);
+ *      · otherwise an existing Upshift row is refreshed, and a Turtle row for
+ *        the same vault that the live feed no longer lists is retired
+ *        (active=false) — it is a frozen duplicate;
+ *      · a vault only in the live Turtle feed (no row yet) is left to Turtle.
+ *    If the Turtle feed can't be read, every active Turtle row counts as live
+ *    (skip, never double count) and the run reports an error.
+ *  - Stale sweep: Upshift rows this run did not ingest (no longer listed,
+ *    below the floor, non-active, unattributed, owned by another pipeline)
+ *    are set active=false, so a vault never stays "live" on a frozen snapshot.
  */
 
 import { prisma } from "../lib/db";
@@ -45,6 +58,8 @@ export interface UpshiftCollectionResult {
   skippedNonEvmTvlUsd: number;
   skippedUnattributed: { name: string; tvl: number }[];
   crossSourceOverlaps: { name: string; tvl: number; address: string; source: string }[];
+  deactivatedStale: number; // Upshift rows this run retired (see stale sweep)
+  retiredTurtleDuplicates: number; // Turtle rows for Upshift vaults the live Turtle feed dropped
   errors: string[];
   duration: number;
 }
@@ -65,14 +80,22 @@ async function upsertUpshiftVault(
     const chainId = vault.chainId;
     const chainName = canonicalChainName(chainId);
     const addressLower = vault.address.toLowerCase();
-    const tvlUsd = vault.latest_reported_tvl ?? 0;
+    const tvlUsd = vault.tvlUsd;
 
-    const estTotalAPR = sanitizeApyPct(vault.apy?.apy ?? null);
+    // A target-only APY is the strategist's target, not a realized yield.
+    const estTotalAPR = vault.apyDisplay?.isTargetOnly ? null : sanitizeApyPct(vault.apy ?? null);
     const aprDecimal = estTotalAPR != null ? estTotalAPR / 100 : null;
-    const creationTimestamp = vault.startDatetime
-      ? Math.floor(new Date(vault.startDatetime).getTime() / 1000)
-      : undefined;
+    const sharePrice =
+      typeof vault.sharePrice === "number" && Number.isFinite(vault.sharePrice) && vault.sharePrice > 0
+        ? vault.sharePrice
+        : 1;
+    const assetDecimals = vault.depositAsset?.decimals;
+    const totalAssets =
+      typeof vault.tvl === "number" && Number.isFinite(vault.tvl) && vault.tvl >= 0 && assetDecimals != null
+        ? vault.tvl.toFixed(assetDecimals).replace(".", "").replace(/^0+(?=\d)/, "")
+        : "0";
 
+    // No fee fields: the platform does not report fees, so existing values stay.
     const vaultFields = {
       name: vault.name,
       protocol: "upshift",
@@ -82,13 +105,9 @@ async function upsertUpshiftVault(
       chainId,
       chainName,
       onchainAddress: addressLower,
-      onchainSymbol: vault.receipt?.symbol ?? null,
+      onchainSymbol: vault.receiptSymbol ?? null,
       estTotalAPR,
       netAPR: estTotalAPR,
-      // Platform reports fees as percent; Vault stores fractions (Morpho semantics)
-      performanceFee: (vault.fees?.performance ?? 0) / 100,
-      managementFee: (vault.fees?.management ?? 0) / 100,
-      creationTimestamp,
       active: true,
     };
 
@@ -106,10 +125,10 @@ async function upsertUpshiftVault(
       update: { ...vaultFields, updatedAt: new Date() },
       create: {
         address: vault.address,
-        symbol: vault.receipt?.symbol ?? vault.name,
-        assetAddress: "unknown",
-        assetSymbol: vault.receipt?.symbol?.replace(/^up/i, "") ?? "UNKNOWN",
-        assetDecimals: vault.receipt?.decimals ?? 18,
+        symbol: vault.receiptSymbol ?? vault.name,
+        assetAddress: vault.depositAsset?.address ?? "unknown",
+        assetSymbol: vault.depositAsset?.symbol ?? "UNKNOWN",
+        assetDecimals: assetDecimals ?? 18,
         ...vaultFields,
       },
     });
@@ -117,10 +136,10 @@ async function upsertUpshiftVault(
     await prisma.vaultSnapshot.create({
       data: {
         vaultId: row.id,
-        totalAssets: String(vault.totalAssets?.raw ?? "0"),
+        totalAssets,
         totalAssetsUsd: tvlUsd,
-        totalSupply: "0",
-        sharePrice: 1,
+        totalSupply: vault.totalSupplyRaw ?? "0",
+        sharePrice,
         apy: aprDecimal,
         netApy: aprDecimal,
         avgApy: aprDecimal,
@@ -185,10 +204,10 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
     totalFetched = vaults.length;
     log(`Fetched ${vaults.length} vaults from the Upshift platform`);
 
-    // Identities owned by other pipelines (Morpho/Euler real addresses,
-    // Turtle/fund onchainAddress) plus the live Turtle feed's receipt tokens.
+    // Identities owned by other ACTIVE non-Turtle rows (Morpho/Euler real
+    // addresses, fund onchainAddress). A retired row owns nothing.
     const foreign = await prisma.vault.findMany({
-      where: { dataSource: { not: "upshift" } },
+      where: { dataSource: { notIn: ["upshift", "turtle"] }, active: true },
       select: { address: true, onchainAddress: true, chainId: true, dataSource: true },
     });
     const foreignKeys = new Map<string, string>();
@@ -196,24 +215,63 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       foreignKeys.set(`${v.address.toLowerCase()}:${v.chainId}`, v.dataSource);
       if (v.onchainAddress) foreignKeys.set(`${v.onchainAddress}:${v.chainId}`, v.dataSource);
     }
+    // Active Turtle rows by on-chain identity, and this pipeline's own rows.
+    const turtleRows = new Map<string, { id: string; turtleId: string | null }>();
+    for (const v of await prisma.vault.findMany({
+      where: { dataSource: "turtle", active: true, onchainAddress: { not: null } },
+      select: { id: true, turtleId: true, onchainAddress: true, chainId: true },
+    })) {
+      turtleRows.set(`${v.onchainAddress}:${v.chainId}`, { id: v.id, turtleId: v.turtleId });
+    }
+    const upshiftRows = await prisma.vault.findMany({
+      where: { dataSource: "upshift" },
+      select: { id: true, address: true, chainId: true, active: true },
+    });
+    const upshiftKeys = new Set(upshiftRows.map((v) => `${v.address.toLowerCase()}:${v.chainId}`));
+
+    // Receipt tokens (addr:chainId) and opportunity ids the LIVE Turtle feed
+    // lists. null = feed unreadable → every active Turtle row counts as live.
+    let liveTurtle: Set<string> | null = null;
     try {
-      for (const opp of await fetchTurtleOpportunities()) {
+      const opportunities = await fetchTurtleOpportunities();
+      liveTurtle = new Set<string>();
+      for (const opp of opportunities) {
+        liveTurtle.add(opp.id);
         const receipt = opp.receiptToken;
         if (!receipt?.address) continue;
         const chainId = resolveChainId(receipt.chain?.chainId, receipt.chain?.slug);
         if (chainId === null) continue;
-        const key = `${receipt.address.toLowerCase()}:${chainId}`;
-        if (!foreignKeys.has(key)) foreignKeys.set(key, "turtle (live feed)");
+        liveTurtle.add(`${receipt.address.toLowerCase()}:${chainId}`);
       }
     } catch (error) {
-      logError("Turtle feed unavailable for the cross-source guard (continuing with DB-only guard)", error);
+      const msg = `Turtle feed unavailable for the cross-source guard: ${error instanceof Error ? error.message : error}`;
+      logError(msg);
+      errors.push(msg);
     }
 
+    /** Who owns this vault? `null` = Upshift ingests it (see header). */
+    const retireTurtleIds = new Set<string>();
+    const ownerOf = (key: string): string | null => {
+      const other = foreignKeys.get(key);
+      if (other) return other;
+      const turtleRow = turtleRows.get(key);
+      const turtleLive =
+        turtleRow !== undefined &&
+        (liveTurtle === null ||
+          liveTurtle.has(key) ||
+          (turtleRow.turtleId !== null && liveTurtle.has(turtleRow.turtleId)));
+      if (turtleLive) return "turtle";
+      if (!upshiftKeys.has(key) && liveTurtle?.has(key)) return "turtle (live feed)";
+      if (turtleRow) retireTurtleIds.add(turtleRow.id); // frozen: the live feed dropped it
+      return null;
+    };
+    const kept = new Set<string>(); // addr:chainId of every vault this run ingests
+
     for (const vault of vaults) {
-      const tvlUsd = vault.latest_reported_tvl ?? 0;
+      const tvlUsd = vault.tvlUsd;
       if (tvlUsd < MIN_TVL_USD) continue;
 
-      if (!vault.isVisible || vault.status !== "active") {
+      if (vault.status !== "active") {
         skippedInvisible++;
         skippedInvisibleTvlUsd += tvlUsd;
         continue;
@@ -225,24 +283,21 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       }
 
       const addressLower = vault.address.toLowerCase();
-      const owner = foreignKeys.get(`${addressLower}:${vault.chainId}`);
+      const owner = ownerOf(`${addressLower}:${vault.chainId}`);
       if (owner) {
         crossSourceOverlaps.push({ name: vault.name, tvl: tvlUsd, address: addressLower, source: owner });
         continue;
       }
 
-      const strategist = vault.strategists?.[0];
-      const curatorId = strategist?.name
-        ? await matchCurator(vault.name, {
-            name: strategist.name,
-            landingUrl: strategist.website_url ?? undefined,
-          })
+      const curatorId = vault.strategistName
+        ? await matchCurator(vault.name, { name: vault.strategistName })
         : null;
       if (!curatorId) {
         skippedUnattributed.push({ name: vault.name, tvl: tvlUsd });
         continue;
       }
 
+      kept.add(`${addressLower}:${vault.chainId}`);
       const result = await upsertUpshiftVault(vault, curatorId);
       if (result.upserted) {
         vaultsUpserted++;
@@ -252,6 +307,26 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       }
     }
 
+    // ── Stale sweep + frozen-duplicate retirement ───────────────────────────
+    // Only reached after a successful, non-empty fetch (the client throws
+    // otherwise), so a source outage can never retire live rows.
+    const staleIds = upshiftRows
+      .filter((v) => v.active && !kept.has(`${v.address.toLowerCase()}:${v.chainId}`))
+      .map((v) => v.id);
+    const deactivatedStale =
+      staleIds.length > 0
+        ? (await prisma.vault.updateMany({ where: { id: { in: staleIds } }, data: { active: false } })).count
+        : 0;
+    const retiredTurtleDuplicates =
+      retireTurtleIds.size > 0
+        ? (
+            await prisma.vault.updateMany({
+              where: { id: { in: [...retireTurtleIds] } },
+              data: { active: false },
+            })
+          ).count
+        : 0;
+
     await updateUpshiftCuratorStats();
 
     const duration = Date.now() - startTime;
@@ -259,13 +334,14 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
     log("Upshift collection completed!");
     log(`  Fetched: ${totalFetched}`);
     log(`  Upserted (visible, EVM, attributed, ≥$${MIN_TVL_USD / 1000}k): ${vaultsUpserted}`);
-    log(`  Skipped hidden/inactive: ${skippedInvisible} ($${(skippedInvisibleTvlUsd / 1e6).toFixed(1)}M)`);
+    log(`  Skipped non-active: ${skippedInvisible} ($${(skippedInvisibleTvlUsd / 1e6).toFixed(1)}M)`);
     log(`  Skipped non-EVM/unknown chain: ${skippedNonEvm} ($${(skippedNonEvmTvlUsd / 1e6).toFixed(1)}M)`);
     log(`  Skipped unattributed: ${skippedUnattributed.length}`);
     log(`  Cross-source overlaps (kept by incumbent pipeline): ${crossSourceOverlaps.length}`);
     for (const o of crossSourceOverlaps.slice(0, 10)) {
       log(`    ${o.name} ($${(o.tvl / 1e6).toFixed(1)}M) — owned by ${o.source}`);
     }
+    log(`  Retired: ${deactivatedStale} stale Upshift rows, ${retiredTurtleDuplicates} frozen Turtle duplicates`);
     log(`  Errors: ${errors.length}`);
     log(`  Duration: ${(duration / 1000).toFixed(1)}s`);
     log("=".repeat(60));
@@ -281,6 +357,8 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       skippedNonEvmTvlUsd,
       skippedUnattributed,
       crossSourceOverlaps,
+      deactivatedStale,
+      retiredTurtleDuplicates,
       errors,
       duration,
     };
@@ -299,6 +377,8 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       skippedNonEvmTvlUsd,
       skippedUnattributed,
       crossSourceOverlaps,
+      deactivatedStale: 0,
+      retiredTurtleDuplicates: 0,
       errors,
       duration: Date.now() - startTime,
     };

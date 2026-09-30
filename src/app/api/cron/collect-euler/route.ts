@@ -34,14 +34,19 @@ export async function GET(request: NextRequest) {
       vaults: result.vaultsUpserted,
       skippedUnlabeled: result.skippedUnlabeled,
       overlaps: result.crossSourceOverlaps.length,
+      errors: result.errors.length,
       duration: `${(result.duration / 1000).toFixed(1)}s`,
     });
 
     revalidateDataPages();
 
+    // Fail loud: a partial run still writes what it could, but any source
+    // failure turns the cron red (HTTP 500) instead of a quiet 200.
     return NextResponse.json({
-      success: true,
-      message: "Euler data collected successfully",
+      success: result.success,
+      message: result.success
+        ? "Euler data collected successfully"
+        : `Euler collection finished with ${result.errors.length} error(s)`,
       result: {
         totalFetched: result.totalFetched,
         vaultsUpserted: result.vaultsUpserted,
@@ -51,10 +56,12 @@ export async function GET(request: NextRequest) {
         skippedUnlabeledTvlUsd: result.skippedUnlabeledTvlUsd,
         skippedDeprecated: result.skippedDeprecated,
         crossSourceOverlaps: result.crossSourceOverlaps,
+        deactivatedStale: result.deactivatedStale,
+        retiredTurtleDuplicates: result.retiredTurtleDuplicates,
         errors: result.errors,
         duration: result.duration,
       },
-    });
+    }, { status: result.success ? 200 : 500 });
   } catch (error) {
     console.error("[CRON] Euler collection failed:", error);
 

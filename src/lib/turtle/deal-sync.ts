@@ -1,15 +1,16 @@
 /**
  * Phase 3a/3b: distributor deal mapping + attributed deposit ingestion.
  *
- * Server-side use of the public Earn API with the publishable key (approved
- * 2026-06-09; read-only GETs: distributor opportunities + distributor deposits).
- * Runs from the collect-turtle cron after the main collection pass.
+ * Server-side use of the Earn API (approved 2026-06-09; read-only GETs:
+ * distributor opportunities + distributor deposits). Auth is the server-only
+ * TURTLE_API_KEY sent as `X-API-Key` (Turtle stopped reading Bearer tokens on
+ * 2026-09-18). Runs from the collect-turtle cron after the main collection pass.
  */
 
 import { prisma } from "../db";
+import { turtleApiKey } from "./client";
 
 const EARN_API_BASE = "https://earn.turtle.xyz/v1";
-const API_KEY = process.env.NEXT_PUBLIC_TURTLE_API_KEY ?? "";
 const DISTRIBUTOR_ID = process.env.NEXT_PUBLIC_TURTLE_DISTRIBUTOR_ID ?? "";
 
 interface DealToken {
@@ -52,7 +53,7 @@ export interface DealSyncSummary {
 
 async function earnGet<T>(path: string): Promise<T> {
   const res = await fetch(`${EARN_API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${API_KEY}` },
+    headers: { "X-API-Key": turtleApiKey() },
   });
   if (!res.ok) {
     throw new Error(`Earn API ${path} -> ${res.status} ${res.statusText}`);
@@ -82,6 +83,13 @@ async function syncDealMapping() {
     `/opportunities/distributors/${DISTRIBUTOR_ID}`
   );
   const opps = unwrapList<DealOpportunity>(raw, "opportunities");
+  // An empty list would clear every existing deal mapping below. The distributor
+  // always has deals, so treat empty as a response-shape or auth problem.
+  if (opps.length === 0) {
+    throw new Error(
+      "Earn API returned 0 distributor opportunities; refusing to clear deal mappings"
+    );
+  }
 
   const vaults = await prisma.vault.findMany({
     select: {
@@ -264,10 +272,9 @@ async function syncDeposits() {
 }
 
 export async function syncDealsAndDeposits(): Promise<DealSyncSummary> {
-  if (!API_KEY || !DISTRIBUTOR_ID) {
-    throw new Error(
-      "NEXT_PUBLIC_TURTLE_API_KEY / NEXT_PUBLIC_TURTLE_DISTRIBUTOR_ID not set"
-    );
+  turtleApiKey(); // throws when TURTLE_API_KEY is missing
+  if (!DISTRIBUTOR_ID) {
+    throw new Error("NEXT_PUBLIC_TURTLE_DISTRIBUTOR_ID not set");
   }
   const mapping = await syncDealMapping();
   const deposits = await syncDeposits();

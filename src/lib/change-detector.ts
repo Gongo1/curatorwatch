@@ -9,6 +9,9 @@ import { prisma } from "./db";
 import type { Prisma } from "@prisma/client";
 import { ALERT_TYPES, THRESHOLDS, type AlertType, type Severity } from "./change-thresholds";
 
+/** Lifecycle alerts compare consecutive runs only (collection is every 6h). */
+const LIFECYCLE_MAX_GAP_MS = 48 * 60 * 60 * 1000;
+
 export interface AlertEvent {
   vaultId: string;
   changeType: AlertType;
@@ -338,6 +341,17 @@ async function detectVaultLifecycle(
   });
 
   if (!previousSnapshot) {
+    return alerts;
+  }
+
+  // A crossing measured across a collection gap (e.g. the first run after a
+  // source outage: V2 was frozen Aug 26 -> Sep 30 2026) happened at some
+  // unknown point in that gap. Reporting it now as a fresh launch/shutdown
+  // would be false news.
+  if (
+    currentSnapshot.timestamp.getTime() - previousSnapshot.timestamp.getTime() >
+    LIFECYCLE_MAX_GAP_MS
+  ) {
     return alerts;
   }
 

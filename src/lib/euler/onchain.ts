@@ -90,18 +90,26 @@ export interface SonicFetchResult {
   skippedNonStable: { symbol: string; assets: number }[];
   skippedInsolvency: number;
   skippedEmpty: number;
+  unreadable: number; // eth_call failed on every RPC
 }
 
 export async function fetchSonicEulerVaults(): Promise<SonicFetchResult> {
-  const [products, entities] = await Promise.all([
-    fetch("https://labels.euler.finance/master/146/products.json").then((r) => (r.ok ? r.json() : {})),
-    fetch("https://labels.euler.finance/master/146/entities.json").then((r) => (r.ok ? r.json() : {})),
-  ]);
+  // The labels are the vault list here — an unreadable file must fail the
+  // run, not read as "Sonic has no vaults".
+  const [products, entities] = await Promise.all(
+    ["products.json", "entities.json"].map(async (file) => {
+      const r = await fetch(`https://labels.euler.finance/master/146/${file}`);
+      if (!r.ok) throw new Error(`Euler labels error (146/${file}): ${r.status}`);
+      return r.json();
+    })
+  );
 
   const vaults: SonicEulerVault[] = [];
   const skippedNonStable: SonicFetchResult["skippedNonStable"] = [];
   let skippedInsolvency = 0;
   let skippedEmpty = 0;
+  let unreadable = 0;
+  let attempted = 0;
 
   for (const product of Object.values(products as Record<string, LabelProduct>)) {
     const slug = Array.isArray(product.entity) ? product.entity[0] : product.entity;
@@ -118,6 +126,7 @@ export async function fetchSonicEulerVaults(): Promise<SonicFetchResult> {
     if (insolvency) skippedInsolvency += (product.deprecatedVaults ?? []).length;
 
     for (const { address, listed } of candidates) {
+      attempted++;
       try {
         const [taHex, assetHex] = await Promise.all([
           ethCall(SONIC_RPCS, address, SEL_TOTAL_ASSETS),
@@ -155,10 +164,13 @@ export async function fetchSonicEulerVaults(): Promise<SonicFetchResult> {
           productName: product.name,
         });
       } catch {
-        skippedEmpty++; // unreadable vault — most deprecated shells are empty
+        unreadable++; // most deprecated shells are empty; an RPC outage fails them all
       }
     }
   }
 
-  return { vaults, skippedNonStable, skippedInsolvency, skippedEmpty };
+  if (attempted > 0 && unreadable === attempted) {
+    throw new Error(`Sonic on-chain: all ${attempted} vault reads failed (RPC outage?)`);
+  }
+  return { vaults, skippedNonStable, skippedInsolvency, skippedEmpty, unreadable };
 }
