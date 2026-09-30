@@ -19,9 +19,19 @@
  *  - $50k TVL floor. Strategist attribution required (matchCurator: existing
  *    rows first, else a clean `tc:<slug>` from the strategist name); vaults
  *    with no strategist are skipped + reported.
- *  - Cross-source guard: DB rows of other pipelines + the LIVE Turtle feed's
- *    receipt tokens (Turtle lists 7 Upshift opportunities — the incumbent
- *    keeps them).
+ *  - Cross-source guard (one active row per vault, never two):
+ *      · an active non-Turtle row (Morpho, Euler, fund) owns the vault → skip;
+ *      · an active Turtle row that the LIVE Turtle feed still lists owns it →
+ *        skip (Turtle keeps refreshing it);
+ *      · otherwise an existing Upshift row is refreshed, and a Turtle row for
+ *        the same vault that the live feed no longer lists is retired
+ *        (active=false) — it is a frozen duplicate;
+ *      · a vault only in the live Turtle feed (no row yet) is left to Turtle.
+ *    If the Turtle feed can't be read, every active Turtle row counts as live
+ *    (skip, never double count) and the run reports an error.
+ *  - Stale sweep: Upshift rows this run did not ingest (no longer listed,
+ *    below the floor, non-active, unattributed, owned by another pipeline)
+ *    are set active=false, so a vault never stays "live" on a frozen snapshot.
  */
 
 import { prisma } from "../lib/db";
@@ -48,6 +58,8 @@ export interface UpshiftCollectionResult {
   skippedNonEvmTvlUsd: number;
   skippedUnattributed: { name: string; tvl: number }[];
   crossSourceOverlaps: { name: string; tvl: number; address: string; source: string }[];
+  deactivatedStale: number; // Upshift rows this run retired (see stale sweep)
+  retiredTurtleDuplicates: number; // Turtle rows for Upshift vaults the live Turtle feed dropped
   errors: string[];
   duration: number;
 }
@@ -192,10 +204,10 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
     totalFetched = vaults.length;
     log(`Fetched ${vaults.length} vaults from the Upshift platform`);
 
-    // Identities owned by other pipelines (Morpho/Euler real addresses,
-    // Turtle/fund onchainAddress) plus the live Turtle feed's receipt tokens.
+    // Identities owned by other ACTIVE non-Turtle rows (Morpho/Euler real
+    // addresses, fund onchainAddress). A retired row owns nothing.
     const foreign = await prisma.vault.findMany({
-      where: { dataSource: { not: "upshift" } },
+      where: { dataSource: { notIn: ["upshift", "turtle"] }, active: true },
       select: { address: true, onchainAddress: true, chainId: true, dataSource: true },
     });
     const foreignKeys = new Map<string, string>();
@@ -203,18 +215,57 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       foreignKeys.set(`${v.address.toLowerCase()}:${v.chainId}`, v.dataSource);
       if (v.onchainAddress) foreignKeys.set(`${v.onchainAddress}:${v.chainId}`, v.dataSource);
     }
+    // Active Turtle rows by on-chain identity, and this pipeline's own rows.
+    const turtleRows = new Map<string, { id: string; turtleId: string | null }>();
+    for (const v of await prisma.vault.findMany({
+      where: { dataSource: "turtle", active: true, onchainAddress: { not: null } },
+      select: { id: true, turtleId: true, onchainAddress: true, chainId: true },
+    })) {
+      turtleRows.set(`${v.onchainAddress}:${v.chainId}`, { id: v.id, turtleId: v.turtleId });
+    }
+    const upshiftRows = await prisma.vault.findMany({
+      where: { dataSource: "upshift" },
+      select: { id: true, address: true, chainId: true, active: true },
+    });
+    const upshiftKeys = new Set(upshiftRows.map((v) => `${v.address.toLowerCase()}:${v.chainId}`));
+
+    // Receipt tokens (addr:chainId) and opportunity ids the LIVE Turtle feed
+    // lists. null = feed unreadable → every active Turtle row counts as live.
+    let liveTurtle: Set<string> | null = null;
     try {
-      for (const opp of await fetchTurtleOpportunities()) {
+      const opportunities = await fetchTurtleOpportunities();
+      liveTurtle = new Set<string>();
+      for (const opp of opportunities) {
+        liveTurtle.add(opp.id);
         const receipt = opp.receiptToken;
         if (!receipt?.address) continue;
         const chainId = resolveChainId(receipt.chain?.chainId, receipt.chain?.slug);
         if (chainId === null) continue;
-        const key = `${receipt.address.toLowerCase()}:${chainId}`;
-        if (!foreignKeys.has(key)) foreignKeys.set(key, "turtle (live feed)");
+        liveTurtle.add(`${receipt.address.toLowerCase()}:${chainId}`);
       }
     } catch (error) {
-      logError("Turtle feed unavailable for the cross-source guard (continuing with DB-only guard)", error);
+      const msg = `Turtle feed unavailable for the cross-source guard: ${error instanceof Error ? error.message : error}`;
+      logError(msg);
+      errors.push(msg);
     }
+
+    /** Who owns this vault? `null` = Upshift ingests it (see header). */
+    const retireTurtleIds = new Set<string>();
+    const ownerOf = (key: string): string | null => {
+      const other = foreignKeys.get(key);
+      if (other) return other;
+      const turtleRow = turtleRows.get(key);
+      const turtleLive =
+        turtleRow !== undefined &&
+        (liveTurtle === null ||
+          liveTurtle.has(key) ||
+          (turtleRow.turtleId !== null && liveTurtle.has(turtleRow.turtleId)));
+      if (turtleLive) return "turtle";
+      if (!upshiftKeys.has(key) && liveTurtle?.has(key)) return "turtle (live feed)";
+      if (turtleRow) retireTurtleIds.add(turtleRow.id); // frozen: the live feed dropped it
+      return null;
+    };
+    const kept = new Set<string>(); // addr:chainId of every vault this run ingests
 
     for (const vault of vaults) {
       const tvlUsd = vault.tvlUsd;
@@ -232,7 +283,7 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       }
 
       const addressLower = vault.address.toLowerCase();
-      const owner = foreignKeys.get(`${addressLower}:${vault.chainId}`);
+      const owner = ownerOf(`${addressLower}:${vault.chainId}`);
       if (owner) {
         crossSourceOverlaps.push({ name: vault.name, tvl: tvlUsd, address: addressLower, source: owner });
         continue;
@@ -246,6 +297,7 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
         continue;
       }
 
+      kept.add(`${addressLower}:${vault.chainId}`);
       const result = await upsertUpshiftVault(vault, curatorId);
       if (result.upserted) {
         vaultsUpserted++;
@@ -254,6 +306,26 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
         logError(`Failed to upsert ${vault.name}: ${result.error}`);
       }
     }
+
+    // ── Stale sweep + frozen-duplicate retirement ───────────────────────────
+    // Only reached after a successful, non-empty fetch (the client throws
+    // otherwise), so a source outage can never retire live rows.
+    const staleIds = upshiftRows
+      .filter((v) => v.active && !kept.has(`${v.address.toLowerCase()}:${v.chainId}`))
+      .map((v) => v.id);
+    const deactivatedStale =
+      staleIds.length > 0
+        ? (await prisma.vault.updateMany({ where: { id: { in: staleIds } }, data: { active: false } })).count
+        : 0;
+    const retiredTurtleDuplicates =
+      retireTurtleIds.size > 0
+        ? (
+            await prisma.vault.updateMany({
+              where: { id: { in: [...retireTurtleIds] } },
+              data: { active: false },
+            })
+          ).count
+        : 0;
 
     await updateUpshiftCuratorStats();
 
@@ -269,6 +341,7 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
     for (const o of crossSourceOverlaps.slice(0, 10)) {
       log(`    ${o.name} ($${(o.tvl / 1e6).toFixed(1)}M) — owned by ${o.source}`);
     }
+    log(`  Retired: ${deactivatedStale} stale Upshift rows, ${retiredTurtleDuplicates} frozen Turtle duplicates`);
     log(`  Errors: ${errors.length}`);
     log(`  Duration: ${(duration / 1000).toFixed(1)}s`);
     log("=".repeat(60));
@@ -284,6 +357,8 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       skippedNonEvmTvlUsd,
       skippedUnattributed,
       crossSourceOverlaps,
+      deactivatedStale,
+      retiredTurtleDuplicates,
       errors,
       duration,
     };
@@ -302,6 +377,8 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
       skippedNonEvmTvlUsd,
       skippedUnattributed,
       crossSourceOverlaps,
+      deactivatedStale: 0,
+      retiredTurtleDuplicates: 0,
       errors,
       duration: Date.now() - startTime,
     };
