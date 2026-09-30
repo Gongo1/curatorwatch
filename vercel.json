@@ -1,12 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/cron/collect",
+      "path": "/api/cron/collect?lane=core-v2",
       "schedule": "0 */6 * * *"
     },
     {
-      "path": "/api/cron/collect?full=true",
+      "path": "/api/cron/collect?lane=core-v2&full=true",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/collect?lane=core-v1",
+      "schedule": "30 */6 * * *"
     },
     {
       "path": "/api/cron/collect-turtle",

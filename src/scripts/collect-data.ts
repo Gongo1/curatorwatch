@@ -86,6 +86,8 @@ export interface CollectionResult {
   duration: number;
 }
 
+export type MorphoGeneration = "v1" | "v2";
+
 // A chain/generation that returns zero vaults while the DB still tracks more
 // than this many active vaults for it is treated as a broken source, not an
 // empty market.
@@ -103,6 +105,9 @@ export interface CollectionOptions {
   // the vault count and must finish within the function budget, so the other
   // chains run in their own invocation). Default: all MORPHO_CHAINS.
   chainIds?: number[];
+  // Restrict the run to these vault generations (cron lanes: Ethereum V1 and
+  // V2 each run in their own invocation). Default: both.
+  generations?: MorphoGeneration[];
 }
 
 function log(message: string) {
@@ -1056,7 +1061,9 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       const chainName = canonicalChainName(chain.chainId);
       const chainMinTvl = effectiveMinTvl(chain, options);
 
+      const generations = options.generations ?? ["v2", "v1"];
       for (const isV1 of [false, true]) {
+        if (!generations.includes(isV1 ? "v1" : "v2")) continue;
         const ctx: ChainContext = { chainId: chain.chainId, chainName, isV1, curatorRegistry };
         const label = `${chainName} ${isV1 ? "V1" : "V2"}`;
 
