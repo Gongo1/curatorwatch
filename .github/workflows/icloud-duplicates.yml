@@ -1,0 +1,28 @@
+name: iCloud duplicate guard
+
+# macOS iCloud Drive creates conflict copies named "<name> 2.ts", "<name> 3.tsx"
+# etc. PR #65 removed 23 of them. This fails any PR (or push to main) that
+# tracks a file whose name matches that pattern, so they can't creep back in.
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail on iCloud duplicate files
+        run: |
+          DUPES=$(git ls-files | grep -E ' [0-9]+\.' || true)
+          if [ -n "$DUPES" ]; then
+            echo "::error::iCloud duplicate files are tracked (name ends in ' <number>.<ext>'):"
+            echo "$DUPES"
+            exit 1
+          fi
+          echo "No iCloud duplicates."

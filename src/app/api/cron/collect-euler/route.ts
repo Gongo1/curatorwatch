@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectEulerData } from "@/scripts/collect-euler-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
+  return withCronRun("collect-euler", async () => {
     console.log("[CRON] Starting Euler data collection...");
 
     const result = await collectEulerData();
@@ -42,35 +43,30 @@ export async function GET(request: NextRequest) {
 
     // Fail loud: a partial run still writes what it could, but any source
     // failure turns the cron red (HTTP 500) instead of a quiet 200.
-    return NextResponse.json({
-      success: result.success,
-      message: result.success
-        ? "Euler data collected successfully"
-        : `Euler collection finished with ${result.errors.length} error(s)`,
-      result: {
-        totalFetched: result.totalFetched,
-        vaultsUpserted: result.vaultsUpserted,
-        snapshotsCreated: result.snapshotsCreated,
-        nameAttributed: result.nameAttributed,
-        skippedUnlabeled: result.skippedUnlabeled,
-        skippedUnlabeledTvlUsd: result.skippedUnlabeledTvlUsd,
-        skippedDeprecated: result.skippedDeprecated,
-        crossSourceOverlaps: result.crossSourceOverlaps,
-        deactivatedStale: result.deactivatedStale,
-        retiredTurtleDuplicates: result.retiredTurtleDuplicates,
-        errors: result.errors,
-        duration: result.duration,
+    return {
+      rowsWritten: result.snapshotsCreated,
+      ...(result.success
+        ? {}
+        : { stepErrors: { collect: `${result.errors.length} error(s): ${result.errors[0] ?? "unknown"}` } }),
+      body: {
+        message: result.success
+          ? "Euler data collected successfully"
+          : `Euler collection finished with ${result.errors.length} error(s)`,
+        result: {
+          totalFetched: result.totalFetched,
+          vaultsUpserted: result.vaultsUpserted,
+          snapshotsCreated: result.snapshotsCreated,
+          nameAttributed: result.nameAttributed,
+          skippedUnlabeled: result.skippedUnlabeled,
+          skippedUnlabeledTvlUsd: result.skippedUnlabeledTvlUsd,
+          skippedDeprecated: result.skippedDeprecated,
+          crossSourceOverlaps: result.crossSourceOverlaps,
+          deactivatedStale: result.deactivatedStale,
+          retiredTurtleDuplicates: result.retiredTurtleDuplicates,
+          errors: result.errors,
+          duration: result.duration,
+        },
       },
-    }, { status: result.success ? 200 : 500 });
-  } catch (error) {
-    console.error("[CRON] Euler collection failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Euler collection failed",
-      },
-      { status: 500 }
-    );
-  }
+    };
+  });
 }

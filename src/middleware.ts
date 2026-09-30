@@ -23,6 +23,7 @@ const isPublic = createRouteMatcher([
   "/api/account(.*)",
   "/api/cron(.*)", // secret-protected, sessionless — must never be walled
   "/api/health",
+  "/api/data-as-of", // per-source "as of" stamp shown on the public home page
 ]);
 
 export default gateEnabled

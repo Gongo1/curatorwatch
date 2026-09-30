@@ -8,6 +8,7 @@ import { ratingsData } from "@/lib/risk-engine-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
 import { detectDisclosureCandidates } from "@/lib/news/disclosure-listener";
 import { storePlatformAlerts } from "@/lib/curator-alert-detector";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 900; // Pro plan maximum
 export const dynamic = "force-dynamic";
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
   const laneGenerations: MorphoGeneration[] =
     lane === "core-v1" ? ["v1"] : lane === "core-v2" ? ["v2"] : ["v2", "v1"];
 
-  try {
+  return withCronRun("collect", async () => {
     console.log(`[CRON] Starting ${fullCollection ? "full" : "light"} data collection (lane: ${lane})...`);
 
     const result = await collectData({
@@ -86,13 +87,20 @@ export async function GET(request: NextRequest) {
     // on 2026-07-07/08 it repeatedly timed out mid-post-steps, which is how the
     // ratings import and returns metrics silently stalled. The alt lane's
     // collection is small (~150 vaults), leaving real headroom for these.
+    // Each step still runs if an earlier one failed, but a failure is recorded
+    // as a step error (run status "partial" → HTTP 500), never swallowed.
+    const stepErrors: Record<string, string> = {};
+    const stepError = (step: string, error: unknown) => {
+      stepErrors[step] = error instanceof Error ? error.message : String(error);
+      console.error(`[CRON] ${step} failed:`, error);
+    };
     if (lane === "alt") {
       // Update vault risk scores and grades
       try {
         const gradeResult = await updateVaultGrades();
         console.log("[CRON] Vault grades updated:", gradeResult);
       } catch (gradeError) {
-        console.error("[CRON] Vault grade update failed (non-fatal):", gradeError);
+        stepError("vaultGrades", gradeError);
       }
 
       // Returns analytics from share-price history — one set-based SQL statement
@@ -100,7 +108,7 @@ export async function GET(request: NextRequest) {
         const returnsResult = await updateReturnsMetrics();
         console.log("[CRON] Returns metrics updated:", returnsResult);
       } catch (returnsError) {
-        console.error("[CRON] Returns metrics update failed (non-fatal):", returnsError);
+        stepError("returnsMetrics", returnsError);
       }
 
       // Refresh the loss-anchored EL ratings from the bundled engine output
@@ -109,7 +117,7 @@ export async function GET(request: NextRequest) {
         const r = await importRatingsData(ratingsData);
         console.log("[CRON] EL ratings imported:", { curators: r.curators, vaults: r.vaults, matched: r.matched });
       } catch (ratingError) {
-        console.error("[CRON] EL rating import failed (non-fatal):", ratingError);
+        stepError("ratingsImport", ratingError);
       }
 
       // Newswire ingest moved to its own cron (/api/cron/fetch-news, vercel.json):
@@ -128,7 +136,7 @@ export async function GET(request: NextRequest) {
           stillMissing: logos.stillMissing.length,
         });
       } catch (logoError) {
-        console.error("[CRON] Logo backfill failed (non-fatal):", logoError);
+        stepError("logoBackfill", logoError);
       }
 
       // Disclosure listener: surface possible off-chain legal/regulatory events
@@ -139,7 +147,7 @@ export async function GET(request: NextRequest) {
         const stored = await storePlatformAlerts(candidates);
         console.log("[CRON] Disclosure candidates:", { found: candidates.length, stored });
       } catch (disclosureError) {
-        console.error("[CRON] Disclosure scan failed (non-fatal):", disclosureError);
+        stepError("disclosureScan", disclosureError);
       }
     }
 
@@ -164,32 +172,13 @@ export async function GET(request: NextRequest) {
     // V2 sat frozen for 5 weeks behind HTTP 200s. Whatever did collect is
     // already written (and pages revalidated) above.
     if (result.sourceErrors.length > 0) {
-      console.error("[CRON] Collection source failures:", result.sourceErrors);
-      return NextResponse.json(
-        {
-          success: false,
-          error: `Collection failed for ${result.sourceErrors.length} source(s): ${result.sourceErrors.join("; ")}`,
-          sourceErrors: result.sourceErrors,
-          result: summary,
-        },
-        { status: 500 }
-      );
+      stepErrors.sources = `Collection failed for ${result.sourceErrors.length} source(s): ${result.sourceErrors.join("; ")}`;
     }
 
-    return NextResponse.json({
-      success: true,
-      message: "Data collected successfully",
-      result: summary,
-    });
-  } catch (error) {
-    console.error("[CRON] Collection failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Collection failed",
-      },
-      { status: 500 }
-    );
-  }
+    return {
+      rowsWritten: result.snapshotsCreated,
+      stepErrors,
+      body: { result: summary, sourceErrors: result.sourceErrors },
+    };
+  }, { lane });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectMarketAllocations } from "@/scripts/collect-market-allocations";
 import { collectLiquidations } from "@/scripts/collect-liquidations";
+import { withCronRun } from "@/lib/cron-run";
 
 // Market allocations (~460 Morpho vaults × 1 API call each) and liquidations
 // don't fit in the collect cron's budget at connection_limit=1 — they get the
@@ -27,50 +28,38 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const summary: Record<string, unknown> = {};
-
-  try {
+  return withCronRun("collect-market-data", async () => {
     console.log("[CRON] Starting market-data collection (allocations + liquidations)...");
+    const summary: Record<string, unknown> = {};
+    const stepErrors: Record<string, string> = {};
+    let rowsWritten = 0;
 
+    // Each step runs even if the other failed, but any failure fails the run
+    // loudly (non-200) so a dead source can't hide behind success:true.
     try {
       const ma = await collectMarketAllocations();
       summary.marketAllocations = ma;
+      rowsWritten += ma.allocationsStored;
       console.log("[CRON] Market allocations:", ma);
+      // Per-vault failures are caught inside; storing nothing means the source is down.
+      if (ma.allocationsStored === 0) {
+        stepErrors.marketAllocations = `0 allocations stored (${ma.errors} vault errors)`;
+      }
     } catch (error) {
-      summary.marketAllocationsError = error instanceof Error ? error.message : String(error);
+      stepErrors.marketAllocations = error instanceof Error ? error.message : String(error);
       console.error("[CRON] Market allocations failed:", error);
     }
 
     try {
       const liq = await collectLiquidations();
       summary.liquidations = liq;
+      rowsWritten += liq.stored;
       console.log("[CRON] Liquidations:", liq);
     } catch (error) {
-      summary.liquidationsError = error instanceof Error ? error.message : String(error);
+      stepErrors.liquidations = error instanceof Error ? error.message : String(error);
       console.error("[CRON] Liquidations failed:", error);
     }
 
-    // Each step runs even if the other failed, but any failure fails the run
-    // loudly (non-200) so a dead source can't hide behind success:true.
-    if (summary.marketAllocationsError || summary.liquidationsError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: [summary.marketAllocationsError, summary.liquidationsError]
-            .filter(Boolean)
-            .join("; "),
-          summary,
-        },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ success: true, summary });
-  } catch (error) {
-    console.error("[CRON] Market-data collection failed:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "failed", summary },
-      { status: 500 }
-    );
-  }
+    return { rowsWritten, stepErrors, body: { summary } };
+  });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectHyperliquidData } from "@/scripts/collect-hyperliquid-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
+  return withCronRun("collect-hyperliquid", async () => {
     console.log("[CRON] Starting Hyperliquid HLP collection...");
 
     const result = await collectHyperliquidData();
@@ -36,20 +37,12 @@ export async function GET(request: NextRequest) {
 
     revalidateDataPages();
 
-    return NextResponse.json({
-      success: result.success,
-      message: "Hyperliquid HLP collected",
-      result,
-    });
-  } catch (error) {
-    console.error("[CRON] Hyperliquid collection failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Hyperliquid collection failed",
-      },
-      { status: 500 }
-    );
-  }
+    return {
+      rowsWritten: result.vaultsUpserted,
+      ...(result.success
+        ? {}
+        : { error: result.errors[0] ?? "Hyperliquid collection failed" }),
+      body: { message: "Hyperliquid HLP collected", result },
+    };
+  });
 }

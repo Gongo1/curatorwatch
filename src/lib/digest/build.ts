@@ -6,6 +6,12 @@
  * day-over-day for flows, Vault.createdAt for new vaults, VaultSnapshot for yield
  * moves, Liquidation for incidents, and the precomputed alert stream for severity
  * counts. All queries are serial (transaction pooler, connection_limit=1).
+ *
+ * Freshness guard: every edition carries per-source "as of" times; vault
+ * sources past their SLA are left out of the tables (and named), a stale
+ * liquidation feed omits INCIDENTS instead of printing "no liquidations". The
+ * digest cron refuses to publish at all on digestBlockers() (Morpho or Turtle
+ * past SLA, or any failed quality assertion).
  */
 
 import { prisma } from "@/lib/db";
@@ -17,6 +23,12 @@ import { curatorSlug } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 import { CURATOR_DOSSIERS, getCuratorDossier } from "@/lib/curator-dossier";
 import { composeBlurbSentences } from "@/lib/curator-blurb-text";
+import {
+  getSourceFreshness,
+  vaultSourceKey,
+  type HealthBreach,
+  type SourceFreshness,
+} from "@/lib/health/freshness";
 import type {
   DigestData,
   DigestFlowItem,
@@ -27,9 +39,43 @@ import type {
 
 const HOUR = 60 * 60 * 1000;
 
-export async function buildDigest(now: Date): Promise<DigestData> {
+/** Sources the edition cannot go out without (they carry most of the tracked TVL). */
+const DIGEST_REQUIRED_SOURCES = ["morpho-v1", "morpho-v2", "turtle"];
+
+/**
+ * Breaches that block publication: a required source past its SLA, under its
+ * coverage floor or reporting far fewer vaults day over day, or any failed
+ * cross-source data-quality assertion. A non-required source's count drop
+ * (e.g. one failed daily funds run: 5 -> 0) is treated like its staleness:
+ * alerted by the health cron (and left out of the tables once past its
+ * SLA), not a blocker.
+ */
+export function digestBlockers(breaches: HealthBreach[]): HealthBreach[] {
+  const required = (key: string, prefix: string) =>
+    DIGEST_REQUIRED_SOURCES.some((k) => key === `${prefix}:${k}`);
+  return breaches.filter((b) => {
+    if (b.kind === "quality") {
+      return !b.key.startsWith("quality:source-count:") || required(b.key, "quality:source-count");
+    }
+    return (b.kind === "freshness" || b.kind === "coverage") && required(b.key, b.kind);
+  });
+}
+
+export async function buildDigest(
+  now: Date,
+  freshness?: SourceFreshness[]
+): Promise<DigestData> {
   const since = new Date(now.getTime() - 24 * HOUR);
   const flowWindowStart = new Date(now.getTime() - 26 * HOUR); // ~24h with cadence tolerance
+
+  // 0. Source freshness → as-of labels + stale vault sources to leave out.
+  const sources = freshness ?? (await getSourceFreshness(now));
+  const staleVaultSources = new Set(
+    sources.filter((s) => s.kind === "vaults" && s.stale && (s.activeVaults ?? 0) > 0).map((s) => s.key)
+  );
+  const isExcluded = (v: { dataSource: string; riskSnapshots: unknown[] }) =>
+    staleVaultSources.has(vaultSourceKey(v.dataSource, v.riskSnapshots.length > 0));
+  const liquidationsStale = sources.find((s) => s.key === "liquidations")?.stale ?? false;
 
   // 1. Curator aggregates → ecosystem totals, concentration, stress base.
   const agg = await getPaginatedCuratorAggregates({
@@ -108,6 +154,8 @@ export async function buildDigest(now: Date): Promise<DigestData> {
       name: true,
       assetSymbol: true,
       chainName: true,
+      dataSource: true,
+      riskSnapshots: { take: 1, select: { id: true } }, // Morpho V2 marker
       curator: { select: { name: true, address: true } },
       snapshots: { orderBy: { timestamp: "desc" }, take: 1, select: { totalAssetsUsd: true } },
     },
@@ -115,6 +163,7 @@ export async function buildDigest(now: Date): Promise<DigestData> {
     take: 30,
   });
   const newVaults = newRows
+    .filter((v) => !isExcluded(v))
     .map((v) => ({
       name: v.name,
       curator: v.curator?.name ?? null,
@@ -149,18 +198,25 @@ export async function buildDigest(now: Date): Promise<DigestData> {
     .map(([vaultId, e]) => ({ vaultId, deltaPct: (e.last - e.first) * 100, tvl: e.tvl, oldApyPct: e.first * 100, newApyPct: e.last * 100 }))
     .filter((m) => Math.abs(m.deltaPct) >= 0.75 && m.tvl >= 1_000_000)
     .sort((a, b) => Math.abs(b.deltaPct) - Math.abs(a.deltaPct))
-    .slice(0, 6);
+    .slice(0, 20); // headroom: stale-source vaults are dropped below, 6 kept
   let yieldMovers: DigestYieldMover[] = [];
   if (moverCandidates.length) {
     const moverVaults = await prisma.vault.findMany({
       where: { id: { in: moverCandidates.map((m) => m.vaultId) } },
-      select: { id: true, name: true, assetSymbol: true, curator: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        assetSymbol: true,
+        dataSource: true,
+        riskSnapshots: { take: 1, select: { id: true } },
+        curator: { select: { name: true } },
+      },
     });
     const vById = new Map(moverVaults.map((v) => [v.id, v]));
     yieldMovers = moverCandidates
       .map((m) => {
         const v = vById.get(m.vaultId);
-        if (!v) return null;
+        if (!v || isExcluded(v)) return null;
         return {
           vaultName: v.name,
           curator: v.curator?.name ?? null,
@@ -170,14 +226,18 @@ export async function buildDigest(now: Date): Promise<DigestData> {
           deltaPct: m.deltaPct,
         };
       })
-      .filter((m): m is DigestYieldMover => m !== null);
+      .filter((m): m is DigestYieldMover => m !== null)
+      .slice(0, 6);
   }
 
   // 5. Incidents — liquidations in the last 24h, attributed to curators via market.
-  const liqs = await prisma.liquidation.findMany({
-    where: { timestamp: { gte: since } },
-    select: { marketUniqueKey: true, seizedAssetsUsd: true, badDebtAssetsUsd: true },
-  });
+  // A stale liquidation feed is omitted (flagged), never reported as "no liquidations".
+  const liqs = liquidationsStale
+    ? []
+    : await prisma.liquidation.findMany({
+        where: { timestamp: { gte: since } },
+        select: { marketUniqueKey: true, seizedAssetsUsd: true, badDebtAssetsUsd: true },
+      });
   const seizedUsd = liqs.reduce((s, l) => s + (l.seizedAssetsUsd ?? 0), 0);
   const badDebtUsd = liqs.reduce((s, l) => s + (l.badDebtAssetsUsd ?? 0), 0);
   const topCurators: { curator: string; seizedUsd: number }[] = [];
@@ -339,9 +399,17 @@ export async function buildDigest(now: Date): Promise<DigestData> {
     topOutflows,
     newVaults,
     yieldMovers,
-    incidents: { count: liqs.length, badDebtUsd, seizedUsd, topCurators },
+    incidents: {
+      count: liqs.length,
+      badDebtUsd,
+      seizedUsd,
+      topCurators,
+      ...(liquidationsStale ? { stale: true } : {}),
+    },
     alertCounts,
     news,
     spotlight,
+    asOf: sources.map((s) => ({ key: s.key, label: s.label, lastAt: s.lastAt, stale: s.stale })),
+    excludedSources: sources.filter((s) => staleVaultSources.has(s.key)).map((s) => s.label),
   };
 }
