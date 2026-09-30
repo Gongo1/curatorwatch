@@ -1,5 +1,7 @@
 // API Response types for the frontend
 
+import type { VaultCountingStatus } from "@/lib/data-quality/counting";
+
 export interface VaultWarning {
   type: string;
   level: string;
@@ -149,6 +151,8 @@ export interface VaultCurator {
 
 // Full vault detail response
 export interface VaultDetail extends VaultData {
+  /** Whether this vault counts toward totals (and why not). */
+  counting?: VaultCountingStatus;
   snapshotHistory: SnapshotHistoryEntry[];
   adapters: VaultAdapterDetail[];
   idleAssets: string;
@@ -232,6 +236,8 @@ export interface CuratorVaultSummary {
   dealOpportunityId: string | null;
   dealDepositable: boolean;
   dealEstApr: number | null;
+  /** Whether this vault counts toward totals (and why not). */
+  counting?: VaultCountingStatus;
 }
 
 export interface CuratorAumPoint {

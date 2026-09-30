@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { cacheGet, cacheSet } from "@/lib/cache";
+import { countedVaultWhere } from "@/lib/data-quality/counting";
 
 export async function GET() {
   try {
@@ -14,7 +15,7 @@ export async function GET() {
     }
 
     const vaults = await prisma.vault.findMany({
-      where: { active: true, ...EXCLUDED_CURATOR_VAULT_FILTER },
+      where: { ...countedVaultWhere(), ...EXCLUDED_CURATOR_VAULT_FILTER },
       select: {
         dataSource: true,
         curatorId: true,

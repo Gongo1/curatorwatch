@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { getPaginatedCuratorAggregates } from "@/lib/curator-aggregates";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
+import { countedVaultWhere } from "@/lib/data-quality/counting";
 
 const MORPHO_PROTOCOL_FEE_RATE = 0.15;
 
@@ -122,8 +123,9 @@ export async function fetchAllDashboardData(params: {
   };
 
   // ── 3. Vaults with latest snapshots (shared query for fees + coverage) ──
+  // Counted vaults only (data-quality/counting) so every total reconciles.
   const vaultsData = await prisma.vault.findMany({
-    where: { active: true, ...EXCLUDED_CURATOR_VAULT_FILTER },
+    where: { ...countedVaultWhere(), ...EXCLUDED_CURATOR_VAULT_FILTER },
     select: {
       dataSource: true,
       curatorId: true,
@@ -279,7 +281,8 @@ export async function fetchAllDashboardData(params: {
   const oldSnapshots = await prisma.vaultSnapshot.findMany({
     where: {
       timestamp: { gte: windowStart, lte: windowEnd },
-      vault: { ...EXCLUDED_CURATOR_VAULT_FILTER },
+      // Same vault set as the current total, so the 30d change is like-for-like.
+      vault: { ...countedVaultWhere(), ...EXCLUDED_CURATOR_VAULT_FILTER },
     },
     select: { vaultId: true, totalAssetsUsd: true },
     orderBy: { timestamp: "desc" },

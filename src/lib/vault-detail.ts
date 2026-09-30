@@ -2,6 +2,7 @@ import { cache } from "react";
 import { prisma } from "@/lib/db";
 import { sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
 import { prettyChainName } from "@/lib/turtle/chain-mapper";
+import { vaultCountingStatus } from "@/lib/data-quality/counting";
 import type { VaultDetail } from "@/lib/types/api";
 
 /**
@@ -249,6 +250,7 @@ export const fetchVaultDetail = cache(async function fetchVaultDetail(
     warnings: (vault.warnings as Array<{ type: string; level: string }>) ?? [],
     listed: vault.listed ?? true,
     creationTimestamp: vault.creationTimestamp ?? null,
+    counting: vaultCountingStatus(vault),
     yield: {
       dailyYield,
       weeklyYield,

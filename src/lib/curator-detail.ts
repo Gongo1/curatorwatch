@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { resolveCuratorSlug } from "@/lib/curator-aliases";
 import { sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
 import { prettyChainName } from "@/lib/turtle/chain-mapper";
+import { vaultCountingStatus } from "@/lib/data-quality/counting";
 import type {
   CuratorProfile,
   CuratorNewsItem,
@@ -212,6 +213,7 @@ export const fetchCuratorDetail = cache(async function fetchCuratorDetail(
       dealOpportunityId: vault.dealOpportunityId ?? null,
       dealDepositable: vault.dealDepositable ?? false,
       dealEstApr: sanitizeApyPct(vault.dealEstApr),
+      counting: vaultCountingStatus(vault),
       latestSnapshot: snapshot
         ? {
             totalAssets: snapshot.totalAssets,
