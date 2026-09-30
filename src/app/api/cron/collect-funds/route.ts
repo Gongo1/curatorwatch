@@ -38,11 +38,18 @@ export async function GET(request: NextRequest) {
 
     revalidateDataPages();
 
-    return NextResponse.json({
-      success: true,
-      message: "Tokenized funds collected successfully",
-      result,
-    });
+    // Fail loud: the collector catches source/upsert/totals-hygiene errors and
+    // returns success:false; that must not be a 200.
+    return NextResponse.json(
+      {
+        success: result.success,
+        message: result.success
+          ? "Tokenized funds collected successfully"
+          : "Tokenized funds collection failed",
+        result,
+      },
+      { status: result.success ? 200 : 500 }
+    );
   } catch (error) {
     console.error("[CRON] Funds collection failed:", error);
 
