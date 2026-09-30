@@ -4,11 +4,22 @@ import {
   GET_LIQUIDATION_TRANSACTIONS,
   type LiquidationTransactionsResponse,
   type LiquidationTransaction,
+  type LiquidationAsset,
 } from "../lib/graphql/queries";
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 500;
 const API_DELAY_MS = 200;
-const MAX_PAGES = 50; // Safety limit
+// The Morpho API rejects skip > 10,000, so MAX_PAGES * BATCH_SIZE must stay
+// within 10,500 (last page requested at skip 9,500).
+const MAX_PAGES = 20;
+// Stop paging after this long; the rest is picked up by the next run. Keeps the
+// step well inside the collect-market-data 900s cap alongside allocations.
+const TIME_BUDGET_MS = 180_000;
+// Re-read this much history below the newest stored row so late-indexed events
+// are not missed (duplicates are skipped by the unique key).
+const LOOKBACK_SEC = 60 * 60;
+// Floor used only when the table is empty.
+const EMPTY_TABLE_START_DAYS = 30;
 
 function log(message: string) {
   const timestamp = new Date().toISOString();
@@ -25,123 +36,137 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Collect liquidation transactions from Morpho API.
- * Paginates most-recent-first, stops when reaching already-stored records.
+ * Collect liquidation transactions from the Morpho API.
+ *
+ * Pages OLDEST-first from the newest stored liquidation (minus a lookback), so
+ * the stored history never has holes: if a run hits its page/time budget, the
+ * next run resumes from where this one stopped. This is how a backlog (e.g. the
+ * 2026-07-29 → 2026-09-30 outage) catches up over one or more runs. Inserts are
+ * idempotent via createMany skipDuplicates on (txHash, marketUniqueKey, borrower).
+ *
+ * Fetch and write errors propagate — callers must treat a throw as a failed run.
  */
 export async function collectLiquidations(): Promise<{
   fetched: number;
   stored: number;
-  errors: number;
+  unpriced: number;
+  skipped: number;
+  fromTimestamp: string;
+  backlog: number;
 }> {
+  const startedAt = Date.now();
   let fetched = 0;
   let stored = 0;
-  let errors = 0;
+  let unpriced = 0;
+  let skipped = 0;
   let skip = 0;
-  let shouldContinue = true;
+  let countTotal = 0;
 
-  log("Starting liquidation collection...");
+  const newest = await prisma.liquidation.aggregate({ _max: { timestamp: true } });
+  const newestSec = newest._max.timestamp
+    ? Math.floor(newest._max.timestamp.getTime() / 1000)
+    : null;
+  const timestampGte =
+    newestSec !== null
+      ? newestSec - LOOKBACK_SEC
+      : Math.floor(startedAt / 1000) - EMPTY_TABLE_START_DAYS * 86400;
+  const fromTimestamp = new Date(timestampGte * 1000).toISOString();
 
-  for (let page = 0; page < MAX_PAGES && shouldContinue; page++) {
-    try {
-      const response = await morphoClient.request<LiquidationTransactionsResponse>(
-        GET_LIQUIDATION_TRANSACTIONS,
-        { first: BATCH_SIZE, skip }
-      );
+  log(`Starting liquidation collection from ${fromTimestamp}...`);
 
-      const items = response.transactions.items;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const response = await morphoClient.request<LiquidationTransactionsResponse>(
+      GET_LIQUIDATION_TRANSACTIONS,
+      { first: BATCH_SIZE, skip, timestampGte }
+    );
 
-      if (items.length === 0) {
-        log("No more liquidation transactions found.");
-        break;
+    const { items, pageInfo } = response.marketTransactions;
+    countTotal = pageInfo.countTotal;
+
+    if (items.length === 0) break;
+    fetched += items.length;
+
+    const rows = [];
+    for (const tx of items) {
+      const row = toLiquidationRow(tx);
+      if (!row) {
+        skipped++;
+        continue;
       }
-
-      fetched += items.length;
-      let newInBatch = 0;
-
-      for (const tx of items) {
-        try {
-          const result = await upsertLiquidation(tx);
-          if (result === "created") {
-            stored++;
-            newInBatch++;
-          }
-        } catch (err) {
-          errors++;
-          if (errors <= 3) {
-            logError(`Failed to upsert liquidation ${tx.hash}`, err);
-          }
-        }
-      }
-
-      log(`  Page ${page + 1}: ${items.length} fetched, ${newInBatch} new`);
-
-      // If no new records in this batch, we've caught up
-      if (newInBatch === 0) {
-        log("Reached already-stored records, stopping.");
-        shouldContinue = false;
-      } else {
-        skip += BATCH_SIZE;
-        await sleep(API_DELAY_MS);
-      }
-    } catch (err) {
-      logError(`Failed to fetch liquidations page ${page + 1}`, err);
-      errors++;
-      shouldContinue = false;
+      if (row.unpriced) unpriced++;
+      rows.push(row.data);
     }
+
+    if (rows.length === 0) {
+      // A full page we cannot map means the API shape changed — fail loud.
+      throw new Error(
+        `Liquidations page ${page + 1}: none of ${items.length} items could be mapped`
+      );
+    }
+
+    const result = await prisma.liquidation.createMany({ data: rows, skipDuplicates: true });
+    stored += result.count;
+
+    log(`  Page ${page + 1}: ${items.length} fetched, ${result.count} new`);
+
+    skip += BATCH_SIZE;
+    if (skip >= countTotal) break;
+    if (Date.now() - startedAt > TIME_BUDGET_MS) {
+      log("Time budget reached; remaining backlog continues next run.");
+      break;
+    }
+    await sleep(API_DELAY_MS);
   }
 
-  log(`Liquidation collection complete: ${fetched} fetched, ${stored} stored, ${errors} errors`);
-  return { fetched, stored, errors };
+  const backlog = Math.max(0, countTotal - skip);
+  log(
+    `Liquidation collection complete: ${fetched} fetched, ${stored} stored, ` +
+      `${unpriced} unpriced, ${skipped} skipped, ${backlog} left for next run`
+  );
+  return { fetched, stored, unpriced, skipped, fromTimestamp, backlog };
 }
 
-async function upsertLiquidation(tx: LiquidationTransaction): Promise<"created" | "existing"> {
+/** Raw token amount → USD. Null when the asset has no price. */
+function toUsd(raw: number | string, asset: LiquidationAsset | null): number | null {
+  if (!asset) return null;
+  const usd = asset.price?.usd;
+  if (usd == null || !Number.isFinite(usd)) return null;
+  const value = (Number(raw) / 10 ** asset.decimals) * usd;
+  return Number.isFinite(value) ? value : null;
+}
+
+function toLiquidationRow(tx: LiquidationTransaction) {
+  const market = tx.market;
   const data = tx.data;
-  if (!data?.market?.marketId) return "existing";
+  if (!market?.marketId || !data?.liquidator || !tx.user?.address) return null;
 
-  const timestamp = new Date(Number(tx.timestamp) * 1000);
-  const txHash = tx.hash;
-  const marketUniqueKey = data.market.marketId;
-  const borrower = tx.user.address;
+  const repaidAssetsUsd = toUsd(data.repaidAssets, market.loanAsset);
+  const badDebtAssetsUsd = toUsd(data.badDebtAssets, market.loanAsset);
+  const seizedAssetsUsd = toUsd(data.seizedAssets, market.collateralAsset);
 
-  const existing = await prisma.liquidation.findUnique({
-    where: {
-      txHash_marketUniqueKey_borrower: {
-        txHash,
-        marketUniqueKey,
-        borrower,
-      },
-    },
-    select: { id: true },
-  });
-
-  if (existing) return "existing";
-
-  await prisma.liquidation.create({
+  return {
+    // Unpriced legs are stored as 0 (columns are non-null), matching the old
+    // `?? 0` behaviour; the count is surfaced in the run summary.
+    unpriced: repaidAssetsUsd === null || seizedAssetsUsd === null,
     data: {
-      txHash,
-      timestamp,
-      marketUniqueKey,
-      borrower,
+      txHash: tx.txHash,
+      timestamp: new Date(Number(tx.timestamp) * 1000),
+      marketUniqueKey: market.marketId,
+      borrower: tx.user.address,
       liquidator: data.liquidator,
-      repaidAssetsUsd: data.repaidAssetsUsd ?? 0,
-      seizedAssetsUsd: data.seizedAssetsUsd ?? 0,
-      badDebtAssetsUsd: data.badDebtAssetsUsd ?? 0,
+      repaidAssetsUsd: repaidAssetsUsd ?? 0,
+      seizedAssetsUsd: seizedAssetsUsd ?? 0,
+      badDebtAssetsUsd: badDebtAssetsUsd ?? 0,
     },
-  });
-
-  return "created";
+  };
 }
 
 // CLI entry point
 async function main() {
   try {
-    const result = await collectLiquidations();
+    await collectLiquidations();
     const totalInDb = await prisma.liquidation.count();
     log(`Database total: ${totalInDb} liquidation records`);
-
-    if (result.errors > 0) {
-      process.exit(1);
-    }
     process.exit(0);
   } catch (error) {
     logError("Fatal error", error);

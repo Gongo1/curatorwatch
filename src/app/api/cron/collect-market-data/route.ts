@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       console.log("[CRON] Market allocations:", ma);
     } catch (error) {
       summary.marketAllocationsError = error instanceof Error ? error.message : String(error);
-      console.error("[CRON] Market allocations failed (non-fatal):", error);
+      console.error("[CRON] Market allocations failed:", error);
     }
 
     try {
@@ -47,7 +47,22 @@ export async function GET(request: NextRequest) {
       console.log("[CRON] Liquidations:", liq);
     } catch (error) {
       summary.liquidationsError = error instanceof Error ? error.message : String(error);
-      console.error("[CRON] Liquidations failed (non-fatal):", error);
+      console.error("[CRON] Liquidations failed:", error);
+    }
+
+    // Each step runs even if the other failed, but any failure fails the run
+    // loudly (non-200) so a dead source can't hide behind success:true.
+    if (summary.marketAllocationsError || summary.liquidationsError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: [summary.marketAllocationsError, summary.liquidationsError]
+            .filter(Boolean)
+            .join("; "),
+          summary,
+        },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, summary });

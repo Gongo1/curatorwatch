@@ -514,61 +514,86 @@ export interface UserPositionsAcrossVaultsResponse {
   };
 }
 
-// Fetch market liquidation transactions
+// Fetch market liquidation transactions, oldest-first from a timestamp floor.
+// Amounts are raw token units (BigInt, serialized as number or string); the
+// collector derives USD from asset decimals + price.usd.
 export const GET_LIQUIDATION_TRANSACTIONS = gql`
-  query GetLiquidationTransactions($first: Int!, $skip: Int!) {
-    transactions(
+  query GetLiquidationTransactions($first: Int!, $skip: Int!, $timestampGte: Int!) {
+    marketTransactions(
       first: $first
       skip: $skip
       orderBy: Timestamp
-      orderDirection: Desc
-      where: { type_in: [MarketLiquidation] }
+      orderDirection: Asc
+      where: { type_in: [Liquidation], timestamp_gte: $timestampGte }
     ) {
+      pageInfo {
+        countTotal
+      }
       items {
-        hash
+        txHash
         timestamp
-        type
-        data {
-          ... on MarketLiquidationTransactionData {
-            repaidAssetsUsd
-            seizedAssetsUsd
-            badDebtAssetsUsd
-            liquidator
-            market {
-              marketId
+        market {
+          marketId
+          loanAsset {
+            decimals
+            price {
+              usd
+            }
+          }
+          collateralAsset {
+            decimals
+            price {
+              usd
             }
           }
         }
         user {
           address
         }
+        data {
+          ... on MarketTransactionLiquidationData {
+            liquidator
+            repaidAssets
+            seizedAssets
+            badDebtAssets
+          }
+        }
       }
     }
   }
 `;
 
+type RawAmount = number | string;
+
+export interface LiquidationAsset {
+  decimals: number;
+  price: { usd: number | null } | null;
+}
+
 export interface LiquidationTransactionData {
-  repaidAssetsUsd: number;
-  seizedAssetsUsd: number;
-  badDebtAssetsUsd: number;
   liquidator: string;
-  market: {
-    marketId: string;
-  };
+  repaidAssets: RawAmount;
+  seizedAssets: RawAmount;
+  badDebtAssets: RawAmount;
 }
 
 export interface LiquidationTransaction {
-  hash: string;
-  timestamp: string;
-  type: string;
-  data: LiquidationTransactionData;
+  txHash: string;
+  timestamp: RawAmount;
+  market: {
+    marketId: string;
+    loanAsset: LiquidationAsset;
+    collateralAsset: LiquidationAsset | null;
+  } | null;
   user: {
     address: string;
-  };
+  } | null;
+  data: LiquidationTransactionData | null;
 }
 
 export interface LiquidationTransactionsResponse {
-  transactions: {
+  marketTransactions: {
+    pageInfo: { countTotal: number };
     items: LiquidationTransaction[];
   };
 }
