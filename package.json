@@ -20,7 +20,8 @@
     "backfill:tx-usd": "tsx src/scripts/backfill-transaction-usd.ts",
     "update:curators": "tsx src/scripts/merge-and-update-curators.ts",
     "cleanup:synthetic-curators": "tsx src/scripts/remove-synthetic-turtle-curators.ts",
-    "report:unmatched-turtle": "tsx src/scripts/report-unmatched-turtle.ts"
+    "report:unmatched-turtle": "tsx src/scripts/report-unmatched-turtle.ts",
+    "backfill:morpho-v2": "tsx src/scripts/backfills/morpho-v2-snapshots.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.6.2",
