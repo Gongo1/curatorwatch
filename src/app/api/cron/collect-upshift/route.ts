@@ -36,7 +36,22 @@ export async function GET(request: NextRequest) {
       duration: `${(result.duration / 1000).toFixed(1)}s`,
     });
 
-    revalidateDataPages();
+    if (result.vaultsUpserted > 0) revalidateDataPages();
+
+    // Fail loud: a source failure or an empty run must not look like success.
+    if (!result.success || result.vaultsUpserted === 0) {
+      console.error("[CRON] Upshift collection failed:", result.errors);
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            result.errors[0] ??
+            `Upshift collection upserted 0 vaults (fetched ${result.totalFetched})`,
+          result,
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
