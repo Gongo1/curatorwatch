@@ -172,11 +172,14 @@ function effectiveMinTvl(chain: MorphoChainConfig, options: CollectionOptions): 
 
 /**
  * Fetch all V2 vaults on one chain from the Morpho API with pagination.
- * Returns vaults sorted by TVL descending.
+ * Returns vaults sorted by TVL descending. A failure after the first page
+ * returns the pages already fetched and records the failure in `pageErrors`
+ * (the caller must surface it — a truncated list is not a clean run).
  */
 export async function fetchAllVaults(
   chain: MorphoChainConfig,
-  options: CollectionOptions = {}
+  options: CollectionOptions = {},
+  pageErrors: string[] = []
 ): Promise<MorphoVaultV2[]> {
   const allVaults: MorphoVaultV2[] = [];
   let skip = 0;
@@ -236,6 +239,9 @@ export async function fetchAllVaults(
       // the API is down — rethrow so the run fails loudly instead of quietly
       // collecting zero vaults (V2 was silently frozen Aug 26 -> Sep 30 this way).
       if (skip === 0) throw error;
+      pageErrors.push(
+        `V2 page at skip=${skip} failed (list truncated at ${allVaults.length}): ${error instanceof Error ? error.message : error}`
+      );
       hasMore = false;
     }
   }
@@ -250,7 +256,8 @@ export async function fetchAllVaults(
  */
 export async function fetchAllVaultsV1(
   chain: MorphoChainConfig,
-  options: CollectionOptions = {}
+  options: CollectionOptions = {},
+  pageErrors: string[] = []
 ): Promise<MorphoVaultV2[]> {
   const allVaults: MorphoVaultV2[] = [];
   let skip = 0;
@@ -294,6 +301,9 @@ export async function fetchAllVaultsV1(
       logError(`Failed to fetch V1 vaults batch at skip=${skip} (chain ${chain.chainId})`, error);
       // First-page failure: fail loudly (see fetchAllVaults).
       if (skip === 0) throw error;
+      pageErrors.push(
+        `V1 page at skip=${skip} failed (list truncated at ${allVaults.length}): ${error instanceof Error ? error.message : error}`
+      );
       hasMore = false;
     }
   }
@@ -1074,9 +1084,18 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
         const label = `${chainName} ${isV1 ? "V1" : "V2"}`;
 
         try {
+          const pageErrors: string[] = [];
           const fetched = isV1
-            ? await fetchAllVaultsV1(chain, options)
-            : await fetchAllVaults(chain, options);
+            ? await fetchAllVaultsV1(chain, options, pageErrors)
+            : await fetchAllVaults(chain, options, pageErrors);
+          // A later page failed: process what was fetched, but the run is not
+          // clean — the tail of the list keeps its old snapshot.
+          for (const e of pageErrors) {
+            const msg = `${label}: ${e}`;
+            logError(msg);
+            errors.push(msg);
+            sourceErrors.push(msg);
+          }
 
           // Validate and filter vaults
           const validVaults: MorphoVaultV2[] = [];
