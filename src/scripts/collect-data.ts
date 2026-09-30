@@ -533,11 +533,13 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
     }
   }
 
-  // Sanity check: reject absurd APY values from the Morpho API
-  const sanitizedAvgApy = sanitizeApyForStorage(vault.avgApy);
+  // Sanity check: reject absurd APY values from the Morpho API. avgApy is no
+  // longer served for V2 (undefined) — normalize so it isn't logged as "bad".
+  const rawAvgApy = vault.avgApy ?? null;
+  const sanitizedAvgApy = sanitizeApyForStorage(rawAvgApy);
   const sanitizedAvgNetApy = sanitizeApyForStorage(vault.avgNetApy);
 
-  if (sanitizedAvgApy !== vault.avgApy || sanitizedAvgNetApy !== vault.avgNetApy) {
+  if (sanitizedAvgApy !== rawAvgApy || sanitizedAvgNetApy !== vault.avgNetApy) {
     log(`  ⚠ Rejected bad APY for ${vaultId}: avgApy=${vault.avgApy}, avgNetApy=${vault.avgNetApy}`);
   }
 
