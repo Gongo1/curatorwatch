@@ -59,7 +59,10 @@ const DEFAULT_VAULT_SLA_HOURS = 26; // a dataSource added later is still watched
 /** Non-vault tables the site and the digest read. */
 export const TABLE_SOURCES: SourceDef[] = [
   { key: "market-allocations", label: "Market allocations", slaHours: 14 },
-  { key: "liquidations", label: "Liquidations", slaHours: 12 },
+  // Ingested every 12h (collect-market-data 04:15/16:15) and aged by EVENT time,
+  // so the newest row is always ~12h old just before the next run: a 12h SLA
+  // would flap every cycle. 14h = cadence + margin, like market allocations.
+  { key: "liquidations", label: "Liquidations", slaHours: 14 },
   { key: "news", label: "Newswire", slaHours: 48 },
   { key: "digest", label: "Curator Daily", slaHours: 25 },
 ];
