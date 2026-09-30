@@ -136,20 +136,41 @@ export async function GET(request: NextRequest) {
 
     revalidateDataPages();
 
+    const summary = {
+      lane,
+      vaultsProcessed: result.vaultsProcessed,
+      vaultsSkipped: result.vaultsSkipped,
+      curatorsCreated: result.curatorsCreated,
+      snapshotsCreated: result.snapshotsCreated,
+      transactionsCollected: result.transactionsCollected,
+      changesDetected: result.changesDetected,
+      platformAlertsDetected: result.platformAlertsDetected,
+      curatorSnapshotsCreated: result.curatorSnapshotsCreated,
+      errorCount: result.errors.length,
+      duration: result.duration,
+    };
+
+    // Fail loud: a chain/generation that failed to fetch, came back empty
+    // while the DB tracks it, or failed wholesale must NOT read as success —
+    // V2 sat frozen for 5 weeks behind HTTP 200s. Whatever did collect is
+    // already written (and pages revalidated) above.
+    if (result.sourceErrors.length > 0) {
+      console.error("[CRON] Collection source failures:", result.sourceErrors);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Collection failed for ${result.sourceErrors.length} source(s): ${result.sourceErrors.join("; ")}`,
+          sourceErrors: result.sourceErrors,
+          result: summary,
+        },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: "Data collected successfully",
-      result: {
-        vaultsProcessed: result.vaultsProcessed,
-        vaultsSkipped: result.vaultsSkipped,
-        curatorsCreated: result.curatorsCreated,
-        snapshotsCreated: result.snapshotsCreated,
-        transactionsCollected: result.transactionsCollected,
-        changesDetected: result.changesDetected,
-        platformAlertsDetected: result.platformAlertsDetected,
-        curatorSnapshotsCreated: result.curatorSnapshotsCreated,
-        duration: result.duration,
-      },
+      result: summary,
     });
   } catch (error) {
     console.error("[CRON] Collection failed:", error);

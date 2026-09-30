@@ -78,8 +78,18 @@ export interface CollectionResult {
   platformAlertsDetected: number;
   curatorSnapshotsCreated: number;
   errors: string[];
+  // Source-level failures (a whole chain/generation failed to fetch, came back
+  // empty while the DB tracks it, or every vault failed to process). Any entry
+  // here means the run did NOT collect what it was asked to — the cron route
+  // turns this into a non-200. Per-vault hiccups stay in `errors` only.
+  sourceErrors: string[];
   duration: number;
 }
+
+// A chain/generation that returns zero vaults while the DB still tracks more
+// than this many active vaults for it is treated as a broken source, not an
+// empty market.
+const EMPTY_SOURCE_DB_THRESHOLD = 10;
 
 export interface CollectionOptions {
   fetchAll?: boolean; // Fetch all vaults (default: true)
@@ -212,6 +222,10 @@ export async function fetchAllVaults(
       }
     } catch (error) {
       logError(`Failed to fetch vaults batch at skip=${skip} (chain ${chain.chainId})`, error);
+      // First page failing means the query itself is broken (schema drift) or
+      // the API is down — rethrow so the run fails loudly instead of quietly
+      // collecting zero vaults (V2 was silently frozen Aug 26 -> Sep 30 this way).
+      if (skip === 0) throw error;
       hasMore = false;
     }
   }
@@ -268,6 +282,8 @@ export async function fetchAllVaultsV1(
       }
     } catch (error) {
       logError(`Failed to fetch V1 vaults batch at skip=${skip} (chain ${chain.chainId})`, error);
+      // First-page failure: fail loudly (see fetchAllVaults).
+      if (skip === 0) throw error;
       hasMore = false;
     }
   }
@@ -988,9 +1004,26 @@ async function processVaultsBatch(
  * Main data collection function.
  * Fetches all vaults from Morpho API and stores snapshots, transactions, and risk data.
  */
+/**
+ * Active Morpho vaults the DB tracks for one chain + generation. Vault has no
+ * generation column; V2 is told apart by its risk snapshots (only V2 vaults get
+ * them — see processVault). Only called when a source comes back empty.
+ */
+async function countTrackedVaults(chainId: number, isV1: boolean): Promise<number> {
+  return prisma.vault.count({
+    where: {
+      dataSource: "morpho",
+      active: true,
+      chainId,
+      riskSnapshots: isV1 ? { none: {} } : { some: {} },
+    },
+  });
+}
+
 export async function collectData(options: CollectionOptions = {}): Promise<CollectionResult> {
   const startTime = Date.now();
   const errors: string[] = [];
+  const sourceErrors: string[] = [];
   const minTvlUsd = options.minTvlUsd ?? MIN_TVL_USD;
 
   log("=".repeat(60));
@@ -1047,11 +1080,25 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
           }
           totalValid += validVaults.length;
 
-          if (validVaults.length === 0) continue;
+          if (validVaults.length === 0) {
+            // An empty answer for a chain we track is a broken source (e.g. a
+            // query that "succeeds" with nothing), not an empty market.
+            const tracked = await countTrackedVaults(chain.chainId, isV1);
+            if (tracked > EMPTY_SOURCE_DB_THRESHOLD) {
+              const msg = `${label}: API returned 0 vaults but DB tracks ${tracked} active`;
+              logError(msg);
+              errors.push(msg);
+              sourceErrors.push(msg);
+            }
+            continue;
+          }
           log(`Processing ${validVaults.length} ${label} vaults...`);
 
           const batchResult = await processVaultsBatch(validVaults, snapshotTime, options, ctx);
           errors.push(...batchResult.errors);
+          if (batchResult.processed === 0) {
+            sourceErrors.push(`${label}: all ${validVaults.length} vaults failed processing`);
+          }
           result.processed += batchResult.processed;
           result.curatorsCreated += batchResult.curatorsCreated;
           result.txCollected += batchResult.txCollected;
@@ -1061,6 +1108,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
           const msg = `${label} collection failed: ${error instanceof Error ? error.message : error}`;
           logError(msg);
           errors.push(msg);
+          sourceErrors.push(msg);
         }
       }
     }
@@ -1185,12 +1233,14 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       platformAlertsDetected,
       curatorSnapshotsCreated,
       errors,
+      sourceErrors,
       duration,
     };
   } catch (error) {
     const errorMsg = `Critical error during collection: ${error}`;
     logError(errorMsg);
     errors.push(errorMsg);
+    sourceErrors.push(errorMsg);
 
     return {
       success: false,
@@ -1205,6 +1255,7 @@ export async function collectData(options: CollectionOptions = {}): Promise<Coll
       platformAlertsDetected: 0,
       curatorSnapshotsCreated: 0,
       errors,
+      sourceErrors,
       duration: Date.now() - startTime,
     };
   }
