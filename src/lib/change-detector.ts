@@ -31,6 +31,7 @@ interface VaultData {
   assetSymbol: string;
   assetDecimals: number;
   curatorAddress: string | null;
+  creationTimestamp?: number | null; // unix seconds, from the source
 }
 
 interface SnapshotData {
@@ -322,6 +323,12 @@ async function detectLargeFlows(
 
 /**
  * Detect vault lifecycle events (launch/shutdown)
+ *
+ * Launch fires at most once per vault, only for a vault created (or, without a
+ * creation time, first seen) in the last LAUNCH_MAX_AGE_DAYS, and only when
+ * TVL is >= LAUNCH_MIN_TVL on 2 consecutive snapshots (the one before that
+ * below it, or none). The old rule fired on any <$1M -> >=$1M crossing, so
+ * 83 of 87 "launches" were old vaults wobbling around $1M.
  */
 async function detectVaultLifecycle(
   vault: VaultData,
@@ -330,15 +337,17 @@ async function detectVaultLifecycle(
   const alerts: AlertEvent[] = [];
   const currentTVL = currentSnapshot.totalAssetsUsd;
 
-  // Get previous snapshot
-  const previousSnapshot = await prisma.vaultSnapshot.findFirst({
+  // The two snapshots before this run: [previous, the one before it]
+  const priorSnapshots = await prisma.vaultSnapshot.findMany({
     where: {
       vaultId: vault.id,
       timestamp: { lt: currentSnapshot.timestamp },
     },
     orderBy: { timestamp: "desc" },
+    take: 2,
     select: { totalAssetsUsd: true, timestamp: true },
   });
+  const previousSnapshot = priorSnapshots[0];
 
   if (!previousSnapshot) {
     return alerts;
@@ -356,31 +365,27 @@ async function detectVaultLifecycle(
   }
 
   const prevTVL = previousSnapshot.totalAssetsUsd;
+  const launchMin = THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MIN_TVL;
+  const beforePrev = priorSnapshots[1];
 
-  // Vault Launch: TVL was <$1M, now >$1M
+  // Vault Launch: >= $1M on 2 consecutive snapshots, below it (or unseen) before
   if (
-    prevTVL < THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MIN_TVL &&
-    currentTVL >= THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MIN_TVL
+    currentTVL >= launchMin &&
+    prevTVL >= launchMin &&
+    (!beforePrev || beforePrev.totalAssetsUsd < launchMin) &&
+    (await isLaunchCandidate(vault, currentSnapshot.timestamp))
   ) {
-    const existingAlert = await checkDuplicateAlert(
-      vault.id,
-      ALERT_TYPES.VAULT_LAUNCH,
-      currentSnapshot.timestamp
-    );
-
-    if (!existingAlert) {
-      alerts.push({
-        vaultId: vault.id,
-        changeType: ALERT_TYPES.VAULT_LAUNCH,
-        severity: "info",
-        title: `New Vault Launched: ${vault.name}`,
-        description: `Vault went live with ${formatCurrency(currentTVL)} in initial deposits.`,
-        oldValue: formatCurrency(prevTVL),
-        newValue: formatCurrency(currentTVL),
-        detectedAt: currentSnapshot.timestamp,
-        metadata: { prevTVL, currentTVL },
-      });
-    }
+    alerts.push({
+      vaultId: vault.id,
+      changeType: ALERT_TYPES.VAULT_LAUNCH,
+      severity: "info",
+      title: `New Vault Launched: ${vault.name}`,
+      description: `Vault went live with ${formatCurrency(currentTVL)} in initial deposits.`,
+      oldValue: formatCurrency(beforePrev?.totalAssetsUsd ?? 0),
+      newValue: formatCurrency(currentTVL),
+      detectedAt: currentSnapshot.timestamp,
+      metadata: { prevTVL, currentTVL, creationTimestamp: vault.creationTimestamp ?? null },
+    });
   }
 
   // Vault Shutdown: TVL was >$100k, now <$10k
@@ -599,6 +604,34 @@ async function detectVaultTvlChanges(
   }
 
   return alerts;
+}
+
+/**
+ * A vault may "launch" only once ever, and only while it is new: created (or,
+ * without a creation time, first snapshotted) within LAUNCH_MAX_AGE_DAYS.
+ */
+async function isLaunchCandidate(vault: VaultData, now: Date): Promise<boolean> {
+  const alreadyLaunched = await prisma.vaultChange.findFirst({
+    where: { vaultId: vault.id, changeType: ALERT_TYPES.VAULT_LAUNCH },
+    select: { id: true },
+  });
+  if (alreadyLaunched) return false;
+
+  let bornAt: Date | null = vault.creationTimestamp
+    ? new Date(vault.creationTimestamp * 1000)
+    : null;
+  if (!bornAt) {
+    const first = await prisma.vaultSnapshot.findFirst({
+      where: { vaultId: vault.id },
+      orderBy: { timestamp: "asc" },
+      select: { timestamp: true },
+    });
+    bornAt = first?.timestamp ?? null;
+  }
+  if (!bornAt) return false;
+
+  const maxAgeMs = THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  return now.getTime() - bornAt.getTime() <= maxAgeMs;
 }
 
 /**

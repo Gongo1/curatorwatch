@@ -46,7 +46,8 @@ export const THRESHOLDS = {
 
   // Vault Lifecycle - TVL thresholds
   VAULT_LIFECYCLE: {
-    LAUNCH_MIN_TVL: 1_000_000,     // $1M to be considered "launched"
+    LAUNCH_MIN_TVL: 1_000_000,     // $1M to be considered "launched" (on 2 consecutive snapshots)
+    LAUNCH_MAX_AGE_DAYS: 14,       // only vaults created (or first seen) this recently can "launch"
     SHUTDOWN_PREV_MIN: 100_000,    // Previous TVL must be >$100k
     SHUTDOWN_CURR_MAX: 10_000,     // Current TVL must be <$10k
   },
@@ -127,7 +128,7 @@ export const ALERT_METADATA: Record<
     label: "Vault Launch",
     color: "purple",
     description:
-      "New vault launches when TVL goes from $0 to >$1M in initial deposits.",
+      "New vault (created in the last 14 days) whose TVL reaches $1M on 2 consecutive snapshots. Fires once per vault.",
   },
   VAULT_SHUTDOWN: {
     label: "Vault Shutdown",
