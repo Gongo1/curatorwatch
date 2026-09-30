@@ -616,7 +616,7 @@ model CronRun {
   status      String    @default("running")   // running | ok | partial | error
   rowsWritten Int?
   stepErrors  Json?                           // { step: message } for non-fatal step failures
-  error       String?   @db.Text              // fatal error message
+  error       String?   @db.Text              // fatal error, or the joined step errors of a partial run
 
   @@index([job, startedAt(sort: Desc)])
 }

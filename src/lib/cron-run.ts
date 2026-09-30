@@ -89,7 +89,9 @@ export async function withCronRun(
           status,
           rowsWritten: outcome.rowsWritten ?? null,
           stepErrors,
-          error: outcome.error ? error : null,
+          // Partial runs store their joined step errors too: the health check
+          // reads this column, and would otherwise say "no error text".
+          error: error ?? null,
         },
       });
     } catch (e) {
