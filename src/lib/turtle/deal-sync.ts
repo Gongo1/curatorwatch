@@ -7,6 +7,7 @@
  * 2026-09-18). Runs from the collect-turtle cron after the main collection pass.
  */
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { turtleApiKey } from "./client";
 
@@ -152,10 +153,14 @@ async function syncDealMapping() {
 
   // Clear stale mappings before writing new ones so a deal that moved between
   // vaults can't trip the dealOpportunityId unique constraint mid-transaction.
-  await prisma.$transaction([
-    ...toClear.map((v) =>
-      prisma.vault.update({
-        where: { id: v.id },
+  // Set-based: one updateMany for the clears, then one UPDATE ... FROM (VALUES
+  // ...) for the changed mappings (the unique index is checked row by row, so
+  // vaults whose deal id changes are nulled first, making swaps safe too).
+  const ops: Prisma.PrismaPromise<unknown>[] = [];
+  if (toClear.length > 0) {
+    ops.push(
+      prisma.vault.updateMany({
+        where: { id: { in: toClear.map((v) => v.id) } },
         data: {
           dealOpportunityId: null,
           dealDepositable: false,
@@ -163,19 +168,39 @@ async function syncDealMapping() {
           dealCheckedAt: now,
         },
       })
-    ),
-    ...updates.map((u) =>
-      prisma.vault.update({
-        where: { id: u.vaultId },
-        data: {
-          dealOpportunityId: u.oppId,
-          dealDepositable: u.depositable,
-          dealEstApr: u.estApr,
-          dealCheckedAt: now,
-        },
-      })
-    ),
-  ]);
+    );
+  }
+  if (updates.length > 0) {
+    const current = new Map(vaults.map((v) => [v.id, v.dealOpportunityId]));
+    const moving = updates
+      .filter((u) => current.get(u.vaultId) !== null && current.get(u.vaultId) !== u.oppId)
+      .map((u) => u.vaultId);
+    if (moving.length > 0) {
+      ops.push(
+        prisma.vault.updateMany({
+          where: { id: { in: moving } },
+          data: { dealOpportunityId: null },
+        })
+      );
+    }
+    const values = Prisma.join(
+      updates.map(
+        (u) =>
+          Prisma.sql`(${u.vaultId}::text, ${u.oppId}::text, ${u.depositable}::boolean, ${u.estApr}::float8)`
+      )
+    );
+    ops.push(prisma.$executeRaw`
+      UPDATE "Vault" AS v
+      SET "dealOpportunityId" = d.opp_id,
+          "dealDepositable" = d.depositable,
+          "dealEstApr" = d.est_apr,
+          "dealCheckedAt" = ${now},
+          "updatedAt" = ${now}
+      FROM (VALUES ${values}) AS d(id, opp_id, depositable, est_apr)
+      WHERE v.id = d.id
+    `);
+  }
+  if (ops.length > 0) await prisma.$transaction(ops);
 
   if (unmatched.length > 0) {
     console.log(
