@@ -4,8 +4,9 @@
  * Every source the site shows has an SLA (max age of its newest row). Vault
  * sources are measured from VaultSnapshot.timestamp grouped by Vault.dataSource
  * (Morpho split into V1 and V2: V2 froze for 5 weeks while V1 kept the
- * Morpho max fresh). Coverage = share of ACTIVE vaults whose latest snapshot is
- * inside the SLA, so a source that still writes a few rows while most of its
+ * Morpho max fresh). Coverage = share of the source's RECENTLY REPORTING active
+ * vaults (a snapshot in the last COVERAGE_LOOKBACK_DAYS) whose latest snapshot
+ * is inside the SLA, so a source that still writes a few rows while most of its
  * vaults went stale is caught too. Cron status reads CronRun (withCronRun).
  */
 
@@ -30,6 +31,8 @@ export interface SourceFreshness {
   stale: boolean;
   /** Vault sources only. */
   activeVaults?: number;
+  /** Active vaults with a snapshot in the last COVERAGE_LOOKBACK_DAYS (coverage denominator). */
+  reportingVaults?: number;
   freshVaults?: number;
   coverage?: number | null;
   lowCoverage?: boolean;
@@ -61,8 +64,20 @@ export const TABLE_SOURCES: SourceDef[] = [
   { key: "digest", label: "Curator Daily", slaHours: 25 },
 ];
 
-/** Below this share of active vaults inside the SLA, a source is breaching. */
+/** Below this share of recently reporting vaults inside the SLA, a source is breaching. */
 export const COVERAGE_FLOOR = 0.8;
+
+/**
+ * Coverage counts only active vaults that reported in this window. Morpho and
+ * Turtle have no stale sweep: a vault the source stopped returning stays active
+ * with its last snapshot forever. Against ALL active rows, healthy Turtle sat at
+ * 77% (434/564 on 2026-09-17) and Morpho V1/V2 at 83-84%, and only drifts down,
+ * so the floor would block the digest permanently. Long-dead rows are a
+ * data-hygiene issue (counted totals), not a live-source failure; a live outage
+ * stays visible here for this many days, and the source-count quality check
+ * catches a sudden drop.
+ */
+export const COVERAGE_LOOKBACK_DAYS = 14;
 
 /** A CronRun still "running" after this long was killed (every maxDuration is <= 15 min). */
 const STUCK_AFTER_MIN = 20;
@@ -133,9 +148,11 @@ export async function getSourceFreshness(now: Date = new Date()): Promise<Source
   const out: SourceFreshness[] = defs.map((d) => {
     const e = byKey.get(d.key);
     const cutoff = now.getTime() - d.slaHours * HOUR;
+    const lookback = now.getTime() - COVERAGE_LOOKBACK_DAYS * 24 * HOUR;
     const fresh = e ? e.ts.filter((t) => t && t.getTime() >= cutoff).length : 0;
+    const reporting = e ? e.ts.filter((t) => t && t.getTime() >= lookback).length : 0;
     const age = ageHours(e?.lastAt ?? null, now);
-    const coverage = e && e.active > 0 ? fresh / e.active : null;
+    const coverage = reporting > 0 ? fresh / reporting : null;
     return {
       key: d.key,
       label: d.label,
@@ -145,6 +162,7 @@ export async function getSourceFreshness(now: Date = new Date()): Promise<Source
       ageHours: age,
       stale: age === null || age > d.slaHours,
       activeVaults: e?.active ?? 0,
+      reportingVaults: reporting,
       freshVaults: fresh,
       coverage,
       lowCoverage: coverage !== null && coverage < COVERAGE_FLOOR,
@@ -254,9 +272,9 @@ export function freshnessBreaches(sources: SourceFreshness[], cron?: CronHealth)
       out.push({
         key: `coverage:${s.key}`,
         kind: "coverage",
-        message: `${s.label}: only ${s.freshVaults}/${s.activeVaults} active vaults (${Math.round(
+        message: `${s.label}: only ${s.freshVaults}/${s.reportingVaults} vaults that reported in the last ${COVERAGE_LOOKBACK_DAYS}d (${Math.round(
           (s.coverage ?? 0) * 100
-        )}%) have a snapshot inside the ${s.slaHours}h SLA (floor ${COVERAGE_FLOOR * 100}%)`,
+        )}%) have a snapshot inside the ${s.slaHours}h SLA (floor ${COVERAGE_FLOOR * 100}%; ${s.activeVaults} active)`,
       });
     }
   }
