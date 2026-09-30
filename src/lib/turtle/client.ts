@@ -1,7 +1,10 @@
 /**
  * Fetch client for the Turtle Earn opportunities feed.
  *
- * Endpoint: https://earn.turtle.xyz/v2/opportunities/ (public, no auth).
+ * Endpoint: https://earn.turtle.xyz/v2/opportunities/. Auth: since 2026-09-18
+ * every earn.turtle.xyz route requires an `X-API-Key` header (a Bearer token is
+ * no longer read; unauthenticated calls get 401). The key is the server-only
+ * `TURTLE_API_KEY` env var. It must never be exposed as a NEXT_PUBLIC_ variable.
  *
  * Migrated v1 → v2 (2026-06). The v1 feed's `estimatedApr` carried a stale,
  * incentive-inflated headline that no longer matched its own itemized incentives
@@ -27,6 +30,18 @@ import { getChainNameById, getChainSlugById } from "./chain-mapper";
 
 const TURTLE_V2_OPPORTUNITIES_URL = "https://earn.turtle.xyz/v2/opportunities/";
 const PAGE_SIZE = 100; // v2 hard-caps limit at 100
+
+/** Server-only Turtle Earn API key. Throws when it is not set, so a missing key
+ * fails the run loudly instead of degrading to a 401 on every page. */
+export function turtleApiKey(): string {
+  const key = process.env.TURTLE_API_KEY;
+  if (!key) {
+    throw new Error(
+      "TURTLE_API_KEY is not set: earn.turtle.xyz requires an X-API-Key header on every route"
+    );
+  }
+  return key;
+}
 
 // ─── Raw v2 response shapes (only the fields we consume) ────────────────────
 
@@ -129,13 +144,16 @@ function normalizeOpportunity(o: V2Opportunity): TurtleOpportunity {
  * the ingestion (collect-turtle-data.ts) and other consumers need no edits.
  */
 export async function fetchTurtleOpportunities(): Promise<TurtleOpportunity[]> {
+  const apiKey = turtleApiKey();
   const all: TurtleOpportunity[] = [];
   let page = 1;
   let totalPages = 1;
 
   do {
     const url = `${TURTLE_V2_OPPORTUNITIES_URL}?page=${page}&limit=${PAGE_SIZE}`;
-    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    const response = await fetch(url, {
+      headers: { Accept: "application/json", "X-API-Key": apiKey },
+    });
 
     if (!response.ok) {
       throw new Error(

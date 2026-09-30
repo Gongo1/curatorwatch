@@ -40,8 +40,9 @@ export async function GET(request: NextRequest) {
       duration: `${(result.duration / 1000).toFixed(1)}s`,
     });
 
-    // Phase 3: deal mapping + attributed deposits. A failure here must not
-    // fail the whole collection run — report it in the response instead.
+    // Phase 3: deal mapping + attributed deposits. Runs even when the main pass
+    // failed, but any failure in either pass fails the run (HTTP 500) so a dead
+    // source is visible instead of hiding behind success:true.
     let dealSync: DealSyncSummary | null = null;
     let dealSyncError: string | null = null;
     try {
@@ -54,22 +55,43 @@ export async function GET(request: NextRequest) {
 
     revalidateDataPages();
 
-    return NextResponse.json({
-      success: true,
-      message: "Turtle data collected successfully",
-      result: {
-        totalFetched: result.totalFetched,
-        filtered: result.filtered,
-        vaultsUpserted: result.vaultsUpserted,
-        snapshotsCreated: result.snapshotsCreated,
-        vaultsAttributed: result.vaultsAttributed,
-        unmatchedHidden: result.unmatchedHidden,
-        crossSourceOverlaps: result.crossSourceOverlaps,
-        duration: result.duration,
+    // The collector catches a fetch failure and returns 0 rows, so 0 upserted
+    // means the source is down (or every row failed), never a normal run.
+    const collectError =
+      result.vaultsUpserted === 0
+        ? `0 Turtle vaults upserted (fetched ${result.totalFetched})${
+            result.errors.length > 0 ? `: ${result.errors[0]}` : ""
+          }`
+        : null;
+    const failed = collectError !== null || dealSyncError !== null;
+    if (failed) {
+      console.error("[CRON] Turtle run failed:", { collectError, dealSyncError });
+    }
+
+    return NextResponse.json(
+      {
+        success: !failed,
+        message: failed
+          ? "Turtle collection failed"
+          : "Turtle data collected successfully",
+        error: [collectError, dealSyncError].filter(Boolean).join("; ") || undefined,
+        result: {
+          totalFetched: result.totalFetched,
+          filtered: result.filtered,
+          vaultsUpserted: result.vaultsUpserted,
+          snapshotsCreated: result.snapshotsCreated,
+          vaultsAttributed: result.vaultsAttributed,
+          unmatchedHidden: result.unmatchedHidden,
+          crossSourceOverlaps: result.crossSourceOverlaps,
+          errorCount: result.errors.length,
+          errors: result.errors.slice(0, 10),
+          duration: result.duration,
+        },
+        dealSync,
+        dealSyncError,
       },
-      dealSync,
-      dealSyncError,
-    });
+      { status: failed ? 500 : 200 }
+    );
   } catch (error) {
     console.error("[CRON] Turtle collection failed:", error);
 
