@@ -32,6 +32,18 @@ const PAGE_LIMIT = 100;
 // The v3 API hides "hidden" vaults from discovery by default; request them
 // too so a curator's wound-down vault is still counted (policy stays ours).
 const VISIBILITY = "visible,warning,hidden";
+/** Per-request cap for the v3 API and the labels bucket. */
+const REQUEST_TIMEOUT_MS = 15_000;
+
+/**
+ * Signal for one outbound request: aborts after `ms`, or earlier when the
+ * caller's run-level `signal` aborts (the collector's fetch budget). A hung
+ * socket can then never hold the cron until Vercel kills it.
+ */
+export function requestSignal(signal: AbortSignal | undefined, ms: number): AbortSignal {
+  const timeout = AbortSignal.timeout(ms);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
 
 /**
  * Chains the v3 Data API serves (verified 2026-09-30). Sonic (146) is read
@@ -87,7 +99,8 @@ interface EulerVaultsResponse {
  */
 export async function fetchEulerVaults(
   chainId: number,
-  kind: "evk" | "earn"
+  kind: "evk" | "earn",
+  signal?: AbortSignal
 ): Promise<EulerApiVault[]> {
   const all: EulerApiVault[] = [];
   let offset = 0;
@@ -97,7 +110,7 @@ export async function fetchEulerVaults(
 
   while (offset < total) {
     const url = `${EULER_API_BASE}/${kind}/vaults?chainId=${chainId}&limit=${PAGE_LIMIT}&offset=${offset}&visibility=${VISIBILITY}`;
-    const response = await fetch(url, { headers });
+    const response = await fetch(url, { headers, signal: requestSignal(signal, REQUEST_TIMEOUT_MS) });
     if (!response.ok) {
       const detail = (await response.text().catch(() => "")).slice(0, 200);
       throw new Error(`Euler API error (${kind} chain ${chainId} offset ${offset}): ${response.status} ${detail}`);
@@ -149,9 +162,14 @@ type EulerEarnLabel =
   | string
   | { address: string; deprecated?: boolean; deprecationReason?: string };
 
-async function fetchLabelsFile<T>(chainId: number, file: string): Promise<T | null> {
+async function fetchLabelsFile<T>(
+  chainId: number,
+  file: string,
+  signal?: AbortSignal
+): Promise<T | null> {
   const response = await fetch(`${EULER_LABELS_BASE}/${chainId}/${file}`, {
     headers: { Accept: "application/json" },
+    signal: requestSignal(signal, REQUEST_TIMEOUT_MS),
   });
   // The labels bucket answers 403/404 for a file a chain doesn't have — that
   // chain simply has no attribution. Anything else is an outage: throw, or
@@ -173,12 +191,13 @@ async function fetchLabelsFile<T>(chainId: number, file: string): Promise<T | nu
  * unattributed EVK vaults).
  */
 export async function fetchEulerAttribution(
-  chainId: number
+  chainId: number,
+  signal?: AbortSignal
 ): Promise<{ attribution: Map<string, EulerAttribution>; deprecated: Set<string> }> {
   const [entities, products, earnLabels] = await Promise.all([
-    fetchLabelsFile<Record<string, EulerLabelEntity>>(chainId, "entities.json"),
-    fetchLabelsFile<Record<string, EulerLabelProduct>>(chainId, "products.json"),
-    fetchLabelsFile<EulerEarnLabel[]>(chainId, "earn-vaults.json"),
+    fetchLabelsFile<Record<string, EulerLabelEntity>>(chainId, "entities.json", signal),
+    fetchLabelsFile<Record<string, EulerLabelProduct>>(chainId, "products.json", signal),
+    fetchLabelsFile<EulerEarnLabel[]>(chainId, "earn-vaults.json", signal),
   ]);
 
   const attribution = new Map<string, EulerAttribution>();
