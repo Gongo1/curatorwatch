@@ -203,7 +203,12 @@ export async function fetchAllVaults(
         hasMore = false;
       } else {
         // Filter by minimum TVL (backstop — the where-clause already applies it)
-        const validVaults = vaults.filter((v) => (v.totalAssetsUsd ?? 0) >= minTvl);
+        // VaultV2.avgApy is no longer served: fall back to the (sanitized) spot
+        // apy, which tracked avgApy within 0.04pp (median) over Aug 20-26 2026.
+        // Keeps the vault-page APY, curator gross APY and APY alerts alive.
+        const validVaults = vaults
+          .filter((v) => (v.totalAssetsUsd ?? 0) >= minTvl)
+          .map((v) => ({ ...v, avgApy: v.avgApy ?? sanitizeApyForStorage(v.apy) }));
         allVaults.push(...validVaults);
 
         if (options.verbose) {
@@ -554,8 +559,9 @@ async function createSnapshot(vaultId: string, vault: MorphoVaultV2) {
     }
   }
 
-  // Sanity check: reject absurd APY values from the Morpho API. avgApy is no
-  // longer served for V2 (undefined) — normalize so it isn't logged as "bad".
+  // Sanity check: reject absurd APY values from the Morpho API. avgApy may be
+  // undefined (VaultV2.avgApy is no longer served) — normalize so it isn't
+  // logged as "bad".
   const rawAvgApy = vault.avgApy ?? null;
   const sanitizedAvgApy = sanitizeApyForStorage(rawAvgApy);
   const sanitizedAvgNetApy = sanitizeApyForStorage(vault.avgNetApy);

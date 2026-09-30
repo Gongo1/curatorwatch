@@ -2,8 +2,8 @@ import { gql } from "graphql-request";
 
 // Fetch Morpho V2 vaults with pagination support.
 // No avgApy: Morpho removed VaultV2.avgApy (queries failing since 2026-08-26,
-// which silently froze every V2 vault). MorphoVaultV2.avgApy stays optional and
-// is stored as null; avgNetApy is still served.
+// which silently froze every V2 vault). MorphoVaultV2.avgApy stays optional;
+// fetchAllVaults fills it from the spot `apy`. avgNetApy is still served.
 export const GET_VAULTS_V2_PAGINATED = gql`
   query GetVaultsV2Paginated($first: Int!, $skip: Int!, $chainId: Int!, $minTvl: Float!) {
     vaultV2s(
