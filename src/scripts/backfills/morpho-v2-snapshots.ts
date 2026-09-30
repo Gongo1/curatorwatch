@@ -11,7 +11,8 @@
  * idempotent and never overlaps rows the fixed collector writes.
  *
  * Fields written: totalAssets, totalAssetsUsd, totalSupply, sharePrice,
- * avgNetApy (sanitized like createSnapshot). History has no liquidity or
+ * avgNetApy (sanitized like createSnapshot). Days below the chain's TVL floor
+ * (MORPHO_CHAINS) are skipped, the same as the collector. History has no liquidity or
  * instantaneous apy/netApy, so those stay null. avgApy stays null, the same as
  * the live collector writes since Morpho removed it.
  *
@@ -226,8 +227,12 @@ async function fetchHistory(
   return new Map(res.vaultV2s.items.map((v) => [v.address.toLowerCase(), v]));
 }
 
-/** Turn one vault's history into snapshot rows for the days it is missing. */
-function toRows(target: Target, history: VaultHistory): SnapshotRow[] {
+/**
+ * Turn one vault's history into snapshot rows for the days it is missing.
+ * Days below the chain's TVL floor are skipped, as the collector skips them
+ * (this also drops the dust days right after a new vault's creation).
+ */
+function toRows(target: Target, history: VaultHistory, minTvlUsd: number): SnapshotRow[] {
   const h = history.historicalState;
   const byX = <T>(points: Point<T>[]) => new Map(points.map((p) => [p.x, p.y]));
   const assets = byX(h.totalAssets);
@@ -244,6 +249,7 @@ function toRows(target: Target, history: VaultHistory): SnapshotRow[] {
     if (sharePrice == null || totalAssets == null || totalSupply == null || totalAssetsUsd == null) {
       continue;
     }
+    if (totalAssetsUsd < minTvlUsd) continue;
     const timestamp = new Date(x * 1000);
     if (target.existingDays.has(dayKey(timestamp))) continue;
     rows.push({
@@ -279,6 +285,7 @@ async function main() {
   const missing: string[] = [];
 
   for (const [chainId, chainTargets] of byChain) {
+    const minTvlUsd = MORPHO_CHAINS.find((c) => c.chainId === chainId)?.minTvlUsd ?? 1_000;
     for (let i = 0; i < chainTargets.length; i += BATCH_SIZE) {
       const batch = chainTargets.slice(i, i + BATCH_SIZE);
       const histories = await fetchHistory(chainId, batch.map((t) => t.address), from, to);
@@ -292,7 +299,7 @@ async function main() {
           continue;
         }
         fetchedVaults++;
-        rows.push(...toRows(target, history));
+        rows.push(...toRows(target, history, minTvlUsd));
       }
       rowsPlanned += rows.length;
       if (!sample && rows.length > 0) sample = rows[0];
