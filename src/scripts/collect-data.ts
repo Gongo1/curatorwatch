@@ -76,6 +76,9 @@ const API_CONCURRENCY = 4; // Per-vault transaction/reallocation fetches in flig
 const TRANSACTIONS_PER_VAULT = 50;
 const MIN_TVL_USD = 1000; // Skip vaults below $1000 TVL
 const API_DELAY_MS = 100; // Delay between API calls to respect rate limits
+// Per Morpho API request. The run's time budget is only checked between vault
+// chunks, so a hung socket must not hold the lane until the platform kills it.
+const REQUEST_TIMEOUT_MS = 30_000;
 
 export interface CollectionResult {
   success: boolean;
@@ -158,7 +161,11 @@ export async function fetchMorphoCuratorRegistry(): Promise<Map<string, MorphoCa
     try {
       const response = await morphoClient.request<{
         curators: { items: MorphoCanonicalCurator[] };
-      }>(GET_MORPHO_CURATORS, { first: BATCH_SIZE, skip });
+      }>({
+        document: GET_MORPHO_CURATORS,
+        variables: { first: BATCH_SIZE, skip },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
 
       const items = response.curators.items;
       for (const org of items) {
@@ -209,15 +216,16 @@ export async function fetchAllVaults(
 
   while (hasMore) {
     try {
-      const response = await morphoClient.request<VaultV2sResponse>(
-        GET_VAULTS_V2_PAGINATED,
-        {
+      const response = await morphoClient.request<VaultV2sResponse>({
+        document: GET_VAULTS_V2_PAGINATED,
+        variables: {
           first: BATCH_SIZE,
           skip,
           chainId: chain.chainId,
           minTvl,
-        }
-      );
+        },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
 
       const vaults = response.vaultV2s.items;
 
@@ -287,15 +295,16 @@ export async function fetchAllVaultsV1(
 
   while (hasMore) {
     try {
-      const response = await morphoClient.request<VaultsV1Response>(
-        GET_VAULTS_V1_PAGINATED,
-        {
+      const response = await morphoClient.request<VaultsV1Response>({
+        document: GET_VAULTS_V1_PAGINATED,
+        variables: {
           first: BATCH_SIZE,
           skip,
           chainId: chain.chainId,
           minTvl,
-        }
-      );
+        },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
 
       const vaults = response.vaults.items;
 
@@ -355,13 +364,14 @@ function isValidVault(vault: MorphoVaultV2, minTvlUsd: number): { valid: boolean
 
 async function fetchVaultTransactions(vaultAddress: string) {
   try {
-    const response = await morphoClient.request<VaultV2TransactionsResponse>(
-      GET_VAULT_V2_TRANSACTIONS,
-      {
+    const response = await morphoClient.request<VaultV2TransactionsResponse>({
+      document: GET_VAULT_V2_TRANSACTIONS,
+      variables: {
         vaultAddress,
         first: TRANSACTIONS_PER_VAULT,
-      }
-    );
+      },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
     return response.vaultV2transactions.items;
   } catch (error) {
     logError(`Failed to fetch transactions for ${vaultAddress}`, error);
@@ -371,13 +381,14 @@ async function fetchVaultTransactions(vaultAddress: string) {
 
 async function fetchVaultReallocations(vaultAddress: string) {
   try {
-    const response = await morphoClient.request<VaultReallocatesResponse>(
-      GET_VAULT_REALLOCATES,
-      {
+    const response = await morphoClient.request<VaultReallocatesResponse>({
+      document: GET_VAULT_REALLOCATES,
+      variables: {
         vaultAddress,
         first: TRANSACTIONS_PER_VAULT,
-      }
-    );
+      },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
     return response.vaultReallocates.items;
   } catch (error) {
     logError(`Failed to fetch reallocations for ${vaultAddress}`, error);
