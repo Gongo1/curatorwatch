@@ -23,6 +23,9 @@ import { curatorSlug } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 import { CURATOR_DOSSIERS, getCuratorDossier } from "@/lib/curator-dossier";
 import { composeBlurbSentences } from "@/lib/curator-blurb-text";
+import { countedVaultWhere } from "@/lib/data-quality/counting";
+import { getTotalsEpoch } from "@/lib/data-quality/maintenance";
+import { THRESHOLDS } from "@/lib/change-thresholds";
 import {
   getSourceFreshness,
   vaultSourceKey,
@@ -97,8 +100,12 @@ export async function buildDigest(
   });
 
   // 2. Curator flows from CuratorSnapshot (~24h): baseline (first) vs current (last).
+  // Never take a baseline from before a totals restatement: a change in what
+  // counts is not a flow.
+  const epoch = await getTotalsEpoch();
+  const flowBaselineStart = epoch && epoch > flowWindowStart ? epoch : flowWindowStart;
   const snaps = await prisma.curatorSnapshot.findMany({
-    where: { timestamp: { gte: flowWindowStart } },
+    where: { timestamp: { gte: flowBaselineStart } },
     orderBy: { timestamp: "asc" },
     select: { curatorId: true, totalAssetsUsd: true },
   });
@@ -147,9 +154,18 @@ export async function buildDigest(
   };
   const stress = computeStressIndex(curators, flow);
 
-  // 3. New vaults — first ingested in the last 24h, above the dust floor.
+  // 3. New vaults — first ingested in the last 24h, above the dust floor, and
+  // actually new: a source-reported creation time older than the launch
+  // window means a restored feed caught up on an old vault, not a launch.
+  const launchCutoff = Math.floor(
+    (now.getTime() - THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MAX_AGE_DAYS * 24 * HOUR) / 1000
+  );
   const newRows = await prisma.vault.findMany({
-    where: { createdAt: { gte: since }, active: true },
+    where: {
+      createdAt: { gte: since },
+      ...countedVaultWhere(now),
+      OR: [{ creationTimestamp: null }, { creationTimestamp: { gte: launchCutoff } }],
+    },
     select: {
       name: true,
       assetSymbol: true,
@@ -202,7 +218,7 @@ export async function buildDigest(
   let yieldMovers: DigestYieldMover[] = [];
   if (moverCandidates.length) {
     const moverVaults = await prisma.vault.findMany({
-      where: { id: { in: moverCandidates.map((m) => m.vaultId) } },
+      where: { id: { in: moverCandidates.map((m) => m.vaultId) }, ...countedVaultWhere(now) },
       select: {
         id: true,
         name: true,
@@ -227,7 +243,7 @@ export async function buildDigest(
         };
       })
       .filter((m): m is DigestYieldMover => m !== null)
-      .slice(0, 6);
+      .slice(0, 6); // after the counted + stale-source filters, so excluded vaults don't eat slots
   }
 
   // 5. Incidents — liquidations in the last 24h, attributed to curators via market.
@@ -329,7 +345,7 @@ export async function buildDigest(
     const c = aggByAddress.get(addr);
     if (!c) continue;
     const spotVaults = await prisma.vault.findMany({
-      where: { curator: { address: addr }, active: true },
+      where: { curator: { address: addr }, ...countedVaultWhere(now) },
       select: {
         chainId: true,
         protocol: true,

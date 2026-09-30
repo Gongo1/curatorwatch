@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { cacheGet, cacheSet } from "@/lib/cache";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { countedVaultWhere } from "@/lib/data-quality/counting";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 // Morpho protocol fee (15% of interest earned goes to Morpho protocol)
@@ -73,7 +74,7 @@ export async function GET(request: Request) {
     // Get all vaults with their latest snapshots and curator info
     const vaults = await prisma.vault.findMany({
       where: {
-        active: true,
+        ...countedVaultWhere(),
         ...(dataSource ? { dataSource } : {}),
         ...EXCLUDED_CURATOR_VAULT_FILTER,
       },

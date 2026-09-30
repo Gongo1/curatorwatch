@@ -6,7 +6,7 @@
  */
 
 import { prisma } from "./db";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { ALERT_TYPES, THRESHOLDS, type AlertType, type Severity } from "./change-thresholds";
 
 /** Lifecycle alerts compare consecutive runs only (collection is every 6h). */
@@ -31,6 +31,7 @@ interface VaultData {
   assetSymbol: string;
   assetDecimals: number;
   curatorAddress: string | null;
+  creationTimestamp?: number | null; // unix seconds, from the source
 }
 
 interface SnapshotData {
@@ -55,39 +56,165 @@ function formatPercentage(value: number, decimals = 2): string {
   return `${value.toFixed(decimals)}%`;
 }
 
+/** A snapshot point read back for comparisons. */
+interface SnapshotPoint {
+  totalAssetsUsd: number;
+  timestamp: Date;
+}
+
+/** A recent transaction with a USD value (Large Flow input). */
+interface RecentTx {
+  txHash: string;
+  timestamp: Date;
+  type: string;
+  assetsUsd: number | null;
+}
+
 /**
- * Main alert detection function
- * Called during data collection for each vault
+ * Everything the vault-level detectors read, prefetched for a whole batch of
+ * vaults in a fixed number of queries (was 4-8 round trips per vault).
  */
-export async function detectAlerts(
-  vault: VaultData,
-  currentSnapshot: SnapshotData
+interface AlertBatchData {
+  /** avgApy of every snapshot in [t-7d, t], per vault. */
+  apyWindow: Map<string, (number | null)[]>;
+  /** Transactions since t-24h with a USD value, newest first, per vault. */
+  recentTxs: Map<string, RecentTx[]>;
+  /** `${vaultId}|${changeType}|${txHash}` of flow alerts already stored. */
+  flowAlerted: Set<string>;
+  /** The two snapshots before t, newest first, per vault. */
+  priorSnapshots: Map<string, SnapshotPoint[]>;
+  /** Latest snapshot in [t-26h, t-22h], per vault. */
+  snapshot24h: Map<string, SnapshotPoint>;
+  /** `${vaultId}|${changeType}` of alerts detected since t-24h. */
+  recentAlerts: Set<string>;
+}
+
+const HOUR_MS = 60 * 60 * 1000;
+const FLOW_ALERT_TYPES = [ALERT_TYPES.LARGE_FLOW, ALERT_TYPES.LARGE_DEPOSIT, ALERT_TYPES.LARGE_WITHDRAWAL];
+
+function pushTo<K, V>(map: Map<K, V[]>, key: K, value: V) {
+  const list = map.get(key);
+  if (list) list.push(value);
+  else map.set(key, [value]);
+}
+
+/**
+ * Read what the detectors need for `vaultIds` at run time `t`: five queries,
+ * six when any vault has recent transactions.
+ */
+async function fetchAlertBatchData(vaultIds: string[], t: Date): Promise<AlertBatchData> {
+  const apyRows = await prisma.vaultSnapshot.findMany({
+    where: {
+      vaultId: { in: vaultIds },
+      timestamp: { gte: new Date(t.getTime() - 7 * 24 * HOUR_MS), lte: t },
+    },
+    select: { vaultId: true, avgApy: true },
+  });
+  const apyWindow = new Map<string, (number | null)[]>();
+  for (const r of apyRows) pushTo(apyWindow, r.vaultId, r.avgApy);
+
+  const txRows = await prisma.vaultTransaction.findMany({
+    where: {
+      vaultId: { in: vaultIds },
+      timestamp: { gte: new Date(t.getTime() - 24 * HOUR_MS) },
+      assetsUsd: { not: null },
+    },
+    orderBy: { timestamp: "desc" },
+    select: { vaultId: true, txHash: true, timestamp: true, type: true, assetsUsd: true },
+  });
+  const recentTxs = new Map<string, RecentTx[]>();
+  for (const r of txRows) pushTo(recentTxs, r.vaultId, r);
+
+  // Flow alerts already stored for these transactions (any age). Same test
+  // as a per-tx lookup of metadata.txHash, in one statement.
+  const flowAlerted = new Set<string>();
+  if (txRows.length > 0) {
+    const flowRows = await prisma.$queryRaw<{ vaultId: string; changeType: string; txHash: string }[]>`
+      SELECT "vaultId", "changeType", metadata->>'txHash' AS "txHash"
+      FROM "VaultChange"
+      WHERE "vaultId" IN (${Prisma.join([...recentTxs.keys()])})
+        AND "changeType" IN (${Prisma.join(FLOW_ALERT_TYPES)})
+        AND metadata->>'txHash' IN (${Prisma.join([...new Set(txRows.map((r) => r.txHash))])})
+    `;
+    for (const r of flowRows) flowAlerted.add(`${r.vaultId}|${r.changeType}|${r.txHash}`);
+  }
+
+  const priorRows = await prisma.$queryRaw<(SnapshotPoint & { vaultId: string })[]>`
+    SELECT v.id AS "vaultId", p."totalAssetsUsd", p."timestamp"
+    FROM "Vault" v
+    CROSS JOIN LATERAL (
+      SELECT s."totalAssetsUsd", s."timestamp"
+      FROM "VaultSnapshot" s
+      WHERE s."vaultId" = v.id AND s."timestamp" < ${t}
+      ORDER BY s."timestamp" DESC
+      LIMIT 2
+    ) p
+    WHERE v.id IN (${Prisma.join(vaultIds)})
+    ORDER BY v.id, p."timestamp" DESC
+  `;
+  const priorSnapshots = new Map<string, SnapshotPoint[]>();
+  for (const r of priorRows) {
+    pushTo(priorSnapshots, r.vaultId, { totalAssetsUsd: r.totalAssetsUsd, timestamp: r.timestamp });
+  }
+
+  const dayRows = await prisma.$queryRaw<(SnapshotPoint & { vaultId: string })[]>`
+    SELECT DISTINCT ON (s."vaultId") s."vaultId", s."totalAssetsUsd", s."timestamp"
+    FROM "VaultSnapshot" s
+    WHERE s."vaultId" IN (${Prisma.join(vaultIds)})
+      AND s."timestamp" >= ${new Date(t.getTime() - 26 * HOUR_MS)}
+      AND s."timestamp" <= ${new Date(t.getTime() - 22 * HOUR_MS)}
+    ORDER BY s."vaultId", s."timestamp" DESC
+  `;
+  const snapshot24h = new Map<string, SnapshotPoint>(
+    dayRows.map((r) => [r.vaultId, { totalAssetsUsd: r.totalAssetsUsd, timestamp: r.timestamp }])
+  );
+
+  const alertRows = await prisma.vaultChange.findMany({
+    where: { vaultId: { in: vaultIds }, detectedAt: { gte: new Date(t.getTime() - 24 * HOUR_MS) } },
+    select: { vaultId: true, changeType: true },
+  });
+  const recentAlerts = new Set(alertRows.map((r) => `${r.vaultId}|${r.changeType}`));
+
+  return { apyWindow, recentTxs, flowAlerted, priorSnapshots, snapshot24h, recentAlerts };
+}
+
+/**
+ * Main alert detection function, for a batch of vaults collected in one run.
+ * Every snapshot's `timestamp` is the run time; the batch is prefetched once
+ * (fetchAlertBatchData) and each vault is then evaluated in memory, with the
+ * same rules and duplicate checks as a per-vault lookup.
+ */
+export async function detectAlertsBatch(
+  inputs: { vault: VaultData; snapshot: SnapshotData }[]
 ): Promise<AlertEvent[]> {
   const alerts: AlertEvent[] = [];
-  const now = currentSnapshot.timestamp;
+  if (inputs.length === 0) return alerts;
 
-  try {
-    // 1. APY Change Detection
-    const apyAlerts = await detectApyChanges(vault, currentSnapshot);
-    alerts.push(...apyAlerts);
+  const data = await fetchAlertBatchData(
+    inputs.map((i) => i.vault.id),
+    inputs[0].snapshot.timestamp
+  );
 
-    // 2. Large Flow Detection
-    const flowAlerts = await detectLargeFlows(vault, currentSnapshot);
-    alerts.push(...flowAlerts);
+  for (const { vault, snapshot } of inputs) {
+    try {
+      // 1. APY Change Detection
+      alerts.push(...detectApyChanges(vault, snapshot, data));
 
-    // 3. Vault Lifecycle Detection
-    const lifecycleAlerts = await detectVaultLifecycle(vault, currentSnapshot);
-    alerts.push(...lifecycleAlerts);
+      // 2. Large Flow Detection
+      alerts.push(...detectLargeFlows(vault, snapshot, data));
 
-    // 4. Concentration Spike Detection — disabled
-    // const concentrationAlerts = await detectConcentrationSpikes(vault, now);
-    // alerts.push(...concentrationAlerts);
+      // 3. Vault Lifecycle Detection
+      alerts.push(...(await detectVaultLifecycle(vault, snapshot, data)));
 
-    // 5. Vault TVL Snapshot Comparison (catches distributed outflows)
-    const tvlAlerts = await detectVaultTvlChanges(vault, currentSnapshot);
-    alerts.push(...tvlAlerts);
-  } catch (error) {
-    console.error(`Error detecting alerts for vault ${vault.name}:`, error);
+      // 4. Concentration Spike Detection — disabled
+      // const concentrationAlerts = await detectConcentrationSpikes(vault, now);
+      // alerts.push(...concentrationAlerts);
+
+      // 5. Vault TVL Snapshot Comparison (catches distributed outflows)
+      alerts.push(...detectVaultTvlChanges(vault, snapshot, data));
+    } catch (error) {
+      console.error(`Error detecting alerts for vault ${vault.name}:`, error);
+    }
   }
 
   return alerts;
@@ -96,10 +223,11 @@ export async function detectAlerts(
 /**
  * Detect APY changes from 7-day moving average
  */
-async function detectApyChanges(
+function detectApyChanges(
   vault: VaultData,
-  currentSnapshot: SnapshotData
-): Promise<AlertEvent[]> {
+  currentSnapshot: SnapshotData,
+  data: AlertBatchData
+): AlertEvent[] {
   const alerts: AlertEvent[] = [];
   const currentApy = currentSnapshot.avgApy;
 
@@ -107,29 +235,14 @@ async function detectApyChanges(
     return alerts;
   }
 
-  // Get 7-day moving average
-  const sevenDaysAgo = new Date(
-    currentSnapshot.timestamp.getTime() - 7 * 24 * 60 * 60 * 1000
-  );
-
-  const recentSnapshots = await prisma.vaultSnapshot.findMany({
-    where: {
-      vaultId: vault.id,
-      timestamp: {
-        gte: sevenDaysAgo,
-        lte: currentSnapshot.timestamp,
-      },
-    },
-    select: { avgApy: true },
-  });
+  // 7-day moving average (snapshots in [t-7d, t])
+  const recentSnapshots = data.apyWindow.get(vault.id) ?? [];
 
   if (recentSnapshots.length < 2) {
     return alerts; // Not enough data
   }
 
-  const apyValues = recentSnapshots
-    .map((s) => s.avgApy)
-    .filter((apy): apy is number => apy !== null);
+  const apyValues = recentSnapshots.filter((apy): apy is number => apy !== null);
 
   if (apyValues.length === 0) {
     return alerts;
@@ -147,12 +260,7 @@ async function detectApyChanges(
   const directionWord = currentApy > avgApy ? "Spike" : "Drop";
 
   // Check if duplicate exists
-  const existingAlert = await checkDuplicateAlert(
-    vault.id,
-    ALERT_TYPES.APY_CHANGE,
-    currentSnapshot.timestamp
-  );
-  if (existingAlert) {
+  if (data.recentAlerts.has(`${vault.id}|${ALERT_TYPES.APY_CHANGE}`)) {
     return alerts;
   }
 
@@ -188,10 +296,11 @@ async function detectApyChanges(
 /**
  * Detect large deposits/withdrawals (>10% of TVL)
  */
-async function detectLargeFlows(
+function detectLargeFlows(
   vault: VaultData,
-  currentSnapshot: SnapshotData
-): Promise<AlertEvent[]> {
+  currentSnapshot: SnapshotData,
+  data: AlertBatchData
+): AlertEvent[] {
   const alerts: AlertEvent[] = [];
   const currentTVL = currentSnapshot.totalAssetsUsd;
 
@@ -199,19 +308,8 @@ async function detectLargeFlows(
     return alerts;
   }
 
-  // Get recent transactions (last 24h)
-  const twentyFourHoursAgo = new Date(
-    currentSnapshot.timestamp.getTime() - 24 * 60 * 60 * 1000
-  );
-
-  const recentTxs = await prisma.vaultTransaction.findMany({
-    where: {
-      vaultId: vault.id,
-      timestamp: { gte: twentyFourHoursAgo },
-      assetsUsd: { not: null },
-    },
-    orderBy: { timestamp: "desc" },
-  });
+  // Recent transactions (last 24h), newest first
+  const recentTxs = data.recentTxs.get(vault.id) ?? [];
 
   for (const tx of recentTxs) {
     const txSize = tx.assetsUsd || 0;
@@ -227,16 +325,9 @@ async function detectLargeFlows(
       : ALERT_TYPES.LARGE_WITHDRAWAL;
 
     // Check if we already alerted on this transaction (check both old and new types)
-    const existingAlert = await prisma.vaultChange.findFirst({
-      where: {
-        vaultId: vault.id,
-        changeType: { in: [ALERT_TYPES.LARGE_FLOW, alertType] },
-        metadata: {
-          path: ["txHash"],
-          equals: tx.txHash,
-        },
-      },
-    });
+    const existingAlert = [ALERT_TYPES.LARGE_FLOW, alertType].some((type) =>
+      data.flowAlerted.has(`${vault.id}|${type}|${tx.txHash}`)
+    );
 
     if (existingAlert) continue;
 
@@ -322,23 +413,24 @@ async function detectLargeFlows(
 
 /**
  * Detect vault lifecycle events (launch/shutdown)
+ *
+ * Launch fires at most once per vault, only for a vault created (or, without a
+ * creation time, first seen) in the last LAUNCH_MAX_AGE_DAYS, and only when
+ * TVL is >= LAUNCH_MIN_TVL on 2 consecutive snapshots (the one before that
+ * below it, or none). The old rule fired on any <$1M -> >=$1M crossing, so
+ * 83 of 87 "launches" were old vaults wobbling around $1M.
  */
 async function detectVaultLifecycle(
   vault: VaultData,
-  currentSnapshot: SnapshotData
+  currentSnapshot: SnapshotData,
+  data: AlertBatchData
 ): Promise<AlertEvent[]> {
   const alerts: AlertEvent[] = [];
   const currentTVL = currentSnapshot.totalAssetsUsd;
 
-  // Get previous snapshot
-  const previousSnapshot = await prisma.vaultSnapshot.findFirst({
-    where: {
-      vaultId: vault.id,
-      timestamp: { lt: currentSnapshot.timestamp },
-    },
-    orderBy: { timestamp: "desc" },
-    select: { totalAssetsUsd: true, timestamp: true },
-  });
+  // The two snapshots before this run: [previous, the one before it]
+  const priorSnapshots = data.priorSnapshots.get(vault.id) ?? [];
+  const previousSnapshot = priorSnapshots[0];
 
   if (!previousSnapshot) {
     return alerts;
@@ -356,31 +448,27 @@ async function detectVaultLifecycle(
   }
 
   const prevTVL = previousSnapshot.totalAssetsUsd;
+  const launchMin = THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MIN_TVL;
+  const beforePrev = priorSnapshots[1];
 
-  // Vault Launch: TVL was <$1M, now >$1M
+  // Vault Launch: >= $1M on 2 consecutive snapshots, below it (or unseen) before
   if (
-    prevTVL < THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MIN_TVL &&
-    currentTVL >= THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MIN_TVL
+    currentTVL >= launchMin &&
+    prevTVL >= launchMin &&
+    (!beforePrev || beforePrev.totalAssetsUsd < launchMin) &&
+    (await isLaunchCandidate(vault, currentSnapshot.timestamp))
   ) {
-    const existingAlert = await checkDuplicateAlert(
-      vault.id,
-      ALERT_TYPES.VAULT_LAUNCH,
-      currentSnapshot.timestamp
-    );
-
-    if (!existingAlert) {
-      alerts.push({
-        vaultId: vault.id,
-        changeType: ALERT_TYPES.VAULT_LAUNCH,
-        severity: "info",
-        title: `New Vault Launched: ${vault.name}`,
-        description: `Vault went live with ${formatCurrency(currentTVL)} in initial deposits.`,
-        oldValue: formatCurrency(prevTVL),
-        newValue: formatCurrency(currentTVL),
-        detectedAt: currentSnapshot.timestamp,
-        metadata: { prevTVL, currentTVL },
-      });
-    }
+    alerts.push({
+      vaultId: vault.id,
+      changeType: ALERT_TYPES.VAULT_LAUNCH,
+      severity: "info",
+      title: `New Vault Launched: ${vault.name}`,
+      description: `Vault went live with ${formatCurrency(currentTVL)} in initial deposits.`,
+      oldValue: formatCurrency(beforePrev?.totalAssetsUsd ?? 0),
+      newValue: formatCurrency(currentTVL),
+      detectedAt: currentSnapshot.timestamp,
+      metadata: { prevTVL, currentTVL, creationTimestamp: vault.creationTimestamp ?? null },
+    });
   }
 
   // Vault Shutdown: TVL was >$100k, now <$10k
@@ -388,11 +476,7 @@ async function detectVaultLifecycle(
     prevTVL > THRESHOLDS.VAULT_LIFECYCLE.SHUTDOWN_PREV_MIN &&
     currentTVL < THRESHOLDS.VAULT_LIFECYCLE.SHUTDOWN_CURR_MAX
   ) {
-    const existingAlert = await checkDuplicateAlert(
-      vault.id,
-      ALERT_TYPES.VAULT_SHUTDOWN,
-      currentSnapshot.timestamp
-    );
+    const existingAlert = data.recentAlerts.has(`${vault.id}|${ALERT_TYPES.VAULT_SHUTDOWN}`);
 
     if (!existingAlert) {
       alerts.push({
@@ -505,10 +589,11 @@ async function detectConcentrationSpikes(
  * Detect vault TVL changes via snapshot-to-snapshot comparison (24h lookback).
  * This catches distributed outflows that individual transaction alerts miss.
  */
-async function detectVaultTvlChanges(
+function detectVaultTvlChanges(
   vault: VaultData,
-  currentSnapshot: SnapshotData
-): Promise<AlertEvent[]> {
+  currentSnapshot: SnapshotData,
+  data: AlertBatchData
+): AlertEvent[] {
   const alerts: AlertEvent[] = [];
   const currentTVL = currentSnapshot.totalAssetsUsd;
 
@@ -516,21 +601,8 @@ async function detectVaultTvlChanges(
     return alerts;
   }
 
-  // Get snapshot from ~24h ago (within 2h tolerance window)
-  const twentyTwoHoursAgo = new Date(currentSnapshot.timestamp.getTime() - 22 * 60 * 60 * 1000);
-  const twentySixHoursAgo = new Date(currentSnapshot.timestamp.getTime() - 26 * 60 * 60 * 1000);
-
-  const oldSnapshot = await prisma.vaultSnapshot.findFirst({
-    where: {
-      vaultId: vault.id,
-      timestamp: {
-        gte: twentySixHoursAgo,
-        lte: twentyTwoHoursAgo,
-      },
-    },
-    orderBy: { timestamp: "desc" },
-    select: { totalAssetsUsd: true, timestamp: true },
-  });
+  // Snapshot from ~24h ago (latest in the 22-26h window)
+  const oldSnapshot = data.snapshot24h.get(vault.id);
 
   if (!oldSnapshot || oldSnapshot.totalAssetsUsd <= 0) {
     return alerts;
@@ -542,11 +614,7 @@ async function detectVaultTvlChanges(
 
   // TVL Drop detection
   if (pctChange < 0) {
-    const isDuplicate = await checkDuplicateAlert(
-      vault.id,
-      ALERT_TYPES.VAULT_TVL_DROP,
-      currentSnapshot.timestamp
-    );
+    const isDuplicate = data.recentAlerts.has(`${vault.id}|${ALERT_TYPES.VAULT_TVL_DROP}`);
     if (isDuplicate) return alerts;
 
     if (absPctChange > THRESHOLDS.VAULT_TVL.CRITICAL) {
@@ -578,11 +646,7 @@ async function detectVaultTvlChanges(
 
   // TVL Surge detection (positive signal)
   if (pctChange > 0 && absPctChange > THRESHOLDS.VAULT_TVL.SURGE_INFO) {
-    const isDuplicate = await checkDuplicateAlert(
-      vault.id,
-      ALERT_TYPES.VAULT_TVL_SURGE,
-      currentSnapshot.timestamp
-    );
+    const isDuplicate = data.recentAlerts.has(`${vault.id}|${ALERT_TYPES.VAULT_TVL_SURGE}`);
     if (!isDuplicate) {
       alerts.push({
         vaultId: vault.id,
@@ -599,6 +663,34 @@ async function detectVaultTvlChanges(
   }
 
   return alerts;
+}
+
+/**
+ * A vault may "launch" only once ever, and only while it is new: created (or,
+ * without a creation time, first snapshotted) within LAUNCH_MAX_AGE_DAYS.
+ */
+async function isLaunchCandidate(vault: VaultData, now: Date): Promise<boolean> {
+  const alreadyLaunched = await prisma.vaultChange.findFirst({
+    where: { vaultId: vault.id, changeType: ALERT_TYPES.VAULT_LAUNCH },
+    select: { id: true },
+  });
+  if (alreadyLaunched) return false;
+
+  let bornAt: Date | null = vault.creationTimestamp
+    ? new Date(vault.creationTimestamp * 1000)
+    : null;
+  if (!bornAt) {
+    const first = await prisma.vaultSnapshot.findFirst({
+      where: { vaultId: vault.id },
+      orderBy: { timestamp: "asc" },
+      select: { timestamp: true },
+    });
+    bornAt = first?.timestamp ?? null;
+  }
+  if (!bornAt) return false;
+
+  const maxAgeMs = THRESHOLDS.VAULT_LIFECYCLE.LAUNCH_MAX_AGE_DAYS * 24 * 60 * 60 * 1000;
+  return now.getTime() - bornAt.getTime() <= maxAgeMs;
 }
 
 /**
@@ -623,37 +715,29 @@ async function checkDuplicateAlert(
 }
 
 /**
- * Store detected alerts in the database
+ * Store detected alerts in the database, in one statement. An alert that
+ * repeats (vaultId, changeType, detectedAt) is skipped, as before.
  */
 export async function storeAlerts(alerts: AlertEvent[]): Promise<number> {
   if (alerts.length === 0) return 0;
 
-  let stored = 0;
+  const result = await prisma.vaultChange.createMany({
+    data: alerts.map((alert) => ({
+      vaultId: alert.vaultId,
+      changeType: alert.changeType,
+      severity: alert.severity,
+      title: alert.title,
+      description: alert.description,
+      oldValue: alert.oldValue,
+      newValue: alert.newValue,
+      metadata: alert.metadata,
+      detectedAt: alert.detectedAt,
+      viewed: false,
+    })),
+    skipDuplicates: true,
+  });
 
-  for (const alert of alerts) {
-    try {
-      await prisma.vaultChange.create({
-        data: {
-          vaultId: alert.vaultId,
-          changeType: alert.changeType,
-          severity: alert.severity,
-          title: alert.title,
-          description: alert.description,
-          oldValue: alert.oldValue,
-          newValue: alert.newValue,
-          metadata: alert.metadata,
-          detectedAt: alert.detectedAt,
-          viewed: false,
-        },
-      });
-      stored++;
-    } catch (error) {
-      // Likely a duplicate, skip
-      console.log(`Skipping duplicate alert: ${alert.title}`);
-    }
-  }
-
-  return stored;
+  return result.count;
 }
 
 /**
@@ -728,6 +812,5 @@ export async function getAlerts(options: {
   };
 }
 
-// Legacy exports for backwards compatibility
-export const detectChanges = detectAlerts;
+// Legacy export for backwards compatibility
 export const storeChanges = storeAlerts;

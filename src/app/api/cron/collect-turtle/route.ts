@@ -7,7 +7,8 @@ import {
 import { revalidateDataPages } from "@/lib/revalidate-pages";
 import { withCronRun } from "@/lib/cron-run";
 
-export const maxDuration = 300;
+// Safety margin only: the batched collector finishes in well under 2 minutes.
+export const maxDuration = 800;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {

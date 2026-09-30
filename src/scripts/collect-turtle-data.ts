@@ -7,15 +7,23 @@
  * Morpho vaults are already covered by the primary Morpho pipeline, so excluding them
  * prevents double-counting. Opportunities that don't resolve to a curator (denylisted
  * protocols/infra, or no curator name) are skipped, not stored.
+ *
+ * Writes are batched (a fixed ~12 DB round trips per run, independent of the
+ * number of vaults): one read of the existing rows, one curator batch, then
+ * createMany / UPDATE ... FROM (VALUES ...) in chunks of 500. The per-vault
+ * upsert it replaced cost 3-5 round trips per vault and hit the route's cap.
  */
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../lib/db";
 import { fetchTurtleOpportunities } from "../lib/turtle/client";
 import { extractProtocol } from "../lib/turtle/protocol-extractor";
-import { matchCurator } from "../lib/turtle/curator-matcher";
+import { matchCurators } from "../lib/turtle/curator-matcher";
 import { resolveChainId, canonicalChainName } from "../lib/turtle/chain-mapper";
 import { sanitizeApyPct } from "../lib/utils/sanitize-apy";
-import type { TurtleOpportunity } from "../lib/turtle/types";
+import { assessPhantom } from "../lib/data-quality/phantom";
+import { finalizeCollection, recordSnapshotsWritten } from "../lib/data-quality/maintenance";
+import type { TurtleOpportunity, TurtleToken } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 100_000; // $100K dust floor
 
@@ -68,6 +76,17 @@ function logError(message: string, error?: unknown) {
 }
 
 /**
+ * The chain an opportunity's position lives on: the RECEIPT token's chain,
+ * falling back to the first deposit token's, then the opportunity's. Lido
+ * wstETH lists WETH on Ethereum as the deposit token for every L2 wstETH
+ * opportunity, so reading the deposit chain labeled 11 L2 rows "Ethereum"
+ * (with L2 contract addresses).
+ */
+function opportunityChain(opp: TurtleOpportunity): TurtleToken["chain"] | undefined {
+  return opp.receiptToken?.chain ?? opp.depositTokens?.[0]?.chain ?? opp.chain;
+}
+
+/**
  * Filter Turtle opportunities to managed vaults we care about.
  */
 function filterOpportunities(
@@ -84,222 +103,173 @@ function filterOpportunities(
     if (protocol === "morpho") return false;
 
     // Exclude testnets — testnet balances are not real TVL
-    const chainSlug = (
-      opp.depositTokens?.[0]?.chain?.slug ??
-      opp.chain?.slug ??
-      "ethereum"
-    ).toLowerCase();
+    const chainSlug = (opportunityChain(opp)?.slug ?? "ethereum").toLowerCase();
     if (TESTNET_CHAINS.has(chainSlug)) return false;
 
     return true;
   });
 }
 
+/** Rows per bulk statement (createMany / UPDATE ... FROM (VALUES ...)). */
+const WRITE_CHUNK = 500;
+
+function chunked<T>(rows: T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < rows.length; i += WRITE_CHUNK) out.push(rows.slice(i, i + WRITE_CHUNK));
+  return out;
+}
+
+/** One opportunity that passed every guard, ready for the bulk writes. */
+interface PlannedVault {
+  opp: TurtleOpportunity;
+  address: string; // synthetic `turtle-<opp.id>`
+  vaultId: string | undefined; // existing row id up front; filled in after createMany for new rows
+  fields: {
+    name: string;
+    turtleId: string;
+    protocol: string;
+    curatorId: string;
+    dataSource: "turtle";
+    opportunityType: string;
+    chainId: number;
+    chainName: string;
+    onchainAddress: string | null;
+    onchainSymbol: string | null;
+    estTotalAPR: number | null;
+    netAPR: number | null;
+    aprBreakdown: { source: string; apr: number; type: string }[] | undefined;
+    active: true;
+  };
+  createOnly: { symbol: string; assetAddress: string; assetSymbol: string; assetDecimals: number };
+  aprDecimal: number | null;
+  phantomReason: string | null;
+}
+
+/** Chain for an opportunity, or null when neither the numeric id nor the slug resolves. */
+function resolveOppChain(opp: TurtleOpportunity): { chainId: number; chainName: string } | null {
+  // Prefer Turtle's authoritative numeric chainId (present on every chain object)
+  // over the slug→id map, so chains we haven't enumerated are never silently
+  // mislabeled as Ethereum (chainId 1). Skip + log if neither resolves.
+  const chainObj = opportunityChain(opp);
+  const chainSlug = (chainObj?.slug ?? "ethereum").toLowerCase();
+  const chainId = resolveChainId(chainObj?.chainId, chainSlug);
+  if (chainId === null) return null;
+  return { chainId, chainName: canonicalChainName(chainId, chainSlug) };
+}
+
 /**
- * Upsert a single Turtle vault into the database.
+ * Build the vault row + snapshot for one opportunity (no DB access). Same
+ * fields and guards the per-row upsert wrote before the writes were batched.
  */
-async function upsertTurtleVault(
+function planTurtleVault(
   opp: TurtleOpportunity,
-  morphoVaultKeys: Set<string>,
-  fundAddresses: Set<string>
-): Promise<{
-  upserted: boolean;
-  matched: boolean;
-  skipped?: boolean;
-  curatorName: string;
-  error?: string;
-  overlap?: { onchainAddress: string; existingRow: boolean };
-}> {
-  try {
-    const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
+  chain: { chainId: number; chainName: string },
+  curatorId: string,
+  existingId: string | undefined
+): PlannedVault {
+  const protocol = extractProtocol(opp.description, opp.name, opp.protocol);
 
-    // Extract chain info. Prefer Turtle's authoritative numeric chainId (present on
-    // every chain object) over the slug→id map, so chains we haven't enumerated are
-    // never silently mislabeled as Ethereum (chainId 1). Skip + log if neither resolves.
-    const chainObj = opp.depositTokens?.[0]?.chain ?? opp.chain;
-    const chainSlug = (chainObj?.slug ?? "ethereum").toLowerCase();
-    const chainId = resolveChainId(chainObj?.chainId, chainSlug);
-    if (chainId === null) {
-      return {
-        upserted: false,
-        matched: false,
-        skipped: true,
-        curatorName: opp.curator?.name ?? opp.name,
-        error: `unknown chain (no numeric id, unmapped slug "${chainSlug}")`,
-      };
-    }
-    const chainName = canonicalChainName(chainId, chainSlug);
+  // Extract asset info from deposit tokens
+  const depositToken = opp.depositTokens?.[0];
+  const assetAddress = depositToken?.address ?? "unknown";
+  const assetSymbol = depositToken?.symbol ?? "UNKNOWN";
+  const assetDecimals = depositToken?.decimals ?? 18;
 
-    // Extract asset info from deposit tokens
-    const depositToken = opp.depositTokens?.[0];
-    const assetAddress = depositToken?.address ?? "unknown";
-    const assetSymbol = depositToken?.symbol ?? "UNKNOWN";
-    const assetDecimals = depositToken?.decimals ?? 18;
+  // Real on-chain identity: the receipt/share token is the vault contract for
+  // ERC-4626-style opportunities. Stored lowercase for cross-source joins.
+  const onchainAddress = opp.receiptToken?.address?.toLowerCase() ?? null;
+  const onchainSymbol = opp.receiptToken?.symbol ?? null;
 
-    // Resolve to a curator (name-based; Turtle gives no address). Returns null for
-    // denylisted protocols/infra or opportunities with no curator name.
-    const curatorName = opp.curator?.name ?? opp.name;
-    const curatorId = await matchCurator(opp.name, opp.curator);
+  // Turtle API returns estimatedApr as percentage (e.g. 8.33 = 8.33%).
+  // Store directly as percentage — no APY conversion. Sanitize first: the Turtle
+  // feed occasionally reports garbage (e.g. 5,769% on "Staked Plasma USD"), and
+  // unlike the Morpho write path this one was previously unguarded. >200% → null,
+  // which propagates to netAPR + the snapshot's decimal APY fields below.
+  const estTotalAPR = sanitizeApyPct(opp.estimatedApr ?? null);
 
-    // Only ingest opportunities that resolve to a curator — skip the rest (don't store
-    // hidden rows), keeping the vault table clean under the broadened filter.
-    if (curatorId === null) {
-      return { upserted: false, matched: false, skipped: true, curatorName };
-    }
+  // Build APR breakdown from incentives (name, description, rewardType, apr).
+  const aprBreakdown = opp.incentives?.length > 0
+    ? opp.incentives.map((inc) => ({
+        source: inc.name ?? inc.token?.symbol ?? "Unknown",
+        apr: inc.apr ?? 0,
+        type: inc.rewardType ?? inc.type ?? "unknown",
+      }))
+    : null;
 
-    const syntheticAddress = `turtle-${opp.id}`;
-
-    // Real on-chain identity: the receipt/share token is the vault contract for
-    // ERC-4626-style opportunities. Stored lowercase for cross-source joins.
-    const onchainAddress = opp.receiptToken?.address?.toLowerCase() ?? null;
-    const onchainSymbol = opp.receiptToken?.symbol ?? null;
-
-    // Cross-source guard: if the Morpho pipeline already tracks this exact vault
-    // (same on-chain address + chain), don't create a second row for it. If a
-    // Turtle row already exists from before, keep refreshing it but flag the
-    // overlap in the run report so it can be reviewed and merged deliberately —
-    // never auto-unlinked (no silent drops).
-    const isOverlap =
-      onchainAddress !== null &&
-      (morphoVaultKeys.has(`${onchainAddress}:${chainId}`) ||
-        fundAddresses.has(onchainAddress));
-    if (isOverlap) {
-      const existing = await prisma.vault.findUnique({
-        where: { address: syntheticAddress },
-        select: { id: true },
-      });
-      if (!existing) {
-        return {
-          upserted: false,
-          matched: false,
-          skipped: true,
-          curatorName: opp.curator?.name ?? opp.name,
-          overlap: { onchainAddress, existingRow: false },
-        };
-      }
-    }
-
-    // Turtle API returns estimatedApr as percentage (e.g. 8.33 = 8.33%).
-    // Store directly as percentage — no APY conversion. Sanitize first: the Turtle
-    // feed occasionally reports garbage (e.g. 5,769% on "Staked Plasma USD"), and
-    // unlike the Morpho write path this one was previously unguarded. >200% → null,
-    // which propagates to netAPR + the snapshot's decimal APY fields below.
-    const estTotalAPR = sanitizeApyPct(opp.estimatedApr ?? null);
-
-    // Build APR breakdown from incentives (name, description, rewardType, apr).
-    const aprBreakdown = opp.incentives?.length > 0
-      ? opp.incentives.map((inc) => ({
-          source: inc.name ?? inc.token?.symbol ?? "Unknown",
-          apr: inc.apr ?? 0,
-          type: inc.rewardType ?? inc.type ?? "unknown",
-        }))
-      : null;
-
+  return {
+    opp,
+    // One Turtle opportunity = one vault row, keyed on the deterministic
+    // synthetic address — no curator+asset+chain dedup, which wrongly collapsed
+    // distinct vaults of the same curator and desynced turtleId↔address.
+    address: `turtle-${opp.id}`,
+    vaultId: existingId,
     // Vault-level data shared between create and update
-    const vaultFields = {
+    fields: {
       name: opp.name,
       turtleId: opp.id,
       protocol,
       curatorId,
-      dataSource: "turtle" as const,
+      dataSource: "turtle",
       opportunityType: opp.type,
-      chainId,
-      chainName,
+      chainId: chain.chainId,
+      chainName: chain.chainName,
       onchainAddress,
       onchainSymbol,
       estTotalAPR,
       netAPR: estTotalAPR,
       aprBreakdown: aprBreakdown ?? undefined,
       active: true, // a vault present in the current filtered set is active
-    };
-
+    },
+    createOnly: { symbol: assetSymbol, assetAddress, assetSymbol, assetDecimals },
     // Snapshot stores APR as a decimal so yield math (tvl * netApy) still works.
-    const aprDecimal = estTotalAPR != null ? estTotalAPR / 100 : null;
-
-    // Upsert keyed on the deterministic synthetic address (`turtle-<opp.id>`). One
-    // Turtle opportunity = one vault row — no curator+asset+chain dedup, which wrongly
-    // collapsed distinct vaults of the same curator and desynced turtleId↔address.
-    const vault = await prisma.vault.upsert({
-      where: { address: syntheticAddress },
-      update: { ...vaultFields, updatedAt: new Date() },
-      create: {
-        address: syntheticAddress,
-        symbol: assetSymbol,
-        assetAddress,
-        assetSymbol,
-        assetDecimals,
-        ...vaultFields,
-      },
-    });
-
-    await prisma.vaultSnapshot.create({
-      data: {
-        vaultId: vault.id,
-        totalAssets: "0",
-        totalAssetsUsd: opp.tvl,
-        totalSupply: "0",
-        sharePrice: 1,
-        apy: aprDecimal,
-        netApy: aprDecimal,
-        avgApy: aprDecimal,
-        avgNetApy: aprDecimal,
-      },
-    });
-
-    return {
-      upserted: true,
-      matched: true,
-      curatorName,
-      overlap: isOverlap && onchainAddress ? { onchainAddress, existingRow: true } : undefined,
-    };
-  } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error);
-    return {
-      upserted: false,
-      matched: false,
-      curatorName: opp.curator?.name ?? opp.name,
-      error: msg,
-    };
-  }
+    aprDecimal: estTotalAPR != null ? estTotalAPR / 100 : null,
+    // Phantom test on the RAW source APR (the stored value is sanitized).
+    phantomReason: assessPhantom({
+      apy: opp.estimatedApr != null ? opp.estimatedApr / 100 : null,
+      assetSymbol,
+    }),
+  };
 }
 
 /**
- * Update curator stats for curators that have Turtle-sourced vaults.
+ * Update existing vault rows in one UPDATE ... FROM (VALUES ...) statement per
+ * chunk. Writes the same fields the per-row upsert's update branch wrote; an
+ * absent aprBreakdown leaves the stored one untouched (Prisma's `undefined`).
  */
-async function updateTurtleCuratorStats() {
-  const turtleCurators = await prisma.curator.findMany({
-    where: {
-      vaults: { some: { dataSource: "turtle" } },
-    },
-    select: { id: true, name: true, address: true },
-  });
-
-  for (const curator of turtleCurators) {
-    const vaultCount = await prisma.vault.count({
-      where: { curatorId: curator.id },
-    });
-
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId: curator.id },
-      select: { id: true },
-    });
-
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) {
-        totalAssets += snapshot.totalAssetsUsd;
-      }
-    }
-
-    await prisma.curator.update({
-      where: { id: curator.id },
-      data: { vaultCount, totalAssetsManaged: totalAssets },
-    });
+async function updateExistingVaults(rows: PlannedVault[], now: Date): Promise<void> {
+  for (const chunk of chunked(rows)) {
+    const values = Prisma.join(
+      chunk.map((r) => {
+        const f = r.fields;
+        return Prisma.sql`(${r.vaultId}::text, ${f.name}::text, ${f.turtleId}::text,
+          ${f.protocol}::text, ${f.curatorId}::text, ${f.opportunityType}::text,
+          ${f.chainId}::int, ${f.chainName}::text, ${f.onchainAddress}::text,
+          ${f.onchainSymbol}::text, ${f.estTotalAPR}::float8,
+          ${f.aprBreakdown ? JSON.stringify(f.aprBreakdown) : null}::jsonb)`;
+      })
+    );
+    await prisma.$executeRaw`
+      UPDATE "Vault" AS v
+      SET "name" = d.name,
+          "turtleId" = d.turtle_id,
+          "protocol" = d.protocol,
+          "curatorId" = d.curator_id,
+          "dataSource" = 'turtle',
+          "opportunityType" = d.opportunity_type,
+          "chainId" = d.chain_id,
+          "chainName" = d.chain_name,
+          "onchainAddress" = d.onchain_address,
+          "onchainSymbol" = d.onchain_symbol,
+          "estTotalAPR" = d.apr,
+          "netAPR" = d.apr,
+          "aprBreakdown" = COALESCE(d.apr_breakdown, v."aprBreakdown"),
+          "active" = true,
+          "updatedAt" = ${now}
+      FROM (VALUES ${values}) AS d(id, name, turtle_id, protocol, curator_id,
+        opportunity_type, chain_id, chain_name, onchain_address, onchain_symbol,
+        apr, apr_breakdown)
+      WHERE v.id = d.id
+    `;
   }
 }
 
@@ -322,11 +292,11 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     const filtered = filterOpportunities(allOpportunities);
     log(`Filtered to ${filtered.length} opportunities (TVL>=$100K, non-Morpho, non-testnet)`);
 
-    // Snapshot of vault identities owned by the native pipelines (Morpho +
-    // Euler rows store the real contract in `address`) for the cross-source
-    // guard. Built once per run.
+    // Snapshot of vault identities owned by the native pipelines (Morpho,
+    // Euler and Upshift rows store the real contract in `address`) for the
+    // cross-source guard. Built once per run.
     const morphoVaults = await prisma.vault.findMany({
-      where: { dataSource: { in: ["morpho", "euler"] } },
+      where: { dataSource: { in: ["morpho", "euler", "upshift"] } },
       select: { address: true, chainId: true },
     });
     const morphoVaultKeys = new Set(
@@ -353,7 +323,15 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     });
     const fundAddresses = new Set(fundRows.map((v) => v.onchainAddress!));
 
-    // 3. Upsert each vault
+    // Existing rows keyed by synthetic address, so the writes below need no
+    // per-vault lookup (the upsert used to be keyed on this address).
+    const existingRows = await prisma.vault.findMany({
+      where: { address: { startsWith: "turtle-" } },
+      select: { id: true, address: true },
+    });
+    const existingIdByAddress = new Map(existingRows.map((v) => [v.address, v.id]));
+
+    // 3. Plan every vault in memory, then write in bulk.
     let vaultsUpserted = 0;
     let snapshotsCreated = 0;
     let vaultsAttributed = 0;
@@ -363,6 +341,8 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
     const implausibleTvl: TurtleCollectionResult["implausibleTvl"] = [];
     const crossSourceOverlaps: TurtleCollectionResult["crossSourceOverlaps"] = [];
 
+    // 3a. Source guards + chain resolution.
+    const candidates: { opp: TurtleOpportunity; chain: { chainId: number; chainName: string } }[] = [];
     for (const opp of filtered) {
       if (fundAdopted.has(`turtle-${opp.id}`)) {
         fundAdoptedSkipped++;
@@ -378,28 +358,113 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
         );
         continue;
       }
-      const result = await upsertTurtleVault(opp, morphoVaultKeys, fundAddresses);
-      if (result.overlap) {
+      const chain = resolveOppChain(opp);
+      if (chain === null) {
+        // Unknown chain (no numeric id, unmapped slug): skipped, not stored.
+        hiddenVaults.push({ name: opp.curator?.name ?? opp.name, tvl: opp.tvl ?? 0 });
+        continue;
+      }
+      candidates.push({ opp, chain });
+    }
+
+    // 3b. Resolve curators (name-based; Turtle gives no address) in one batch.
+    // null = denylisted protocol/infra or no curator name.
+    const curatorIds = await matchCurators(
+      candidates.map(({ opp }) => ({ opportunityName: opp.name, curatorData: opp.curator }))
+    );
+
+    const planned: PlannedVault[] = [];
+    candidates.forEach(({ opp, chain }, i) => {
+      const curatorId = curatorIds[i];
+      // Only ingest opportunities that resolve to a curator — skip the rest (don't
+      // store hidden rows), keeping the vault table clean under the broadened filter.
+      if (curatorId === null) {
+        hiddenVaults.push({ name: opp.curator?.name ?? opp.name, tvl: opp.tvl ?? 0 });
+        return;
+      }
+      const address = `turtle-${opp.id}`;
+      const existingId = existingIdByAddress.get(address);
+
+      // Cross-source guard: if a native pipeline (Morpho, Euler, Upshift, funds)
+      // already tracks this exact vault (same on-chain address + chain), don't
+      // create a second row for it. If a Turtle row already exists from before,
+      // keep refreshing it and flag the overlap in the run report; the exclusion
+      // rules mark it cross_source_dup (not counted) while the native row is
+      // fresh — never auto-unlinked (no silent drops).
+      const onchainAddress = opp.receiptToken?.address?.toLowerCase() ?? null;
+      const isOverlap =
+        onchainAddress !== null &&
+        (morphoVaultKeys.has(`${onchainAddress}:${chain.chainId}`) ||
+          fundAddresses.has(onchainAddress));
+      if (isOverlap) {
         crossSourceOverlaps.push({
           name: opp.name,
           tvl: opp.tvl ?? 0,
-          onchainAddress: result.overlap.onchainAddress,
-          existingRow: result.overlap.existingRow,
+          onchainAddress,
+          existingRow: existingId !== undefined,
         });
+        if (existingId === undefined) return;
       }
-      if (result.upserted) {
-        vaultsUpserted++;
-        snapshotsCreated++;
-        vaultsAttributed++;
-      } else if (result.skipped) {
-        if (!result.overlap) {
-          hiddenVaults.push({ name: result.curatorName, tvl: opp.tvl ?? 0 });
-        }
-      } else if (result.error) {
-        errors.push(`${opp.name}: ${result.error}`);
-        logError(`Failed to upsert ${opp.name}: ${result.error}`);
+      planned.push(planTurtleVault(opp, chain, curatorId, existingId));
+    });
+
+    // 3c. Bulk writes: create new rows, update existing ones, then snapshots
+    // and the lastSnapshotAt / phantom stamp. A failed statement throws and
+    // fails the run (caught below), never a silent partial success.
+    const now = new Date();
+    const toCreate = planned.filter((p) => p.vaultId === undefined);
+    const toUpdate = planned.filter((p) => p.vaultId !== undefined);
+
+    for (const chunk of chunked(toCreate)) {
+      await prisma.vault.createMany({
+        data: chunk.map((p) => ({ address: p.address, ...p.createOnly, ...p.fields })),
+        skipDuplicates: true,
+      });
+    }
+    if (toCreate.length > 0) {
+      const created = await prisma.vault.findMany({
+        where: { address: { in: toCreate.map((p) => p.address) } },
+        select: { id: true, address: true },
+      });
+      const createdId = new Map(created.map((v) => [v.address, v.id]));
+      for (const p of toCreate) p.vaultId = createdId.get(p.address);
+    }
+    await updateExistingVaults(toUpdate, now);
+
+    // A new row can be missing only if the insert hit another unique key
+    // (turtleId) — report it like the per-row upsert's error used to.
+    const written: PlannedVault[] = [];
+    for (const p of planned) {
+      if (p.vaultId === undefined) {
+        const msg = `${p.opp.name}: vault row not created (unique conflict on turtleId ${p.opp.id})`;
+        errors.push(msg);
+        logError(msg);
+      } else {
+        written.push(p);
       }
     }
+
+    for (const chunk of chunked(written)) {
+      const res = await prisma.vaultSnapshot.createMany({
+        data: chunk.map((p) => ({
+          vaultId: p.vaultId!,
+          totalAssets: "0",
+          totalAssetsUsd: p.opp.tvl,
+          totalSupply: "0",
+          sharePrice: 1,
+          apy: p.aprDecimal,
+          netApy: p.aprDecimal,
+          avgApy: p.aprDecimal,
+          avgNetApy: p.aprDecimal,
+        })),
+      });
+      snapshotsCreated += res.count;
+    }
+    await recordSnapshotsWritten(
+      written.map((p) => ({ vaultId: p.vaultId!, phantomReason: p.phantomReason }))
+    );
+    vaultsUpserted = written.length;
+    vaultsAttributed = written.length;
     const unmatchedHidden = hiddenVaults.length;
 
     if (crossSourceOverlaps.length > 0) {
@@ -411,8 +476,10 @@ export async function collectTurtleData(): Promise<TurtleCollectionResult> {
       }
     }
 
-    // 4. Update curator stats
-    await updateTurtleCuratorStats();
+    // 4. Totals hygiene (exclusion flags incl. cross-source duplicates of
+    // existing Turtle rows), then curator stats over counted vaults.
+    const hygiene = await finalizeCollection();
+    log(`  Exclusion flags changed: ${hygiene.changed} (${JSON.stringify(hygiene.excludedByReason)})`);
 
     const duration = Date.now() - startTime;
 

@@ -12,6 +12,7 @@ import { prisma } from "./db";
 import type { Prisma } from "@prisma/client";
 import { ALERT_TYPES, THRESHOLDS, type Severity } from "./change-thresholds";
 import { EXCLUDED_CURATORS } from "./curator-aliases";
+import { ensureTotalsEpoch, getTotalsEpoch } from "./data-quality/maintenance";
 
 export interface PlatformAlertEvent {
   scope: "curator" | "ecosystem";
@@ -42,6 +43,10 @@ function formatCurrency(value: number): string {
  * Called once per collection run (hourly) to build AUM history.
  */
 export async function createCuratorSnapshots(): Promise<number> {
+  // First snapshot on new counting rules marks the restatement, so AUM alerts
+  // and digest flows never compare across it (see TOTALS_RULES_VERSION).
+  await ensureTotalsEpoch();
+
   const curators = await prisma.curator.findMany({
     where: {
       vaultCount: { gt: 0 },
@@ -77,6 +82,8 @@ export async function createCuratorSnapshots(): Promise<number> {
 export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
   const alerts: PlatformAlertEvent[] = [];
   const now = new Date();
+  // Baselines from before a totals restatement are not comparable.
+  const epoch = await getTotalsEpoch();
 
   const curators = await prisma.curator.findMany({
     where: {
@@ -93,20 +100,34 @@ export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
     },
   });
 
+  // Baselines and recent alerts for every curator, read up front (four
+  // queries instead of two to four per curator).
+  const baselines24h = await getClosestCuratorSnapshots(now, 24, epoch);
+  const baselines72h = await getClosestCuratorSnapshots(now, 72, epoch);
+  const recentAlerts = await getRecentCuratorAlerts(now, 72);
+  const isDuplicate = (curatorId: string, changeType: string, windowHours: number) => {
+    const windowStart = now.getTime() - windowHours * 60 * 60 * 1000;
+    return recentAlerts.some(
+      (a) =>
+        a.curatorId === curatorId &&
+        a.changeType === changeType &&
+        a.detectedAt.getTime() >= windowStart
+    );
+  };
+
   for (const curator of curators) {
     const currentAUM = curator.totalAssetsManaged ?? 0;
     if (currentAUM <= 0) continue;
 
     // 24h comparison
-    const snapshot24h = await getClosestCuratorSnapshot(curator.id, now, 24);
+    const snapshot24h = baselines24h.get(curator.id);
     if (snapshot24h) {
       const pctChange24h = ((currentAUM - snapshot24h.totalAssetsUsd) / snapshot24h.totalAssetsUsd) * 100;
 
       // Drops
       if (pctChange24h < 0) {
         const absDrop = Math.abs(pctChange24h);
-        const isDuplicate = await checkPlatformDuplicate("curator", curator.id, ALERT_TYPES.CURATOR_AUM_DROP, now, 24);
-        if (!isDuplicate) {
+        if (!isDuplicate(curator.id, ALERT_TYPES.CURATOR_AUM_DROP, 24)) {
           if (absDrop >= THRESHOLDS.CURATOR_AUM.CRITICAL_24H) {
             alerts.push({
               scope: "curator",
@@ -139,8 +160,7 @@ export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
 
       // Surges
       if (pctChange24h > 0 && pctChange24h >= THRESHOLDS.CURATOR_AUM.SURGE_INFO) {
-        const isDuplicate = await checkPlatformDuplicate("curator", curator.id, ALERT_TYPES.CURATOR_AUM_SURGE, now, 24);
-        if (!isDuplicate) {
+        if (!isDuplicate(curator.id, ALERT_TYPES.CURATOR_AUM_SURGE, 24)) {
           alerts.push({
             scope: "curator",
             curatorId: curator.id,
@@ -158,7 +178,7 @@ export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
     }
 
     // 72h comparison (sustained outflow detection)
-    const snapshot72h = await getClosestCuratorSnapshot(curator.id, now, 72);
+    const snapshot72h = baselines72h.get(curator.id);
     if (snapshot72h) {
       const pctChange72h = ((currentAUM - snapshot72h.totalAssetsUsd) / snapshot72h.totalAssetsUsd) * 100;
 
@@ -168,8 +188,7 @@ export async function detectCuratorAlerts(): Promise<PlatformAlertEvent[]> {
           (a) => a.curatorId === curator.id && a.changeType === ALERT_TYPES.CURATOR_AUM_DROP && a.severity === "critical"
         );
         if (!has24hCritical) {
-          const isDuplicate = await checkPlatformDuplicate("curator", curator.id, ALERT_TYPES.CURATOR_AUM_DROP, now, 72);
-          if (!isDuplicate) {
+          if (!isDuplicate(curator.id, ALERT_TYPES.CURATOR_AUM_DROP, 72)) {
             alerts.push({
               scope: "curator",
               curatorId: curator.id,
@@ -217,13 +236,17 @@ export async function detectEcosystemAlerts(): Promise<PlatformAlertEvent[]> {
   // Get the latest snapshot per curator from the 22-26h window
   const twentyTwoHoursAgo = new Date(now.getTime() - 22 * 60 * 60 * 1000);
   const twentySixHoursAgo = new Date(now.getTime() - 26 * 60 * 60 * 1000);
+  // Baselines from before a totals restatement are not comparable.
+  const epoch = await getTotalsEpoch();
+  const windowStart =
+    epoch && epoch > twentySixHoursAgo ? epoch : twentySixHoursAgo;
 
   const oldSnapshots = await prisma.$queryRaw<{ total: number }[]>`
     SELECT COALESCE(SUM(s."totalAssetsUsd"), 0) as total
     FROM (
       SELECT DISTINCT ON ("curatorId") "totalAssetsUsd"
       FROM "CuratorSnapshot"
-      WHERE "timestamp" >= ${twentySixHoursAgo}
+      WHERE "timestamp" >= ${windowStart}
         AND "timestamp" <= ${twentyTwoHoursAgo}
       ORDER BY "curatorId", "timestamp" DESC
     ) s
@@ -319,25 +342,39 @@ export async function cleanupOldCuratorSnapshots(): Promise<number> {
 // --- Helpers ---
 
 /**
- * Get the closest CuratorSnapshot to `hoursAgo` for a given curator.
- * Uses a 2h tolerance window.
+ * Per curator, the latest CuratorSnapshot in the 2h tolerance window around
+ * `hoursAgo` (never before the totals epoch), in one query.
  */
-async function getClosestCuratorSnapshot(
-  curatorId: string,
+async function getClosestCuratorSnapshots(
   now: Date,
-  hoursAgo: number
-): Promise<{ totalAssetsUsd: number; timestamp: Date } | null> {
+  hoursAgo: number,
+  epoch: Date | null = null
+): Promise<Map<string, { totalAssetsUsd: number; timestamp: Date }>> {
   const targetTime = new Date(now.getTime() - hoursAgo * 60 * 60 * 1000);
-  const windowStart = new Date(targetTime.getTime() - 2 * 60 * 60 * 1000);
+  const earliest = new Date(targetTime.getTime() - 2 * 60 * 60 * 1000);
+  const windowStart = epoch && epoch > earliest ? epoch : earliest;
   const windowEnd = new Date(targetTime.getTime() + 2 * 60 * 60 * 1000);
 
-  return prisma.curatorSnapshot.findFirst({
+  const rows = await prisma.$queryRaw<{ curatorId: string; totalAssetsUsd: number; timestamp: Date }[]>`
+    SELECT DISTINCT ON ("curatorId") "curatorId", "totalAssetsUsd", "timestamp"
+    FROM "CuratorSnapshot"
+    WHERE "timestamp" >= ${windowStart} AND "timestamp" <= ${windowEnd}
+    ORDER BY "curatorId", "timestamp" DESC
+  `;
+  return new Map(
+    rows.map((r) => [r.curatorId, { totalAssetsUsd: r.totalAssetsUsd, timestamp: r.timestamp }])
+  );
+}
+
+/** Curator AUM alerts detected in the last `windowHours` (duplicate checks). */
+async function getRecentCuratorAlerts(now: Date, windowHours: number) {
+  return prisma.platformAlert.findMany({
     where: {
-      curatorId,
-      timestamp: { gte: windowStart, lte: windowEnd },
+      scope: "curator",
+      changeType: { in: [ALERT_TYPES.CURATOR_AUM_DROP, ALERT_TYPES.CURATOR_AUM_SURGE] },
+      detectedAt: { gte: new Date(now.getTime() - windowHours * 60 * 60 * 1000) },
     },
-    orderBy: { timestamp: "desc" },
-    select: { totalAssetsUsd: true, timestamp: true },
+    select: { curatorId: true, changeType: true, detectedAt: true },
   });
 }
 

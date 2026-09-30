@@ -9,6 +9,7 @@ import { CuratorDisclosureBanner } from "@/components/CuratorDisclosureBanner";
 import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { DataAsOf } from "@/components/DataAsOf";
 import { ApyDistViz, buildApyDistribution } from "@/components/ApyDistViz";
+import { NotCountedNote } from "@/components/NotCountedNote";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { formatCurrency, formatTimeAgo } from "@/lib/utils/format";
 import type {
@@ -62,12 +63,15 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const [vsort, setVsort] = useState<{ k: VSortKey; dir: 1 | -1 }>({ k: "tvl", dir: -1 });
 
   const { vaults } = data;
-  const totalTVL = vaults.reduce((s, v) => s + tvlOf(v), 0);
+  // Every vault is listed below, but only counted ones feed the totals
+  // (wrappers, bridged copies, stale rows, … carry a note instead).
+  const countedVaults = vaults.filter((v) => v.counting?.counted !== false);
+  const totalTVL = countedVaults.reduce((s, v) => s + tvlOf(v), 0);
   const assetMap: Record<string, number> = {};
   const networks = new Set<string>();
   const sources = new Set<string>();
   let annualYield = 0;
-  for (const v of vaults) {
+  for (const v of countedVaults) {
     assetMap[v.asset.symbol] = (assetMap[v.asset.symbol] || 0) + tvlOf(v);
     networks.add(v.chainName ?? "Ethereum");
     sources.add(v.dataSource ?? "morpho");
@@ -76,13 +80,13 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const assets = Object.entries(assetMap)
     .map(([symbol, amount]) => ({ symbol, amount, pct: totalTVL ? (amount / totalTVL) * 100 : 0 }))
     .sort((a, b) => b.amount - a.amount);
-  const yieldByVault = vaults
+  const yieldByVault = countedVaults
     .map((v) => ({ name: v.name, apy: netApyOf(v), dollars: tvlOf(v) * netApyOf(v) }))
     .filter((x) => x.dollars > 0)
     .sort((a, b) => b.dollars - a.dollars)
     .slice(0, 8);
   const weightedApy = totalTVL ? annualYield / totalTVL : 0;
-  const apyPairs = vaults
+  const apyPairs = countedVaults
     .filter((v) => netApyOf(v) > 0 && tvlOf(v) > 0)
     .map((v) => ({ apy: netApyOf(v) * 100, tvl: tvlOf(v) }));
   const apyDist = apyPairs.length ? buildApyDistribution(apyPairs) : null;
@@ -201,14 +205,14 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
       </header>
 
       {/* ── About: computed figures + curated dossier facts ── */}
-      <CuratorBlurb curator={curator} vaults={vaults} />
+      <CuratorBlurb curator={curator} vaults={countedVaults} />
 
       {/* ── Verdict: TVL at a glance ── */}
       <div className="max-w-md mb-8">
         <div className="border border-border rounded-2xl bg-background-subtle p-5">
           <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">Total value locked</div>
           <div className="font-mono font-semibold text-3xl tracking-tight tabular-nums mt-0.5 mb-3">
-            {formatCurrency(derived.totalTVL)} <span className="text-text-tertiary text-sm font-normal">· {vaults.length} vaults</span>
+            {formatCurrency(derived.totalTVL)} <span className="text-text-tertiary text-sm font-normal">· {countedVaults.length} vaults</span>
           </div>
           <div className="grid grid-cols-2 gap-3 pt-1">
             <Fact k="Networks" v={derived.networks.join(" · ")} />
@@ -266,6 +270,11 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                       <Link href={`/vault/${v.address}`} className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
                         {v.name}
                       </Link>
+                      {v.counting && !v.counting.counted && (
+                        <div className="mt-0.5">
+                          <NotCountedNote counting={v.counting} />
+                        </div>
+                      )}
                     </td>
                     <td className="py-3 px-3"><span className="font-mono text-xs text-text-secondary border border-border rounded px-1.5 py-0.5">{v.asset.symbol}</span></td>
                     <td className="py-3 px-3">

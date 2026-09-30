@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { cacheGet, cacheSet } from "@/lib/cache";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
+import { COUNTED_STRUCTURAL_WHERE } from "@/lib/data-quality/counting";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
 
 interface DailyAggregated {
@@ -95,6 +96,8 @@ export async function GET() {
           gte: thirtyDaysAgo,
         },
         vault: {
+          // History keeps closed/quiet vaults, but never double counts.
+          ...COUNTED_STRUCTURAL_WHERE,
           ...EXCLUDED_CURATOR_VAULT_FILTER,
         },
       },

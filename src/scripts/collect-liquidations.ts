@@ -9,6 +9,9 @@ import {
 
 const BATCH_SIZE = 500;
 const API_DELAY_MS = 200;
+// A hung request must not hold the function past its cap (the time budget
+// below is only checked between pages). A timeout throws, failing the step.
+const REQUEST_TIMEOUT_MS = 30_000;
 // The Morpho API rejects skip > 10,000, so MAX_PAGES * BATCH_SIZE must stay
 // within 10,500 (last page requested at skip 9,500).
 const MAX_PAGES = 20;
@@ -75,10 +78,11 @@ export async function collectLiquidations(): Promise<{
   log(`Starting liquidation collection from ${fromTimestamp}...`);
 
   for (let page = 0; page < MAX_PAGES; page++) {
-    const response = await morphoClient.request<LiquidationTransactionsResponse>(
-      GET_LIQUIDATION_TRANSACTIONS,
-      { first: BATCH_SIZE, skip, timestampGte }
-    );
+    const response = await morphoClient.request<LiquidationTransactionsResponse>({
+      document: GET_LIQUIDATION_TRANSACTIONS,
+      variables: { first: BATCH_SIZE, skip, timestampGte },
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
 
     const { items, pageInfo } = response.marketTransactions;
     countTotal = pageInfo.countTotal;

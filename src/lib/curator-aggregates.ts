@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATORS } from "@/lib/curator-aliases";
 import { sanitizeApy, sanitizeApyPct, sanitizeApyForStorage } from "@/lib/utils/sanitize-apy";
 import { stablecoinSharePct } from "@/lib/utils/asset-class";
+import { countedVaultWhere } from "@/lib/data-quality/counting";
 
 export interface AssetDistribution {
   symbol: string;
@@ -99,20 +100,21 @@ export async function getPaginatedCuratorAggregates(
     dataSource,
   } = options;
 
-  // Build where clause
-  const vaultFilter: Record<string, unknown> = {};
+  // Build where clause. Only COUNTED vaults (active, listed, not a double
+  // count, fresh snapshot) feed curator totals — see data-quality/counting.
+  const vaultFilter: Record<string, unknown> = { ...countedVaultWhere() };
   if (dataSource) {
     vaultFilter.dataSource = dataSource;
   }
 
-  const vaultSome = Object.keys(vaultFilter).length > 0 ? vaultFilter : {};
+  const vaultSome = vaultFilter;
 
   // Always-applied filters:
   // - Exclude synthetic distributor-derived curators (legacy `turtle-<slug>` rows).
   //   Turtle is a data source, not a curator; these must never appear in the directory
   //   or contribute to curator TVL. (Belt-and-suspenders behind the cleanup migration.)
   // - Exclude explicitly excluded curators by name.
-  // - Require at least one vault matching the dataSource filter.
+  // - Require at least one counted vault matching the dataSource filter.
   const baseFilters: Record<string, unknown>[] = [
     { address: { not: { startsWith: "turtle-" } } },
     { vaults: { some: vaultSome } },
@@ -138,6 +140,7 @@ export async function getPaginatedCuratorAggregates(
     where: whereClause,
     include: {
       vaults: {
+        where: vaultSome,
         include: {
           snapshots: {
             orderBy: { timestamp: "desc" },
@@ -297,6 +300,7 @@ export async function getCuratorAggregates(
     where: { id: curatorId },
     include: {
       vaults: {
+        where: countedVaultWhere(),
         include: {
           snapshots: {
             orderBy: { timestamp: "desc" },

@@ -6,6 +6,7 @@
 import { prisma } from "@/lib/db";
 import { EXCLUDED_CURATOR_VAULT_FILTER } from "@/lib/curator-aliases";
 import { sanitizeApy } from "@/lib/utils/sanitize-apy";
+import { countedVaultWhere } from "@/lib/data-quality/counting";
 
 // ── Fees ─────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export interface FeesOverview {
  */
 export async function fetchFeesOverview(): Promise<FeesOverview> {
   const vaults = await prisma.vault.findMany({
-    where: { active: true, curatorId: { not: null }, ...EXCLUDED_CURATOR_VAULT_FILTER },
+    where: { ...countedVaultWhere(), curatorId: { not: null }, ...EXCLUDED_CURATOR_VAULT_FILTER },
     select: {
       curatorId: true,
       performanceFee: true,

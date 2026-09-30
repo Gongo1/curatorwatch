@@ -25,6 +25,7 @@ export const ALERT_TYPES = {
 
   // Ecosystem-level (stored in PlatformAlert)
   ECOSYSTEM_AUM_DROP: "ECOSYSTEM_AUM_DROP", // Total platform AUM fell >3% in 24h
+  TOTALS_RESTATED: "TOTALS_RESTATED",     // Counting rules changed; AUM baselines before this are not comparable
 } as const;
 
 export type AlertType = (typeof ALERT_TYPES)[keyof typeof ALERT_TYPES];
@@ -46,7 +47,8 @@ export const THRESHOLDS = {
 
   // Vault Lifecycle - TVL thresholds
   VAULT_LIFECYCLE: {
-    LAUNCH_MIN_TVL: 1_000_000,     // $1M to be considered "launched"
+    LAUNCH_MIN_TVL: 1_000_000,     // $1M to be considered "launched" (on 2 consecutive snapshots)
+    LAUNCH_MAX_AGE_DAYS: 14,       // only vaults created (or first seen) this recently can "launch"
     SHUTDOWN_PREV_MIN: 100_000,    // Previous TVL must be >$100k
     SHUTDOWN_CURR_MAX: 10_000,     // Current TVL must be <$10k
   },
@@ -127,7 +129,7 @@ export const ALERT_METADATA: Record<
     label: "Vault Launch",
     color: "purple",
     description:
-      "New vault launches when TVL goes from $0 to >$1M in initial deposits.",
+      "New vault (created in the last 14 days) whose TVL reaches $1M on 2 consecutive snapshots. Fires once per vault.",
   },
   VAULT_SHUTDOWN: {
     label: "Vault Shutdown",
@@ -176,6 +178,12 @@ export const ALERT_METADATA: Record<
     color: "red",
     description:
       "Alerts when total platform AUM drops >3% in 24h. Indicates broad-based outflows.",
+  },
+  TOTALS_RESTATED: {
+    label: "Totals Restated",
+    color: "blue",
+    description:
+      "The rules for which vaults count toward totals changed. AUM before this point is not directly comparable, so AUM alerts restart from here.",
   },
 };
 

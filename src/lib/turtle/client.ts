@@ -142,8 +142,11 @@ function normalizeOpportunity(o: V2Opportunity): TurtleOpportunity {
  * Fetch every Turtle opportunity by paging through the v2 feed, normalized to the
  * internal `TurtleOpportunity` shape. Signature is unchanged from the v1 client so
  * the ingestion (collect-turtle-data.ts) and other consumers need no edits.
+ * `signal` (optional) aborts the page loop, e.g. a caller's fetch budget.
  */
-export async function fetchTurtleOpportunities(): Promise<TurtleOpportunity[]> {
+export async function fetchTurtleOpportunities(
+  opts: { signal?: AbortSignal } = {}
+): Promise<TurtleOpportunity[]> {
   const apiKey = turtleApiKey();
   const all: TurtleOpportunity[] = [];
   let page = 1;
@@ -153,6 +156,7 @@ export async function fetchTurtleOpportunities(): Promise<TurtleOpportunity[]> {
     const url = `${TURTLE_V2_OPPORTUNITIES_URL}?page=${page}&limit=${PAGE_SIZE}`;
     const response = await fetch(url, {
       headers: { Accept: "application/json", "X-API-Key": apiKey },
+      signal: opts.signal,
     });
 
     if (!response.ok) {
