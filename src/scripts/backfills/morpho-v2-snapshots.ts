@@ -10,11 +10,12 @@
  * that already has any snapshot for the vault is skipped, so the script is
  * idempotent and never overlaps rows the fixed collector writes.
  *
- * Fields written: totalAssets, totalAssetsUsd, totalSupply, sharePrice,
- * avgNetApy (sanitized like createSnapshot). Days below the chain's TVL floor
- * (MORPHO_CHAINS) are skipped, the same as the collector. History has no liquidity or
- * instantaneous apy/netApy, so those stay null. avgApy stays null, the same as
- * the live collector writes since Morpho removed it.
+ * Fields written: totalAssets, totalAssetsUsd, totalSupply, sharePrice, avgApy
+ * and avgNetApy (both sanitized like createSnapshot). VaultV2History still
+ * serves avgApy, so the backfilled days get the real value (the live collector
+ * now fills it from spot apy). History has no liquidity or instantaneous
+ * apy/netApy, so those stay null. Days below the chain's TVL floor
+ * (MORPHO_CHAINS) are skipped, the same as the collector.
  *
  * Targets: active Morpho V2 vaults (V2 = has risk snapshots, see
  * countTrackedVaults in collect-data.ts) whose newest snapshot is no older than
@@ -37,8 +38,9 @@ const MORPHO_API_URL = process.env.MORPHO_API_URL || "https://api.morpho.org/gra
 const client = new GraphQLClient(MORPHO_API_URL);
 
 const DEFAULT_FROM = "2026-08-27";
-// 15 vaults x 5 DAY series over ~35 days costs ~750k of the API's 1M complexity cap.
-const BATCH_SIZE = 15;
+// Complexity scales with vaults x series: 12 vaults x 6 DAY series stays under
+// the API's 1M cap (15 x 5 measured at ~750k).
+const BATCH_SIZE = 12;
 const API_DELAY_MS = 250;
 const TARGET_LOOKBACK_DAYS = 3;
 const DAY_MS = 86_400_000;
@@ -58,6 +60,7 @@ const GET_VAULT_V2_HISTORY = gql`
           totalAssets(options: $options) { x y }
           totalAssetsUsd(options: $options) { x y }
           totalSupply(options: $options) { x y }
+          avgApy(options: $options) { x y }
           avgNetApy(options: $options) { x y }
         }
       }
@@ -93,6 +96,7 @@ interface VaultHistory {
     totalAssets: Point<number | string>[];
     totalAssetsUsd: Point<number>[];
     totalSupply: Point<number | string>[];
+    avgApy: Point<number>[];
     avgNetApy: Point<number>[];
   };
 }
@@ -110,6 +114,7 @@ interface SnapshotRow {
   totalAssetsUsd: number;
   totalSupply: string;
   sharePrice: number;
+  avgApy: number | null;
   avgNetApy: number | null;
   timestamp: Date;
 }
@@ -238,6 +243,7 @@ function toRows(target: Target, history: VaultHistory, minTvlUsd: number): Snaps
   const assets = byX(h.totalAssets);
   const supply = byX(h.totalSupply);
   const usd = byX(h.totalAssetsUsd);
+  const avgApy = byX(h.avgApy);
   const netApy = byX(h.avgNetApy);
 
   const rows: SnapshotRow[] = [];
@@ -258,6 +264,7 @@ function toRows(target: Target, history: VaultHistory, minTvlUsd: number): Snaps
       totalAssetsUsd,
       totalSupply: String(totalSupply),
       sharePrice,
+      avgApy: sanitizeApyForStorage(avgApy.get(x)),
       avgNetApy: sanitizeApyForStorage(netApy.get(x)),
       timestamp,
     });
