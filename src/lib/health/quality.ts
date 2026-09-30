@@ -153,10 +153,12 @@ export async function runQualityChecks(now: Date = new Date()): Promise<QualityC
   });
 
   // ── Total TVL day over day ─────────────────────────────────────────────────
-  // Same vault set on both sides (active today): latest snapshot vs the latest
-  // one at least 24h old.
+  // Same vault set on both sides (active today AND with a snapshot at least
+  // 24h old): latest snapshot vs the latest one at least 24h old. Vaults new
+  // in the window (a restored source's first run, a batch of launches) would
+  // otherwise count on the current side only and read as a TVL jump.
   const [tvl] = await prisma.$queryRaw<{ cur: number | null; prev: number | null }[]>`
-    SELECT sum(n.tvl) AS cur, sum(p.tvl) AS prev
+    SELECT sum(n.tvl) FILTER (WHERE p.tvl IS NOT NULL) AS cur, sum(p.tvl) AS prev
     FROM "Vault" v
     LEFT JOIN LATERAL (
       SELECT "totalAssetsUsd" AS tvl FROM "VaultSnapshot"
