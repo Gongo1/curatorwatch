@@ -675,8 +675,9 @@ async function writeVaultRows(
       ${parseCreationTimestamp(vault) ?? null}::int,
       ${JSON.stringify(vault.pendingConfigs?.items ?? [])}::jsonb
     )`);
-    // creationTimestamp: an absent value leaves the column as is (Prisma
-    // skipped `undefined`); every other column is overwritten, as before.
+    // creationTimestamp and curatorAddress: an absent value leaves the column
+    // as is (Prisma skipped `undefined`); every other column is overwritten,
+    // as before.
     await prisma.$executeRaw`
       UPDATE "Vault" AS t
       SET "name" = v.name,
@@ -684,7 +685,7 @@ async function writeVaultRows(
           "chainId" = ${ctx.chainId}::int,
           "chainName" = ${ctx.chainName}::text,
           "onchainAddress" = v.onchain_address,
-          "curatorAddress" = v.curator_address,
+          "curatorAddress" = COALESCE(v.curator_address, t."curatorAddress"),
           "curatorId" = v.curator_id,
           "performanceFee" = v.performance_fee,
           "managementFee" = v.management_fee,
