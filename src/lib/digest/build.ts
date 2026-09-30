@@ -43,16 +43,22 @@ const HOUR = 60 * 60 * 1000;
 const DIGEST_REQUIRED_SOURCES = ["morpho-v1", "morpho-v2", "turtle"];
 
 /**
- * Breaches that block publication: a required source past its SLA or under
- * its coverage floor, or any failed data-quality assertion.
+ * Breaches that block publication: a required source past its SLA, under its
+ * coverage floor or reporting far fewer vaults day over day, or any failed
+ * cross-source data-quality assertion. A non-required source's count drop
+ * (e.g. one failed daily funds run: 5 -> 0) is treated like its staleness:
+ * alerted by the health cron (and left out of the tables once past its
+ * SLA), not a blocker.
  */
 export function digestBlockers(breaches: HealthBreach[]): HealthBreach[] {
-  return breaches.filter(
-    (b) =>
-      b.kind === "quality" ||
-      ((b.kind === "freshness" || b.kind === "coverage") &&
-        DIGEST_REQUIRED_SOURCES.some((k) => b.key === `${b.kind}:${k}`))
-  );
+  const required = (key: string, prefix: string) =>
+    DIGEST_REQUIRED_SOURCES.some((k) => key === `${prefix}:${k}`);
+  return breaches.filter((b) => {
+    if (b.kind === "quality") {
+      return !b.key.startsWith("quality:source-count:") || required(b.key, "quality:source-count");
+    }
+    return (b.kind === "freshness" || b.kind === "coverage") && required(b.key, b.kind);
+  });
 }
 
 export async function buildDigest(
