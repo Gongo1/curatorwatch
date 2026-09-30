@@ -2,7 +2,7 @@
  * READ-ONLY preview of what Upshift ingestion would add.
  *
  * Fetches the platform payload through the collector's own path and applies
- * the same policy (visible+active, EVM chains, $50k floor, strategist
+ * the same policy (listed+active, EVM chains, $50k floor, strategist
  * attribution, cross-source guard incl. live Turtle receipt tokens). The
  * strategist match is approximated against existing curator names (the real
  * collector may additionally create tc:<slug> rows for new strategists, so
@@ -62,9 +62,9 @@ async function main() {
   const byStrategist = new Map<string, { n: number; tvl: number; isNew: boolean }>();
 
   for (const v of vaults) {
-    const tvl = v.latest_reported_tvl ?? 0;
+    const tvl = v.tvlUsd;
     if (tvl < MIN_TVL_USD) continue;
-    if (!v.isVisible || v.status !== "active") {
+    if (v.status !== "active") {
       hiddenTvl += tvl;
       continue;
     }
@@ -77,7 +77,7 @@ async function main() {
       overlaps.push(`${v.name} (${fmtUsd(tvl)}) — owned by ${owner}`);
       continue;
     }
-    const strategist = v.strategists?.[0]?.name;
+    const strategist = v.strategistName;
     if (!strategist) {
       unattributed.push(`${v.name} (${fmtUsd(tvl)})`);
       continue;
@@ -92,7 +92,7 @@ async function main() {
     rec.n++;
     rec.tvl += tvl;
     byStrategist.set(strategist, rec);
-    console.log(`+ ${v.name} — ${fmtUsd(tvl)} — ${strategist} — ${canonicalChainName(v.chainId)} — apy ${v.apy?.apy?.toFixed(2) ?? "—"}%`);
+    console.log(`+ ${v.name} — ${fmtUsd(tvl)} — ${strategist} — ${canonicalChainName(v.chainId)} — apy ${v.apy?.toFixed(2) ?? "—"}%`);
   }
 
   console.log(`\nTOTAL new: ${newCount} vaults, ${fmtUsd(newTvl)}`);

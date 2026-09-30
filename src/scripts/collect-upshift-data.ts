@@ -8,10 +8,13 @@
  * to Morpho.
  *
  * Policy (mirrors the Euler pipeline):
- *  - Respect the platform's own flags: `isVisible && status === "active"`
- *    only — Upshift hides wound-down/pre-launch vaults and cross-chain
- *    mirrors, and hidden rows include exact duplicates that would double
- *    count. Skipped-invisible TVL is reported, never silent.
+ *  - Respect the platform's own listing: the pools endpoint returns only the
+ *    vaults the app lists (Upshift hides wound-down/pre-launch vaults and
+ *    cross-chain mirrors, and hidden rows include exact duplicates that
+ *    would double count); of those, `status === "active"` only. Skipped
+ *    non-active TVL is reported, never silent.
+ *  - The platform reports no fees: existing fee values are left untouched
+ *    (never overwritten with 0). A target-only APY is not stored as realized.
  *  - EVM chains our registry can name; Stellar/other-VM vaults skipped + reported.
  *  - $50k TVL floor. Strategist attribution required (matchCurator: existing
  *    rows first, else a clean `tc:<slug>` from the strategist name); vaults
@@ -65,14 +68,22 @@ async function upsertUpshiftVault(
     const chainId = vault.chainId;
     const chainName = canonicalChainName(chainId);
     const addressLower = vault.address.toLowerCase();
-    const tvlUsd = vault.latest_reported_tvl ?? 0;
+    const tvlUsd = vault.tvlUsd;
 
-    const estTotalAPR = sanitizeApyPct(vault.apy?.apy ?? null);
+    // A target-only APY is the strategist's target, not a realized yield.
+    const estTotalAPR = vault.apyDisplay?.isTargetOnly ? null : sanitizeApyPct(vault.apy ?? null);
     const aprDecimal = estTotalAPR != null ? estTotalAPR / 100 : null;
-    const creationTimestamp = vault.startDatetime
-      ? Math.floor(new Date(vault.startDatetime).getTime() / 1000)
-      : undefined;
+    const sharePrice =
+      typeof vault.sharePrice === "number" && Number.isFinite(vault.sharePrice) && vault.sharePrice > 0
+        ? vault.sharePrice
+        : 1;
+    const assetDecimals = vault.depositAsset?.decimals;
+    const totalAssets =
+      typeof vault.tvl === "number" && Number.isFinite(vault.tvl) && vault.tvl >= 0 && assetDecimals != null
+        ? vault.tvl.toFixed(assetDecimals).replace(".", "").replace(/^0+(?=\d)/, "")
+        : "0";
 
+    // No fee fields: the platform does not report fees, so existing values stay.
     const vaultFields = {
       name: vault.name,
       protocol: "upshift",
@@ -82,13 +93,9 @@ async function upsertUpshiftVault(
       chainId,
       chainName,
       onchainAddress: addressLower,
-      onchainSymbol: vault.receipt?.symbol ?? null,
+      onchainSymbol: vault.receiptSymbol ?? null,
       estTotalAPR,
       netAPR: estTotalAPR,
-      // Platform reports fees as percent; Vault stores fractions (Morpho semantics)
-      performanceFee: (vault.fees?.performance ?? 0) / 100,
-      managementFee: (vault.fees?.management ?? 0) / 100,
-      creationTimestamp,
       active: true,
     };
 
@@ -106,10 +113,10 @@ async function upsertUpshiftVault(
       update: { ...vaultFields, updatedAt: new Date() },
       create: {
         address: vault.address,
-        symbol: vault.receipt?.symbol ?? vault.name,
-        assetAddress: "unknown",
-        assetSymbol: vault.receipt?.symbol?.replace(/^up/i, "") ?? "UNKNOWN",
-        assetDecimals: vault.receipt?.decimals ?? 18,
+        symbol: vault.receiptSymbol ?? vault.name,
+        assetAddress: vault.depositAsset?.address ?? "unknown",
+        assetSymbol: vault.depositAsset?.symbol ?? "UNKNOWN",
+        assetDecimals: assetDecimals ?? 18,
         ...vaultFields,
       },
     });
@@ -117,10 +124,10 @@ async function upsertUpshiftVault(
     await prisma.vaultSnapshot.create({
       data: {
         vaultId: row.id,
-        totalAssets: String(vault.totalAssets?.raw ?? "0"),
+        totalAssets,
         totalAssetsUsd: tvlUsd,
-        totalSupply: "0",
-        sharePrice: 1,
+        totalSupply: vault.totalSupplyRaw ?? "0",
+        sharePrice,
         apy: aprDecimal,
         netApy: aprDecimal,
         avgApy: aprDecimal,
@@ -210,10 +217,10 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
     }
 
     for (const vault of vaults) {
-      const tvlUsd = vault.latest_reported_tvl ?? 0;
+      const tvlUsd = vault.tvlUsd;
       if (tvlUsd < MIN_TVL_USD) continue;
 
-      if (!vault.isVisible || vault.status !== "active") {
+      if (vault.status !== "active") {
         skippedInvisible++;
         skippedInvisibleTvlUsd += tvlUsd;
         continue;
@@ -231,12 +238,8 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
         continue;
       }
 
-      const strategist = vault.strategists?.[0];
-      const curatorId = strategist?.name
-        ? await matchCurator(vault.name, {
-            name: strategist.name,
-            landingUrl: strategist.website_url ?? undefined,
-          })
+      const curatorId = vault.strategistName
+        ? await matchCurator(vault.name, { name: vault.strategistName })
         : null;
       if (!curatorId) {
         skippedUnattributed.push({ name: vault.name, tvl: tvlUsd });
@@ -259,7 +262,7 @@ export async function collectUpshiftData(): Promise<UpshiftCollectionResult> {
     log("Upshift collection completed!");
     log(`  Fetched: ${totalFetched}`);
     log(`  Upserted (visible, EVM, attributed, ≥$${MIN_TVL_USD / 1000}k): ${vaultsUpserted}`);
-    log(`  Skipped hidden/inactive: ${skippedInvisible} ($${(skippedInvisibleTvlUsd / 1e6).toFixed(1)}M)`);
+    log(`  Skipped non-active: ${skippedInvisible} ($${(skippedInvisibleTvlUsd / 1e6).toFixed(1)}M)`);
     log(`  Skipped non-EVM/unknown chain: ${skippedNonEvm} ($${(skippedNonEvmTvlUsd / 1e6).toFixed(1)}M)`);
     log(`  Skipped unattributed: ${skippedUnattributed.length}`);
     log(`  Cross-source overlaps (kept by incumbent pipeline): ${crossSourceOverlaps.length}`);
