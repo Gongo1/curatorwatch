@@ -14,6 +14,7 @@
  * Relative imports: tsx-run collector scripts import this module.
  */
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { ALERT_TYPES } from "../change-thresholds";
 import { staleCutoff } from "./counting";
@@ -45,6 +46,34 @@ export async function recordSnapshotWritten(
                                ELSE "excludeReason" END
     WHERE id = ${vaultId}
   `;
+}
+
+/**
+ * Batch form of recordSnapshotWritten(): same stamp and phantom set/clear for
+ * many vaults, one UPDATE ... FROM (VALUES ...) statement per 500 rows
+ * instead of one round trip per vault.
+ */
+export async function recordSnapshotsWritten(
+  entries: { vaultId: string; phantomReason: string | null }[],
+  at: Date = new Date()
+): Promise<void> {
+  for (let i = 0; i < entries.length; i += 500) {
+    const rows = entries
+      .slice(i, i + 500)
+      .map((e) => Prisma.sql`(${e.vaultId}::text, ${e.phantomReason !== null}::boolean)`);
+    await prisma.$executeRaw`
+      UPDATE "Vault" v
+      SET "lastSnapshotAt" = ${at},
+          "countInTotals" = CASE WHEN d.phantom THEN false
+                                 WHEN v."excludeReason" = 'phantom' THEN true
+                                 ELSE v."countInTotals" END,
+          "excludeReason" = CASE WHEN d.phantom THEN 'phantom'
+                                 WHEN v."excludeReason" = 'phantom' THEN NULL
+                                 ELSE v."excludeReason" END
+      FROM (VALUES ${Prisma.join(rows)}) AS d(id, phantom)
+      WHERE v.id = d.id
+    `;
+  }
 }
 
 /**
