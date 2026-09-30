@@ -15,7 +15,7 @@ import { extractProtocol } from "../lib/turtle/protocol-extractor";
 import { matchCurator } from "../lib/turtle/curator-matcher";
 import { resolveChainId, canonicalChainName } from "../lib/turtle/chain-mapper";
 import { sanitizeApyPct } from "../lib/utils/sanitize-apy";
-import type { TurtleOpportunity } from "../lib/turtle/types";
+import type { TurtleOpportunity, TurtleToken } from "../lib/turtle/types";
 
 const MIN_TVL_USD = 100_000; // $100K dust floor
 
@@ -68,6 +68,17 @@ function logError(message: string, error?: unknown) {
 }
 
 /**
+ * The chain an opportunity's position lives on: the RECEIPT token's chain,
+ * falling back to the first deposit token's, then the opportunity's. Lido
+ * wstETH lists WETH on Ethereum as the deposit token for every L2 wstETH
+ * opportunity, so reading the deposit chain labeled 11 L2 rows "Ethereum"
+ * (with L2 contract addresses).
+ */
+function opportunityChain(opp: TurtleOpportunity): TurtleToken["chain"] | undefined {
+  return opp.receiptToken?.chain ?? opp.depositTokens?.[0]?.chain ?? opp.chain;
+}
+
+/**
  * Filter Turtle opportunities to managed vaults we care about.
  */
 function filterOpportunities(
@@ -84,11 +95,7 @@ function filterOpportunities(
     if (protocol === "morpho") return false;
 
     // Exclude testnets — testnet balances are not real TVL
-    const chainSlug = (
-      opp.depositTokens?.[0]?.chain?.slug ??
-      opp.chain?.slug ??
-      "ethereum"
-    ).toLowerCase();
+    const chainSlug = (opportunityChain(opp)?.slug ?? "ethereum").toLowerCase();
     if (TESTNET_CHAINS.has(chainSlug)) return false;
 
     return true;
@@ -116,7 +123,7 @@ async function upsertTurtleVault(
     // Extract chain info. Prefer Turtle's authoritative numeric chainId (present on
     // every chain object) over the slug→id map, so chains we haven't enumerated are
     // never silently mislabeled as Ethereum (chainId 1). Skip + log if neither resolves.
-    const chainObj = opp.depositTokens?.[0]?.chain ?? opp.chain;
+    const chainObj = opportunityChain(opp);
     const chainSlug = (chainObj?.slug ?? "ethereum").toLowerCase();
     const chainId = resolveChainId(chainObj?.chainId, chainSlug);
     if (chainId === null) {
