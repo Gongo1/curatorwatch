@@ -125,16 +125,18 @@ function findMatch(curators: CuratorRef[], candidate: string): string | null {
 }
 
 /**
- * Best-effort match of a Turtle opportunity to an existing curator.
- * Returns the matched curator id, or null if no confident match exists.
- *
- * @param opportunityName The Turtle opportunity (vault) name.
- * @param curatorData The Turtle API curator object (name only), if present.
+ * What matchCurator() resolves a name pair to, decided without writing:
+ * an existing curator id, a clean `tc:<slug>` curator to upsert, or null.
  */
-export async function matchCurator(
+type CuratorPlan =
+  | { kind: "existing"; id: string }
+  | { kind: "tc"; address: string; name: string; website?: string }
+  | null;
+
+async function planCuratorMatch(
   opportunityName: string,
   curatorData?: TurtleCurator
-): Promise<string | null> {
+): Promise<CuratorPlan> {
   const curators = await getCurators();
 
   // Candidate names, in priority order: API curator name first, then a name
@@ -149,7 +151,7 @@ export async function matchCurator(
     // Try alias-resolved canonical name first, then the raw name.
     const match =
       (aliased && findMatch(curators, aliased)) || findMatch(curators, raw);
-    if (match) return match;
+    if (match) return { kind: "existing", id: match };
   }
 
   // 2. Allowlisted Turtle-only curators (verified, human-reviewed). Attributed to a
@@ -158,25 +160,12 @@ export async function matchCurator(
   for (const raw of rawCandidates) {
     const known = resolveKnownCurator(raw);
     if (known) {
-      const c = await prisma.curator.upsert({
-        where: { address: `tc:${known.slug}` },
-        update: {},
-        create: {
-          address: `tc:${known.slug}`,
-          name: known.name,
-          website: known.website || undefined,
-          logoUrl: curatorData?.iconUrl || undefined,
-        },
-      });
-      // Persist the Turtle-provided icon for rows that predate logo capture —
-      // fill-if-missing only, never clobber an existing logo.
-      if (!c.logoUrl && curatorData?.iconUrl) {
-        await prisma.curator.update({
-          where: { id: c.id },
-          data: { logoUrl: curatorData.iconUrl },
-        });
-      }
-      return c.id;
+      return {
+        kind: "tc",
+        address: `tc:${known.slug}`,
+        name: known.name,
+        website: known.website || undefined,
+      };
     }
   }
 
@@ -188,25 +177,121 @@ export async function matchCurator(
   const turtleName = curatorData?.name?.trim();
   if (turtleName && turtleName.length >= 2 && !isProtocolDenylisted(turtleName)) {
     const slug = slugifyCurator(turtleName);
-    if (slug) {
-      const c = await prisma.curator.upsert({
-        where: { address: `tc:${slug}` },
-        update: {},
-        create: {
-          address: `tc:${slug}`,
-          name: turtleName,
-          logoUrl: curatorData?.iconUrl || undefined,
-        },
-      });
-      if (!c.logoUrl && curatorData?.iconUrl) {
-        await prisma.curator.update({
-          where: { id: c.id },
-          data: { logoUrl: curatorData.iconUrl },
-        });
-      }
-      return c.id;
-    }
+    if (slug) return { kind: "tc", address: `tc:${slug}`, name: turtleName };
   }
 
   return null;
+}
+
+/**
+ * Best-effort match of a Turtle opportunity to an existing curator.
+ * Returns the matched curator id, or null if no confident match exists.
+ *
+ * @param opportunityName The Turtle opportunity (vault) name.
+ * @param curatorData The Turtle API curator object (name only), if present.
+ */
+export async function matchCurator(
+  opportunityName: string,
+  curatorData?: TurtleCurator
+): Promise<string | null> {
+  const plan = await planCuratorMatch(opportunityName, curatorData);
+  if (plan === null) return null;
+  if (plan.kind === "existing") return plan.id;
+
+  const c = await prisma.curator.upsert({
+    where: { address: plan.address },
+    update: {},
+    create: {
+      address: plan.address,
+      name: plan.name,
+      website: plan.website,
+      logoUrl: curatorData?.iconUrl || undefined,
+    },
+  });
+  // Persist the Turtle-provided icon for rows that predate logo capture —
+  // fill-if-missing only, never clobber an existing logo.
+  if (!c.logoUrl && curatorData?.iconUrl) {
+    await prisma.curator.update({
+      where: { id: c.id },
+      data: { logoUrl: curatorData.iconUrl },
+    });
+  }
+  return c.id;
+}
+
+/**
+ * Batch form of matchCurator() for collectors that resolve hundreds of names
+ * per run. Same resolution and the same end state (the first item seen for a
+ * `tc:` curator names it; its logo is the first non-empty icon, filled only
+ * when missing), in a fixed number of round trips: one read of the `tc:` rows,
+ * then a createMany, a re-read and a logo-fill transaction only when needed.
+ * Returns curator ids (or null) in input order.
+ */
+export async function matchCurators(
+  items: { opportunityName: string; curatorData?: TurtleCurator }[]
+): Promise<(string | null)[]> {
+  const plans: CuratorPlan[] = [];
+  for (const it of items) {
+    plans.push(await planCuratorMatch(it.opportunityName, it.curatorData));
+  }
+
+  // One entry per tc: address, in first-seen order.
+  const wanted = new Map<
+    string,
+    { name: string; website?: string; logoUrl?: string }
+  >();
+  plans.forEach((plan, i) => {
+    if (plan?.kind !== "tc") return;
+    const icon = items[i].curatorData?.iconUrl || undefined;
+    const w = wanted.get(plan.address);
+    if (!w) {
+      wanted.set(plan.address, { name: plan.name, website: plan.website, logoUrl: icon });
+    } else if (!w.logoUrl && icon) {
+      w.logoUrl = icon;
+    }
+  });
+
+  const idByAddress = new Map<string, string>();
+  if (wanted.size > 0) {
+    const addresses = [...wanted.keys()];
+    const readRows = () =>
+      prisma.curator.findMany({
+        where: { address: { in: addresses } },
+        select: { id: true, address: true, logoUrl: true },
+      });
+    let rows = await readRows();
+    const existing = new Set(rows.map((r) => r.address));
+    const missing = addresses.filter((a) => !existing.has(a));
+    if (missing.length > 0) {
+      await prisma.curator.createMany({
+        data: missing.map((address) => {
+          const w = wanted.get(address)!;
+          return { address, name: w.name, website: w.website, logoUrl: w.logoUrl };
+        }),
+        skipDuplicates: true,
+      });
+      rows = await readRows();
+    }
+    // Fill-if-missing only, never clobber an existing logo.
+    const logoFills = rows.filter((r) => !r.logoUrl && wanted.get(r.address)?.logoUrl);
+    if (logoFills.length > 0) {
+      await prisma.$transaction(
+        logoFills.map((r) =>
+          prisma.curator.update({
+            where: { id: r.id },
+            data: { logoUrl: wanted.get(r.address)!.logoUrl },
+          })
+        )
+      );
+    }
+    for (const r of rows) idByAddress.set(r.address, r.id);
+  }
+
+  return plans.map((plan) => {
+    if (plan === null) return null;
+    if (plan.kind === "existing") return plan.id;
+    const id = idByAddress.get(plan.address);
+    if (!id) throw new Error(`curator ${plan.address} missing after createMany`);
+    return id;
+  });
 }
