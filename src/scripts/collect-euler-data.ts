@@ -13,13 +13,27 @@
  *    EXISTING curators ("TelosC Surge", "K3 Capital Earn WETH" — the labels
  *    repo lags on these). The fallback never creates a curator, so a
  *    troll-named vault can't mint one.
- *  - Vaults on a product's deprecatedVaults list are excluded (frozen /
- *    insolvency-exposed markets are not live TVL).
+ *  - Vaults on a product's deprecatedVaults list or flagged deprecated in
+ *    earn-vaults.json are excluded (frozen / insolvency-exposed markets are
+ *    not live TVL).
  *  - TVL floor $50k (same as new Morpho chains).
- *  - Cross-source guard: a vault already tracked by another pipeline (Morpho
- *    row, or a Turtle opportunity whose receipt token is this vault — checked
- *    against the LIVE Turtle feed, not just the DB) is skipped and reported —
- *    the incumbent source keeps it; no double-counting.
+ *  - Cross-source guard (one active row per vault, never two):
+ *      · a non-Turtle row (Morpho, …) owns the vault → skip;
+ *      · an active Turtle row that the LIVE Turtle feed still lists owns it →
+ *        skip (Turtle keeps refreshing it);
+ *      · otherwise an existing Euler row is the incumbent → refresh it, and
+ *        retire (active=false) a Turtle row for the same vault that the live
+ *        feed no longer lists — it is a frozen duplicate;
+ *      · a vault only in the live Turtle feed (no row yet) is left to Turtle.
+ *    If the Turtle feed can't be read, every active Turtle row counts as live
+ *    (conservative: skip, never double count) and the run reports an error.
+ *  - Stale sweep: on every chain that fetched cleanly, Euler rows this run did
+ *    not ingest (dropped below the floor, deprecated, unlabeled, now owned by
+ *    Turtle) are set active=false, so a vault can never stay "live" on a
+ *    frozen snapshot again.
+ *  - Fail loud: any chain/source failure lands in `errors`, `success` is false
+ *    and the cron route answers HTTP 500 (the Jul-2026 outage returned 200 for
+ *    12 weeks while ingesting nothing).
  *  - Curator resolution reuses matchCurator (name-based: existing rows first,
  *    then a clean `tc:<slug>` created from the labels entity name).
  */
@@ -48,8 +62,10 @@ export interface EulerCollectionResult {
   nameAttributed: number; // Earn vaults attributed by name-match (no label entry)
   skippedUnlabeled: number; // fetched, above floor, but no attribution → not stored
   skippedUnlabeledTvlUsd: number;
-  skippedDeprecated: number; // on a product's deprecatedVaults list
+  skippedDeprecated: number; // deprecated in products.json or earn-vaults.json
   crossSourceOverlaps: { name: string; tvl: number; address: string; source: string }[];
+  deactivatedStale: number; // Euler rows this run retired (see stale sweep)
+  retiredTurtleDuplicates: number; // Turtle rows for Euler vaults the live Turtle feed dropped
   errors: string[];
   duration: number;
 }
@@ -191,10 +207,10 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
   const crossSourceOverlaps: EulerCollectionResult["crossSourceOverlaps"] = [];
 
   try {
-    // Vault identities already owned by another pipeline (Morpho rows use the
-    // real address; Turtle rows carry it in onchainAddress). Built once.
+    // Vault identities already owned by a non-Turtle pipeline (Morpho rows
+    // use the real address; others carry it in onchainAddress). Built once.
     const foreign = await prisma.vault.findMany({
-      where: { dataSource: { not: "euler" } },
+      where: { dataSource: { notIn: ["euler", "turtle"] } },
       select: { address: true, onchainAddress: true, chainId: true, dataSource: true },
     });
     const foreignKeys = new Map<string, string>(); // addr:chainId → dataSource
@@ -202,6 +218,20 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
       foreignKeys.set(`${v.address.toLowerCase()}:${v.chainId}`, v.dataSource);
       if (v.onchainAddress) foreignKeys.set(`${v.onchainAddress}:${v.chainId}`, v.dataSource);
     }
+
+    // Active Turtle rows by on-chain identity, and this pipeline's own rows.
+    const turtleRows = new Map<string, { id: string; turtleId: string | null }>(); // addr:chainId →
+    for (const v of await prisma.vault.findMany({
+      where: { dataSource: "turtle", active: true, onchainAddress: { not: null } },
+      select: { id: true, turtleId: true, onchainAddress: true, chainId: true },
+    })) {
+      turtleRows.set(`${v.onchainAddress}:${v.chainId}`, { id: v.id, turtleId: v.turtleId });
+    }
+    const eulerRows = await prisma.vault.findMany({
+      where: { dataSource: "euler" },
+      select: { id: true, address: true, chainId: true, active: true },
+    });
+    const eulerKeys = new Set(eulerRows.map((v) => `${v.address.toLowerCase()}:${v.chainId}`));
 
     // Existing curator names for the Earn prefix-match fallback ("TelosC
     // Surge" → TelosC). Longest names first so "K3 Capital" wins over "K3".
@@ -214,22 +244,48 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
       .filter((n) => n.length >= 4)
       .sort((a, b) => b.length - a.length);
 
-    // Belt-and-braces: also key the LIVE Turtle feed's receipt tokens, so the
-    // guard holds even before the Turtle cron has backfilled onchainAddress
-    // onto older rows (a Turtle-listed Euler vault must not be double-counted).
+    // Receipt tokens (addr:chainId) and opportunity ids the LIVE Turtle feed
+    // lists. null = feed unreadable → every active Turtle row is treated as
+    // live (skip, never double count).
+    let liveTurtle: Set<string> | null = null;
     try {
       const opportunities = await fetchTurtleOpportunities();
+      liveTurtle = new Set<string>();
       for (const opp of opportunities) {
+        liveTurtle.add(opp.id);
         const receipt = opp.receiptToken;
         if (!receipt?.address) continue;
         const chainId = resolveChainId(receipt.chain?.chainId, receipt.chain?.slug);
         if (chainId === null) continue;
-        const key = `${receipt.address.toLowerCase()}:${chainId}`;
-        if (!foreignKeys.has(key)) foreignKeys.set(key, "turtle (live feed)");
+        liveTurtle.add(`${receipt.address.toLowerCase()}:${chainId}`);
       }
     } catch (error) {
-      logError("Turtle feed unavailable for the cross-source guard (continuing with DB-only guard)", error);
+      const msg = `Turtle feed unavailable for the cross-source guard: ${error instanceof Error ? error.message : error}`;
+      logError(msg);
+      errors.push(msg);
     }
+
+    /**
+     * Who owns this vault? `null` = Euler ingests it. Also records a frozen
+     * Turtle duplicate for retirement when Euler takes (or keeps) the vault.
+     */
+    const retireTurtleIds = new Set<string>();
+    const isFrozenTurtle = (row: { turtleId: string | null }, key: string) =>
+      liveTurtle !== null && !liveTurtle.has(key) && !(row.turtleId && liveTurtle.has(row.turtleId));
+    const ownerOf = (key: string): string | null => {
+      const other = foreignKeys.get(key);
+      if (other) return other;
+      const turtleRow = turtleRows.get(key);
+      if (turtleRow && !isFrozenTurtle(turtleRow, key)) return "turtle";
+      if (!eulerKeys.has(key) && liveTurtle?.has(key)) return "turtle (live feed)";
+      if (turtleRow) retireTurtleIds.add(turtleRow.id); // frozen: the live feed dropped it
+      return null;
+    };
+
+    // addr:chainId of every vault this run decided to ingest; chains whose
+    // fetch completed. Together they drive the stale sweep.
+    const kept = new Set<string>();
+    const cleanChains = new Set<number>();
 
     // Each chain independent: one chain's API trouble must not kill the run.
     for (const chainId of EULER_CHAIN_IDS) {
@@ -252,13 +308,19 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
 
           const addressLower = vault.address.toLowerCase();
 
-          // Frozen/insolvency-exposed markets are not live TVL — never ingest.
+          // Frozen/insolvency-exposed markets are not live TVL — never ingest,
+          // and retire a Turtle copy the live feed has dropped (it would keep
+          // counting the frozen TVL forever).
           if (labels.deprecated.has(addressLower)) {
             skippedDeprecated++;
+            const turtleRow = turtleRows.get(`${addressLower}:${vault.chainId}`);
+            if (turtleRow && isFrozenTurtle(turtleRow, `${addressLower}:${vault.chainId}`)) {
+              retireTurtleIds.add(turtleRow.id);
+            }
             continue;
           }
 
-          const owner = foreignKeys.get(`${addressLower}:${vault.chainId}`);
+          const owner = ownerOf(`${addressLower}:${vault.chainId}`);
           if (owner) {
             crossSourceOverlaps.push({
               name: vault.name,
@@ -305,6 +367,7 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
             continue;
           }
 
+          kept.add(`${addressLower}:${vault.chainId}`);
           const result = await upsertEulerVault(vault, kind, curatorId);
           if (result.upserted) {
             chainUpserted++;
@@ -316,6 +379,7 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
         }
 
         vaultsUpserted += chainUpserted;
+        cleanChains.add(chainId);
         log(`  ${chainName}: ${candidates.length} fetched, ${chainUpserted} upserted`);
       } catch (error) {
         const msg = `${chainName} failed: ${error instanceof Error ? error.message : error}`;
@@ -332,7 +396,7 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
         if (vault.tvlUsd < MIN_TVL_USD) continue;
 
         const addressLower = vault.address.toLowerCase();
-        const owner = foreignKeys.get(`${addressLower}:146`);
+        const owner = ownerOf(`${addressLower}:146`);
         if (owner) {
           crossSourceOverlaps.push({ name: vault.name, tvl: vault.tvlUsd, address: addressLower, source: owner });
           continue;
@@ -348,6 +412,7 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
           continue;
         }
 
+        kept.add(`${addressLower}:146`);
         const result = await upsertEulerVault(
           {
             chainId: 146,
@@ -371,15 +436,45 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
         }
       }
       vaultsUpserted += sonicUpserted;
+      // Sweep Sonic only on a fully readable pass: a flaky RPC must not retire
+      // a funded vault.
+      if (sonic.unreadable === 0) cleanChains.add(146);
       log(`  Sonic (on-chain): ${sonic.vaults.length} readable funded vaults, ${sonicUpserted} upserted (${sonic.vaults.filter((v) => !v.listed).length} wound-down → listed=false)`);
       if (sonic.skippedNonStable.length > 0) {
         log(`    non-stable assets skipped (no oracle): ${sonic.skippedNonStable.map((s) => s.symbol).join(", ")}`);
       }
-      log(`    insolvency-deprecated excluded: ${sonic.skippedInsolvency} · empty/unreadable: ${sonic.skippedEmpty}`);
+      log(`    insolvency-deprecated excluded: ${sonic.skippedInsolvency} · empty: ${sonic.skippedEmpty} · unreadable: ${sonic.unreadable}`);
     } catch (error) {
       const msg = `Sonic on-chain failed: ${error instanceof Error ? error.message : error}`;
       logError(msg);
       errors.push(msg);
+    }
+
+    // ── Stale sweep + frozen-duplicate retirement ───────────────────────────
+    const staleIds = eulerRows
+      .filter(
+        (v) =>
+          v.active &&
+          cleanChains.has(v.chainId) &&
+          !kept.has(`${v.address.toLowerCase()}:${v.chainId}`)
+      )
+      .map((v) => v.id);
+    const deactivatedStale =
+      staleIds.length > 0
+        ? (await prisma.vault.updateMany({ where: { id: { in: staleIds } }, data: { active: false } })).count
+        : 0;
+    const retiredTurtleDuplicates =
+      retireTurtleIds.size > 0
+        ? (
+            await prisma.vault.updateMany({
+              where: { id: { in: [...retireTurtleIds] } },
+              data: { active: false },
+            })
+          ).count
+        : 0;
+
+    if (vaultsUpserted === 0) {
+      errors.push("0 Euler vaults upserted — source returned nothing usable");
     }
 
     await updateEulerCuratorStats();
@@ -395,6 +490,7 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
     for (const o of crossSourceOverlaps.slice(0, 10)) {
       log(`    ${o.name} ($${(o.tvl / 1e6).toFixed(1)}M) — owned by ${o.source}`);
     }
+    log(`  Retired: ${deactivatedStale} stale Euler rows, ${retiredTurtleDuplicates} frozen Turtle duplicates`);
     log(`  Errors: ${errors.length}`);
     log(`  Duration: ${(duration / 1000).toFixed(1)}s`);
     log("=".repeat(60));
@@ -410,6 +506,8 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
       skippedUnlabeledTvlUsd,
       skippedDeprecated,
       crossSourceOverlaps,
+      deactivatedStale,
+      retiredTurtleDuplicates,
       errors,
       duration,
     };
@@ -428,6 +526,8 @@ export async function collectEulerData(): Promise<EulerCollectionResult> {
       skippedUnlabeledTvlUsd,
       skippedDeprecated,
       crossSourceOverlaps,
+      deactivatedStale: 0,
+      retiredTurtleDuplicates: 0,
       errors,
       duration: Date.now() - startTime,
     };
