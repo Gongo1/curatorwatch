@@ -732,50 +732,45 @@ async function storeReallocations(
   return stored;
 }
 
+/**
+ * Recompute Curator.vaultCount / totalAssetsManaged in ONE set-based statement.
+ *
+ * Semantics are unchanged from the old per-curator loop: every vault linked to
+ * the curator counts (no active/listed filter), TVL is the sum of each vault's
+ * latest snapshot (vaults with no snapshot add 0), and curators with no vaults
+ * are left untouched. The loop did ~1,500 sequential round trips (~8 min at
+ * connection_limit=1) and pushed the core lane past its 900s cap; this runs in
+ * tens of milliseconds. Latest-snapshot lookup is a LATERAL LIMIT 1 on the
+ * (vaultId, timestamp) index — a DISTINCT ON over the whole snapshot table
+ * measured ~6s on prod vs ~22ms for this form.
+ */
 async function updateCuratorStats() {
   log("Updating curator statistics...");
 
-  const curators = await prisma.curator.findMany({
-    select: { id: true, name: true, address: true },
-  });
+  const updated = await prisma.$executeRaw`
+    UPDATE "Curator" c
+    SET "vaultCount" = agg.vault_count,
+        "totalAssetsManaged" = agg.total_assets,
+        "updatedAt" = NOW()
+    FROM (
+      SELECT v."curatorId",
+             COUNT(*)::int AS vault_count,
+             COALESCE(SUM(latest."totalAssetsUsd"), 0) AS total_assets
+      FROM "Vault" v
+      LEFT JOIN LATERAL (
+        SELECT s."totalAssetsUsd"
+        FROM "VaultSnapshot" s
+        WHERE s."vaultId" = v.id
+        ORDER BY s."timestamp" DESC
+        LIMIT 1
+      ) latest ON true
+      WHERE v."curatorId" IS NOT NULL
+      GROUP BY v."curatorId"
+    ) agg
+    WHERE c.id = agg."curatorId"
+  `;
 
-  for (const curator of curators) {
-    // Count vaults
-    const vaultCount = await prisma.vault.count({
-      where: { curatorId: curator.id },
-    });
-
-    // Skip curators with no vaults
-    if (vaultCount === 0) continue;
-
-    // Get total assets from latest snapshots
-    const vaultIds = await prisma.vault.findMany({
-      where: { curatorId: curator.id },
-      select: { id: true },
-    });
-
-    let totalAssets = 0;
-    for (const { id } of vaultIds) {
-      const snapshot = await prisma.vaultSnapshot.findFirst({
-        where: { vaultId: id },
-        orderBy: { timestamp: "desc" },
-        select: { totalAssetsUsd: true },
-      });
-      if (snapshot) {
-        totalAssets += snapshot.totalAssetsUsd;
-      }
-    }
-
-    await prisma.curator.update({
-      where: { id: curator.id },
-      data: {
-        vaultCount,
-        totalAssetsManaged: totalAssets,
-      },
-    });
-
-    log(`  ${curator.name || curator.address.slice(0, 10)}: ${vaultCount} vaults, $${(totalAssets / 1e6).toFixed(2)}M`);
-  }
+  log(`  Curator stats updated: ${updated} curators`);
 }
 
 async function createRiskSnapshot(
