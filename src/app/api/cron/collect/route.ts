@@ -72,6 +72,11 @@ export async function GET(request: NextRequest) {
       skipMarketAllocations: true,
       skipLiquidations: true,
       verbose: false,
+      // Batched writes take a lane ~1-2 min; this is the backstop. Past 600s
+      // no new vault chunk starts (the rest are deferred, stalest first next
+      // run, and the run reports partial), leaving 300s of the 900s cap for
+      // the post-collection steps.
+      timeBudgetMs: 600_000,
     });
 
     console.log("[CRON] Collection complete:", {

@@ -1,7 +1,8 @@
 /**
  * Server-side totals hygiene shared by every collector:
  *   - recordSnapshotWritten(): stamp Vault.lastSnapshotAt and set/clear the
- *     'phantom' flag after a snapshot write;
+ *     'phantom' flag after a snapshot write (recordSnapshotsWritten(): the
+ *     same for a batch of vaults in one statement);
  *   - fetchPhantomBaselines(): ~30-day-old snapshots for the phantom test,
  *     one query per run;
  *   - applyExclusionRules(): write the wrapper / bridged / nested /
@@ -14,6 +15,7 @@
  * Relative imports: tsx-run collector scripts import this module.
  */
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { ALERT_TYPES } from "../change-thresholds";
 import { staleCutoff } from "./counting";
@@ -45,6 +47,36 @@ export async function recordSnapshotWritten(
                                ELSE "excludeReason" END
     WHERE id = ${vaultId}
   `;
+}
+
+/**
+ * Bulk form of recordSnapshotWritten() for collectors that write snapshots in
+ * batches: the same stamp and phantom set/clear rules, one UPDATE ... FROM
+ * (VALUES ...) statement per 500 vaults instead of one round trip per vault.
+ */
+export async function recordSnapshotsWritten(
+  rows: { vaultId: string; phantomReason: string | null }[],
+  at: Date = new Date()
+): Promise<void> {
+  for (let i = 0; i < rows.length; i += 500) {
+    const values = Prisma.join(
+      rows
+        .slice(i, i + 500)
+        .map((r) => Prisma.sql`(${r.vaultId}::text, ${r.phantomReason !== null}::boolean)`)
+    );
+    await prisma.$executeRaw`
+      UPDATE "Vault" AS v
+      SET "lastSnapshotAt" = ${at},
+          "countInTotals" = CASE WHEN d.phantom THEN false
+                                 WHEN v."excludeReason" = 'phantom' THEN true
+                                 ELSE v."countInTotals" END,
+          "excludeReason" = CASE WHEN d.phantom THEN 'phantom'
+                                 WHEN v."excludeReason" = 'phantom' THEN NULL
+                                 ELSE v."excludeReason" END
+      FROM (VALUES ${values}) AS d(id, phantom)
+      WHERE v.id = d.id
+    `;
+  }
 }
 
 /**
