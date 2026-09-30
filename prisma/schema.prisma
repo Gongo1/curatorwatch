@@ -427,6 +427,9 @@ model MarketAllocation {
 
   snapshotTime    DateTime @default(now())
 
+  // One row per vault × market × adapter per run (createMany skipDuplicates).
+  // prisma/manual-sql/2026-09-30-market-allocation-unique.sql
+  @@unique([vaultId, snapshotTime, marketUniqueKey, adapterAddress], map: "MarketAllocation_snapshot_market_key")
   @@index([vaultId, snapshotTime])
   @@index([marketUniqueKey])
   @@index([collateralAssetSymbol])
