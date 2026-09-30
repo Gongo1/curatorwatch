@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { collectUpshiftData } from "@/scripts/collect-upshift-data";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 120;
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
+  return withCronRun("collect-upshift", async () => {
     console.log("[CRON] Starting Upshift data collection...");
 
     const result = await collectUpshiftData();
@@ -39,34 +40,16 @@ export async function GET(request: NextRequest) {
     if (result.vaultsUpserted > 0) revalidateDataPages();
 
     // Fail loud: a source failure or an empty run must not look like success.
-    if (!result.success || result.vaultsUpserted === 0) {
-      console.error("[CRON] Upshift collection failed:", result.errors);
-      return NextResponse.json(
-        {
-          success: false,
-          error:
-            result.errors[0] ??
-            `Upshift collection upserted 0 vaults (fetched ${result.totalFetched})`,
-          result,
-        },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Upshift data collected successfully",
-      result,
-    });
-  } catch (error) {
-    console.error("[CRON] Upshift collection failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Upshift collection failed",
-      },
-      { status: 500 }
-    );
-  }
+    return {
+      rowsWritten: result.snapshotsCreated,
+      ...(!result.success || result.vaultsUpserted === 0
+        ? {
+            error:
+              result.errors[0] ??
+              `Upshift collection upserted 0 vaults (fetched ${result.totalFetched})`,
+          }
+        : {}),
+      body: { message: "Upshift data collected", result },
+    };
+  });
 }

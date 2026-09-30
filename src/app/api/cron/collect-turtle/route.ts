@@ -5,6 +5,7 @@ import {
   type DealSyncSummary,
 } from "@/lib/turtle/deal-sync";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
+  return withCronRun("collect-turtle", async () => {
     console.log("[CRON] Starting Turtle data collection...");
 
     const result = await collectTurtleData();
@@ -63,18 +64,12 @@ export async function GET(request: NextRequest) {
             result.errors.length > 0 ? `: ${result.errors[0]}` : ""
           }`
         : null;
-    const failed = collectError !== null || dealSyncError !== null;
-    if (failed) {
-      console.error("[CRON] Turtle run failed:", { collectError, dealSyncError });
-    }
 
-    return NextResponse.json(
-      {
-        success: !failed,
-        message: failed
-          ? "Turtle collection failed"
-          : "Turtle data collected successfully",
-        error: [collectError, dealSyncError].filter(Boolean).join("; ") || undefined,
+    return {
+      rowsWritten: result.snapshotsCreated,
+      ...(collectError ? { error: collectError } : {}),
+      stepErrors: dealSyncError ? { dealSync: dealSyncError } : undefined,
+      body: {
         result: {
           totalFetched: result.totalFetched,
           filtered: result.filtered,
@@ -88,19 +83,7 @@ export async function GET(request: NextRequest) {
           duration: result.duration,
         },
         dealSync,
-        dealSyncError,
       },
-      { status: failed ? 500 : 200 }
-    );
-  } catch (error) {
-    console.error("[CRON] Turtle collection failed:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : "Turtle collection failed",
-      },
-      { status: 500 }
-    );
-  }
+    };
+  });
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchNews } from "@/lib/news/fetch-news";
 import { revalidateDataPages } from "@/lib/revalidate-pages";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -21,16 +22,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  try {
+  return withCronRun("fetch-news", async () => {
     const result = await fetchNews();
     console.log("[CRON] News ingest:", result);
     revalidateDataPages();
-    return NextResponse.json({ success: true, result });
-  } catch (error) {
-    console.error("[CRON] News ingest failed:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "News ingest failed" },
-      { status: 500 }
-    );
-  }
+
+    // Individual feeds fail all the time (sparse by design), but every feed
+    // failing means the ingest is broken, not quiet.
+    const stepErrors: Record<string, string> = {};
+    if (result.feedsOk === 0 && result.feedsFailed > 0) {
+      stepErrors.feeds = `all ${result.feedsFailed} RSS feeds failed`;
+    }
+    if (result.curatorFeedsOk === 0 && result.curatorFeedsFailed > 0) {
+      stepErrors.curatorFeeds = `all ${result.curatorFeedsFailed} curator feeds failed`;
+    }
+    return { rowsWritten: result.upserted, stepErrors, body: { result } };
+  });
 }
