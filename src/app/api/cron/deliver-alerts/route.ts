@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { sendEmail, alertsEmail, digestEmail, emailConfigured, SITE_URL } from "@/lib/notify/email";
 import { sendTelegram, formatAlertTg, formatDigestTg, telegramConfigured } from "@/lib/notify/telegram";
+import { withCronRun } from "@/lib/cron-run";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -34,19 +35,30 @@ export async function GET(request: NextRequest) {
   }
 
   const digestMode = request.nextUrl.searchParams.get("digest") === "true";
-  const summary: Record<string, unknown> = {
-    emailConfigured: emailConfigured(),
-    telegramConfigured: telegramConfigured(),
-  };
 
-  try {
+  return withCronRun("deliver-alerts", async () => {
+    const summary: Record<string, unknown> = {
+      emailConfigured: emailConfigured(),
+      telegramConfigured: telegramConfigured(),
+    };
+    const stepErrors: Record<string, string> = {};
+
     if (digestMode) {
       // ── Daily digest delivery ────────────────────────────────────────────
       const digest = await prisma.digest.findFirst({
         where: { published: true },
         orderBy: { date: "desc" },
       });
-      if (!digest) return NextResponse.json({ success: true, summary: { ...summary, digest: "none" } });
+      if (!digest) return { error: "no published digest", body: { summary } };
+      // The digest cron refuses to publish on stale or failing data. Never
+      // re-send an older edition in that case: fail loud instead.
+      const today = new Date().toISOString().slice(0, 10);
+      if (digest.slug !== today) {
+        return {
+          error: `latest published digest is ${digest.slug}, not today (${today}); not re-sending`,
+          body: { summary },
+        };
+      }
 
       let emailed = 0;
       let failed = 0;
@@ -65,14 +77,16 @@ export async function GET(request: NextRequest) {
           }
         }
       }
+      if (failed > 0) stepErrors.email = `${failed} digest email(s) failed`;
 
       let tg: { sent: boolean; reason?: string } = { sent: false, reason: "skipped" };
       if (telegramConfigured()) {
         tg = await sendTelegram(formatDigestTg(digest, SITE_URL));
+        if (!tg.sent) stepErrors.telegram = tg.reason ?? "telegram send failed";
       }
 
       summary.digest = { slug: digest.slug, emailed, failed, telegram: tg };
-      return NextResponse.json({ success: true, summary });
+      return { rowsWritten: emailed, stepErrors, body: { summary } };
     }
 
     // ── Alert delivery ───────────────────────────────────────────────────────
@@ -102,6 +116,7 @@ export async function GET(request: NextRequest) {
           tgPosted++;
         } else {
           console.error("[deliver] telegram failed:", result.reason);
+          stepErrors.telegram = result.reason ?? "telegram send failed";
           break; // token/channel problem — don't hammer the API
         }
       }
@@ -158,12 +173,8 @@ export async function GET(request: NextRequest) {
     }
     summary.alertEmails = { emailed, failed, skippedNoNews };
 
-    return NextResponse.json({ success: true, summary });
-  } catch (error) {
-    console.error("[CRON] Alert delivery failed:", error);
-    return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "delivery failed", summary },
-      { status: 500 }
-    );
-  }
+    if (failed > 0) stepErrors.email = `${failed} alert email(s) failed`;
+
+    return { rowsWritten: emailed + tgPosted, stepErrors, body: { summary } };
+  }, { lane: digestMode ? "digest" : "alerts" });
 }

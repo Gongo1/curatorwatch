@@ -59,6 +59,35 @@ function table(headers: string[], rows: string[][], aligns: Align[]): string[] {
 const EMPTY = "No changes in the last 24h.";
 const ROW_CAP = 10;
 
+/** "03:05 UTC" within a day of the edition, else "Sep 18". */
+function asOfTime(iso: string | null, editionIso: string): string {
+  if (!iso) return "never";
+  const t = new Date(iso);
+  if (new Date(editionIso).getTime() - t.getTime() < 24 * 3600_000) {
+    return `${t.toISOString().slice(11, 16)} UTC`;
+  }
+  return t.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+}
+
+/** One "as of" line for the given source keys (prefix match: "morpho" → V1 + V2). */
+function asOfLine(d: DigestData, keys: string[]): string | null {
+  const rows = (d.asOf ?? []).filter(
+    (s) => s.lastAt !== null && keys.some((k) => s.key === k || s.key.startsWith(`${k}-`))
+  );
+  if (rows.length === 0) return null;
+  return `As of: ${rows
+    .map((s) => `${s.label} ${asOfTime(s.lastAt, d.date)}${s.stale ? " (stale)" : ""}`)
+    .join(" · ")}.`;
+}
+
+const VAULT_SOURCE_KEYS = ["morpho", "turtle", "euler", "upshift", "fund", "hyperliquid"];
+
+/** Stale vault sources are dropped from the tables; say so under each table. */
+function excludedLine(d: DigestData): string | null {
+  const ex = d.excludedSources ?? [];
+  return ex.length ? `Not shown (data past SLA): ${ex.join(", ")}.` : null;
+}
+
 function mergedFlows(d: DigestData): DigestFlowItem[] {
   return [...d.topInflows, ...d.topOutflows].sort(
     (a, b) => Math.abs(b.deltaUsd) - Math.abs(a.deltaUsd)
@@ -115,6 +144,8 @@ export function renderMarkdown(d: DigestData): string {
   L.push(`Coverage         ${e.curatorCount} curators · ${e.vaultCount} products`);
   L.push("```");
   L.push("");
+  const ledgerAsOf = asOfLine(d, VAULT_SOURCE_KEYS);
+  if (ledgerAsOf) L.push(ledgerAsOf, "");
   const a = d.alertCounts;
   L.push(`${a.critical} critical · ${a.warning} warning · ${a.info} info alerts in the window.`);
   L.push("");
@@ -157,6 +188,8 @@ export function renderMarkdown(d: DigestData): string {
   // ── YIELD MOVERS ──
   L.push("## YIELD MOVERS");
   L.push("");
+  const yieldExcluded = excludedLine(d);
+  if (yieldExcluded) L.push(yieldExcluded, "");
   const movers = [...d.yieldMovers].sort((x, y) => Math.abs(y.deltaPct) - Math.abs(x.deltaPct));
   if (movers.length === 0) {
     L.push(EMPTY);
@@ -186,6 +219,8 @@ export function renderMarkdown(d: DigestData): string {
   // ── NEW VAULTS ──
   L.push("## NEW VAULTS");
   L.push("");
+  const newExcluded = excludedLine(d);
+  if (newExcluded) L.push(newExcluded, "");
   const fresh = [...d.newVaults].sort((x, y) => y.tvl - x.tvl);
   if (fresh.length === 0) {
     L.push(EMPTY);
@@ -217,7 +252,10 @@ export function renderMarkdown(d: DigestData): string {
   // ── INCIDENTS ──
   L.push("## INCIDENTS");
   L.push("");
-  if (d.incidents.count === 0) {
+  const liqAsOf = asOfLine(d, ["liquidations"]);
+  if (d.incidents.stale) {
+    L.push(`Liquidation feed is past its SLA, so incidents are omitted. ${liqAsOf ?? ""}`.trim());
+  } else if (d.incidents.count === 0) {
     L.push(EMPTY);
   } else {
     L.push(
@@ -237,12 +275,15 @@ export function renderMarkdown(d: DigestData): string {
     }
     L.push("", "Event-level detail → curatorwatch.com/liquidations");
   }
+  if (liqAsOf && !d.incidents.stale) L.push("", liqAsOf);
   L.push("");
 
   // ── NEWSWIRE — fresh curator-tagged coverage as links ──
   // (Replaced CONCENTRATION 2026-08-13 — that table barely changed day to day.)
   L.push("## NEWSWIRE");
   L.push("");
+  const newsAsOf = asOfLine(d, ["news"]);
+  if (newsAsOf) L.push(newsAsOf, "");
   const news = d.news ?? [];
   if (news.length === 0) {
     L.push("No fresh curator coverage in the window.");
