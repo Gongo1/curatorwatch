@@ -51,6 +51,8 @@ export async function runQualityChecks(now: Date = new Date()): Promise<QualityC
   // Only offending rows come back. APY is the stored netApy (apy when netApy is
   // null): createSnapshot sanitizes only the avg fields, so this is where a
   // broken source value lands.
+  // Counted vaults only: a row already left out of the totals (stale, wrapper,
+  // phantom) cannot skew a headline number, so it must not block the digest.
   const bad = await prisma.$queryRaw<
     {
       name: string;
@@ -74,7 +76,7 @@ export async function runQualityChecks(now: Date = new Date()): Promise<QualityC
       SELECT "sharePrice" FROM "VaultSnapshot"
       WHERE "vaultId" = v.id AND timestamp < s1.timestamp ORDER BY timestamp DESC LIMIT 1
     ) s0 ON true
-    WHERE v.active AND (
+    WHERE v.active AND v."countInTotals" AND (
       COALESCE(s1."netApy", s1.apy) > ${L.maxNetApy}
       OR COALESCE(s1."netApy", s1.apy) < ${L.minNetApy}
       OR s1."totalAssetsUsd" > ${L.maxVaultTvlUsd}
