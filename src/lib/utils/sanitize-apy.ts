@@ -15,14 +15,24 @@ export const MAX_SANE_APY = 2.0;
 export const MAX_SANE_APY_PCT = MAX_SANE_APY * 100;
 
 /**
+ * Minimum APY we consider plausible (-50% = -0.5 in decimal), the same floor as
+ * the health check's quality limit. Turtle sends -100 for some opportunities
+ * (Plasma USD, 2026-10-01): a placeholder, not a real -100% yield.
+ */
+export const MIN_SANE_APY = -0.5;
+
+/** Same floor expressed in percentage units. */
+export const MIN_SANE_APY_PCT = MIN_SANE_APY * 100;
+
+/**
  * Sanitize a PERCENTAGE-units APY (e.g. Turtle `netAPR` / `estTotalAPR`, where
  * 8.33 means 8.33%). Returns null when implausible so the UI shows "—" rather
  * than a fabricated number. This is what caught the Turtle-reported 5,769% APR
- * on Midas "Staked Plasma USD".
+ * on Midas "Staked Plasma USD". Values below -50% are nulled the same way.
  */
 export function sanitizeApyPct(value: number | null | undefined): number | null {
   if (value == null) return null;
-  if (Math.abs(value) > MAX_SANE_APY_PCT) return null;
+  if (value > MAX_SANE_APY_PCT || value < MIN_SANE_APY_PCT) return null;
   return value;
 }
 
@@ -42,6 +52,6 @@ export function sanitizeApy(value: number | null | undefined): number {
  */
 export function sanitizeApyForStorage(value: number | null | undefined): number | null {
   if (value == null) return null;
-  if (Math.abs(value) > MAX_SANE_APY) return null;
+  if (value > MAX_SANE_APY || value < MIN_SANE_APY) return null;
   return value;
 }
