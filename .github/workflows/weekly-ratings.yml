@@ -25,7 +25,10 @@ jobs:
           python-version: "3.12"
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # Node 20 is EOL and still trusts the compromised eMudhra CA chain;
+          # 24.22.1+ distrusts it. check-latest skips the runner's cached 24.x.
+          node-version: "24"
+          check-latest: true
 
       - name: Clone engine repo (read-only deploy key)
         run: |
