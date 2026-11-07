@@ -11,6 +11,7 @@ import { DisclosureFlag } from "@/components/DisclosureFlag";
 import { useGate } from "@/lib/gate/GateProvider";
 import { GateTableOverlay } from "@/components/gate/GateTableOverlay";
 import type { RankingGateMeta } from "@/lib/gate/config";
+import { RANKING_COLS } from "./ranking-cols";
 
 function initials(name: string): string {
   return name
@@ -22,7 +23,7 @@ function initials(name: string): string {
     .toUpperCase();
 }
 
-type SortKey = "name" | "vaults" | "tvl";
+type SortKey = "name" | "vaults" | "stable" | "apy" | "tvl";
 type SrcFilter = "all" | "regulated" | "stable";
 
 // A curator counts as "stablecoin-focused" when >= this share of its AUM is in
@@ -36,14 +37,21 @@ const CHIPS: { key: SrcFilter; label: string }[] = [
   { key: "regulated", label: "Has jurisdiction" },
 ];
 
-const PAGE = 15;
+const PAGE = 25;
+
+function pct(n: number, digits = 1): string {
+  return `${n.toFixed(digits)}%`;
+}
 
 export function CuratorIndex({
   curators,
   gate = null,
+  totalAUM,
 }: {
   curators: CuratorDashboardItem[];
   gate?: RankingGateMeta | null;
+  /** Tracked TVL across all curators — the "share" column's denominator. */
+  totalAUM?: number;
 }) {
   const [query, setQuery] = useState("");
   const [filterSrc, setFilterSrc] = useState<SrcFilter>("all");
@@ -58,6 +66,7 @@ export function CuratorIndex({
   // upgrade-fetches (no locked-flash, per the gating spec).
   const truncated = !!gate?.truncated;
   const locked = truncated && ready && !isSignedIn;
+  const denom = totalAUM ?? curators.reduce((s, c) => s + c.totalAUM, 0);
 
   const rows = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -74,7 +83,13 @@ export function CuratorIndex({
         return an < bn ? -sortDir : an > bn ? sortDir : 0;
       }
       const score = (c: CuratorDashboardItem) =>
-        sortKey === "vaults" ? c.vaultCount : c.totalAUM;
+        sortKey === "vaults"
+          ? c.vaultCount
+          : sortKey === "stable"
+            ? c.stablePct
+            : sortKey === "apy"
+              ? c.avgNetApy
+              : c.totalAUM;
       return (score(a) - score(b)) * sortDir;
     });
   }, [curators, query, filterSrc, sortKey, sortDir]);
@@ -93,39 +108,46 @@ export function CuratorIndex({
   };
 
   const shown = rows.slice(0, limit);
-  const arrow = sortDir < 0 ? " ↓" : " ↑";
 
   const Th = ({
     k,
     children,
     className = "",
+    title,
   }: {
     k: SortKey;
     children: React.ReactNode;
     className?: string;
-  }) => (
-    <button
-      type="button"
-      onClick={() => onSort(k)}
-      aria-pressed={sortKey === k}
-      title={truncated ? "Rank by TVL, vaults, name — free" : undefined}
-      className={`font-mono text-[10px] uppercase tracking-[0.1em] hover:text-text-primary transition-colors ${
-        sortKey === k ? "text-accent-blue" : "text-text-tertiary"
-      } ${truncated ? "opacity-40 cursor-not-allowed" : ""} ${className}`}
-    >
-      {children}
-      {sortKey === k ? arrow : ""}
-    </button>
-  );
+    title?: string;
+  }) => {
+    const activeKey = sortKey === k;
+    return (
+      <button
+        type="button"
+        onClick={() => onSort(k)}
+        aria-pressed={activeKey}
+        title={truncated ? "Sort the full ranking — free account" : title}
+        className={`label hover:text-text-primary transition-colors ${
+          activeKey ? "text-accent-blue" : ""
+        } ${truncated ? "cursor-pointer" : ""} ${className}`}
+      >
+        {children}
+        <span className="inline-block w-2.5 text-center" aria-hidden="true">
+          {activeKey ? (sortDir < 0 ? "↓" : "↑") : ""}
+        </span>
+      </button>
+    );
+  };
 
   return (
     <div>
-      {/* controls */}
-      <div className="flex gap-3 items-center mb-5 flex-wrap">
-        <div className="relative flex-1 min-w-[240px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary pointer-events-none" />
+      {/* toolbar */}
+      <div className="flex gap-2 items-center px-2 py-1.5 border-b border-border flex-wrap">
+        <div className="relative flex-1 min-w-[12rem]">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-text-tertiary pointer-events-none" aria-hidden="true" />
           <input
-            type="text"
+            type="search"
+            aria-label="Filter curators by name"
             value={query}
             readOnly={truncated}
             onFocus={truncated ? () => openGate("tools") : undefined}
@@ -135,24 +157,17 @@ export function CuratorIndex({
               setQuery(e.target.value);
               setLimit(PAGE);
             }}
-            placeholder={`Search ${gate?.totalCount ?? curators.length} curators by name…`}
-            title={truncated ? "Jump straight to any curator — free" : undefined}
+            placeholder={`Filter ${gate?.totalCount ?? curators.length} curators`}
             autoComplete="off"
-            className={`w-full bg-background-subtle border border-border rounded-[10px] py-2.5 pl-[2.375rem] pr-3.5 text-sm text-text-primary placeholder:text-text-tertiary focus-visible:outline-2 focus-visible:outline focus-visible:outline-accent-blue focus-visible:outline-offset-1 focus:border-accent-blue transition-colors ${
-              truncated ? "opacity-60 cursor-not-allowed" : ""
-            }`}
+            className="field h-7 pl-7 text-sm"
           />
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div role="group" aria-label="Focus" className="flex border border-border-strong">
           {CHIPS.map((ch) => (
             <button
               key={ch.key}
               type="button"
-              title={
-                truncated
-                  ? `Cut ${gate?.totalCount ?? curators.length} curators by focus and jurisdiction — free`
-                  : undefined
-              }
+              aria-pressed={filterSrc === ch.key}
               onClick={() => {
                 if (truncated) {
                   openGate("tools");
@@ -161,11 +176,11 @@ export function CuratorIndex({
                 setFilterSrc(ch.key);
                 setLimit(PAGE);
               }}
-              className={`font-mono text-xs rounded-lg px-3 py-2 border transition-colors active:translate-y-px ${
+              className={`h-[1.625rem] px-2.5 cond text-[0.75rem] font-semibold uppercase tracking-[0.04em] border-r border-border-strong last:border-r-0 transition-colors ${
                 filterSrc === ch.key
-                  ? "text-accent-blue border-accent-blue bg-accent-blue/10"
-                  : "text-text-secondary border-border bg-background-subtle hover:text-text-primary"
-              } ${truncated ? "opacity-40 cursor-not-allowed" : ""}`}
+                  ? "bg-accent-blue text-signal-ink"
+                  : "text-text-secondary hover:text-text-primary hover:bg-background-hover"
+              }`}
             >
               {ch.label}
             </button>
@@ -174,74 +189,77 @@ export function CuratorIndex({
       </div>
 
       {/* column header */}
-      <div className="grid grid-cols-[34px_1fr_96px_132px] gap-4 px-3 pb-3 items-center">
-        <span aria-hidden="true" />
+      <div className={`${RANKING_COLS} gap-3 px-3 h-7 items-center border-b border-border bg-background`}>
+        <span className="label text-right">#</span>
         <Th k="name" className="text-left">Curator</Th>
-        <Th k="vaults" className="text-right hidden sm:block">Vaults</Th>
+        <Th k="vaults" className="text-right hidden md:block">Vaults</Th>
+        <Th k="stable" className="text-right hidden xl:block" title="Stablecoin share of the curator's TVL">Stable</Th>
+        <Th k="apy" className="text-right hidden sm:block" title="TVL-weighted net APY">Net APY</Th>
+        <span className="label text-right hidden xl:block" title="Share of tracked TVL">Share</span>
         <Th k="tvl" className="text-right">TVL</Th>
       </div>
 
       {/* rows */}
       {shown.length === 0 ? (
-        <p className="font-mono text-sm text-text-tertiary text-center py-12 border-t border-border-subtle">
-          No curators match “{query}”.
+        <p className="text-sm text-text-tertiary text-center py-10">
+          No curator matches “{query}”. Clear the filter to see all {curators.length}.
         </p>
       ) : (
-        shown.map((c, i) => {
-          const name = c.name || `Curator ${c.curatorAddress.slice(0, 6)}`;
-          return (
-            <Link
-              key={c.curatorId}
-              href={`/curator/${curatorSlug(c.name, c.curatorAddress)}`}
-              className="grid grid-cols-[34px_1fr_96px_132px] gap-4 items-center px-3 py-3 border-t border-border-subtle hover:bg-background-subtle active:translate-y-px transition-colors group"
-            >
-              <span className="font-mono text-sm text-text-tertiary text-right tabular-nums">
-                {i + 1}
-              </span>
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="relative w-9 h-9 rounded-[9px] flex-none bg-background-elevated border border-border grid place-items-center overflow-hidden font-display font-bold text-xs text-accent-blue">
-                  {initials(name)}
-                  {c.logoUrl && (
-                    /* eslint-disable-next-line @next/next/no-img-element */
-                    <img
-                      src={c.logoUrl}
-                      alt=""
-                      width={36}
-                      height={36}
-                      loading="lazy"
-                      className="absolute inset-0 w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  )}
-                </span>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
+        <ol>
+          {shown.map((c, i) => {
+            const name = c.name || `Curator ${c.curatorAddress.slice(0, 6)}`;
+            return (
+              <li key={c.curatorId}>
+                <Link
+                  href={`/curator/${curatorSlug(c.name, c.curatorAddress)}`}
+                  className={`${RANKING_COLS} gap-3 items-center px-3 h-9 border-b border-border-subtle hover:bg-background-hover focus-visible:bg-background-hover transition-colors duration-100 group`}
+                >
+                  <span className="num text-xs text-text-tertiary text-right">{i + 1}</span>
+                  <span className="flex items-center gap-2.5 min-w-0">
+                    <span className="relative w-5 h-5 flex-none bg-background-elevated grid place-items-center overflow-hidden cond font-bold text-[0.6rem] text-accent-blue">
+                      {initials(name)}
+                      {c.logoUrl && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={c.logoUrl}
+                          alt=""
+                          width={20}
+                          height={20}
+                          loading="lazy"
+                          className="absolute inset-0 w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                      )}
+                    </span>
+                    <span className="text-[0.9rem] font-medium text-text-primary group-hover:text-accent-blue truncate">
                       {name}
                     </span>
                     {hasCuratorDisclosure(c.curatorAddress) && <DisclosureFlag />}
-                  </div>
-                  {c.jurisdiction && (
-                    <div className="font-mono text-xs text-text-tertiary mt-0.5 truncate">
-                      {c.jurisdiction}
-                    </div>
-                  )}
-                </div>
-              </div>
-              <span className="hidden sm:block font-mono text-sm text-text-secondary text-right tabular-nums">
-                {c.vaultCount}
-              </span>
-              <span className="font-mono text-base font-semibold text-text-primary text-right tabular-nums tracking-tight">
-                {formatCurrency(c.totalAUM)}
-              </span>
-            </Link>
-          );
-        })
+                    {c.jurisdiction && (
+                      <span className="hidden lg:inline label truncate">{c.jurisdiction}</span>
+                    )}
+                  </span>
+                  <span className="hidden md:block num text-sm text-text-secondary text-right">{c.vaultCount}</span>
+                  <span className="hidden xl:block num text-sm text-text-secondary text-right">{pct(c.stablePct, 0)}</span>
+                  <span className="hidden sm:block num text-sm text-text-primary text-right">
+                    {c.avgNetApy > 0 ? pct(c.avgNetApy * 100, 2) : "—"}
+                  </span>
+                  <span className="hidden xl:block num text-xs text-text-tertiary text-right">
+                    {denom > 0 ? pct((c.totalAUM / denom) * 100) : "—"}
+                  </span>
+                  <span className="num text-[0.95rem] font-semibold text-text-primary text-right">
+                    {formatCurrency(c.totalAUM)}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
       )}
 
-      {/* Locked continuation: decoy rows + overlay (anonymous, truncated payloads only) */}
+      {/* Locked continuation: decoy rows + sign-up panel (anonymous, truncated payloads only) */}
       {locked && gate && (
         <GateTableOverlay
           totalCount={gate.totalCount}
@@ -252,10 +270,10 @@ export function CuratorIndex({
       {!truncated && rows.length > limit && (
         <button
           type="button"
-          onClick={() => setLimit((l) => l + 20)}
-          className="block w-full mt-5 text-center font-mono text-xs text-accent-blue bg-transparent border border-border rounded-[9px] py-2.5 hover:border-accent-blue active:translate-y-px transition-colors"
+          onClick={() => setLimit((l) => l + 25)}
+          className="block w-full h-8 label text-accent-blue hover:bg-background-hover transition-colors"
         >
-          Show {Math.min(20, rows.length - limit)} more — {limit} of {rows.length} →
+          Show {Math.min(25, rows.length - limit)} more · {limit} of {rows.length}
         </button>
       )}
     </div>

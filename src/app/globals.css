@@ -1,37 +1,51 @@
 @import "tailwindcss";
 
-/* Slate Terminal — institutional dark OKLCH foundation (anchor hue 250).
-   Token NAMES are unchanged; only values move from literal hex/Tailwind-defaults
-   to a tinted OKLCH ramp so every existing utility renders the new system. */
+/* Terminal — CuratorWatch's world (2026-11 redesign).
+   A warm near-black ground, 1px hairline panels with square corners, and ONE
+   brand signal: amber. Amber marks panel titles, the active function, focus,
+   and the primary action. Values are off-white; only change is green/red.
+   Token NAMES are unchanged from the previous system so every existing
+   utility re-renders in the new world; `accent-blue` is now the amber signal
+   (the name is legacy). */
 :root {
-  /* Background hierarchy — elevation gets LIGHTER, never pure #000 */
-  --background: oklch(15% 0.012 250);
-  --background-subtle: oklch(18.5% 0.013 250);
-  --background-elevated: oklch(21% 0.014 250);
-  --background-hover: oklch(24% 0.014 250);
+  /* Ground → panel → title bar → hover. Elevation gets lighter, never #000. */
+  --background: oklch(13% 0.004 70);
+  --background-subtle: oklch(16.5% 0.005 70);
+  --background-elevated: oklch(20% 0.006 70);
+  --background-hover: oklch(23.5% 0.008 70);
 
-  /* Border colors — tinted hairlines */
-  --border: oklch(30% 0.012 250);
-  --border-subtle: oklch(24% 0.010 250);
-  --border-strong: oklch(37% 0.012 250);
+  /* Hairlines */
+  --border: oklch(30% 0.008 70);
+  --border-subtle: oklch(23% 0.006 70);
+  --border-strong: oklch(40% 0.01 70);
 
-  /* Text hierarchy — off-white, tinted, never pure #fff */
-  --foreground: oklch(95% 0.006 250);
-  --text-primary: oklch(95% 0.006 250);
-  --text-secondary: oklch(74% 0.010 250);
-  --text-tertiary: oklch(64% 0.010 250);
-  --text-muted: oklch(54% 0.010 250);
+  /* Text: values off-white, labels warm grey */
+  --foreground: oklch(95% 0.01 85);
+  --text-primary: oklch(95% 0.01 85);
+  --text-secondary: oklch(78% 0.012 80);
+  --text-tertiary: oklch(66% 0.012 78);
+  --text-muted: oklch(54% 0.01 75);
 
-  /* Accent — ONE institutional signal (logo-derived cyan-blue), not literal #3b82f6 */
-  --accent-blue: oklch(70% 0.13 235);
-  --accent-blue-hover: oklch(64% 0.14 235);
-  /* Semantic — reserved for data (up / warn / down), paired with glyphs in UI */
-  --accent-green: oklch(72% 0.15 150);
-  --accent-green-muted: oklch(45% 0.10 150);
-  --accent-red: oklch(64% 0.20 25);
-  --accent-red-muted: oklch(42% 0.13 25);
-  --accent-yellow: oklch(80% 0.13 80);
-  --accent-yellow-muted: oklch(46% 0.09 80);
+  /* The signal: amber (legacy token name `accent-blue`) */
+  --accent-blue: oklch(79% 0.16 66);
+  --accent-blue-hover: oklch(85% 0.15 72);
+  --signal-ink: oklch(14% 0.01 66); /* text on an amber fill */
+
+  /* Semantic — data only (up / warn / down) */
+  --accent-green: oklch(77% 0.17 148);
+  --accent-green-muted: oklch(45% 0.1 148);
+  --accent-red: oklch(67% 0.21 27);
+  --accent-red-muted: oklch(42% 0.13 27);
+  --accent-yellow: oklch(89% 0.15 100);
+  --accent-yellow-muted: oklch(48% 0.09 100);
+
+  /* Chart series — terminal plot colors on black, amber leads */
+  --chart-1: oklch(79% 0.16 66);
+  --chart-2: oklch(80% 0.11 215);
+  --chart-3: oklch(92% 0.01 85);
+  --chart-4: oklch(70% 0.2 345);
+  --chart-5: oklch(77% 0.16 148);
+  --chart-6: oklch(68% 0.15 295);
 }
 
 @theme inline {
@@ -52,6 +66,7 @@
 
   --color-accent-blue: var(--accent-blue);
   --color-accent-blue-hover: var(--accent-blue-hover);
+  --color-signal-ink: var(--signal-ink);
   --color-accent-green: var(--accent-green);
   --color-accent-green-muted: var(--accent-green-muted);
   --color-accent-red: var(--accent-red);
@@ -60,45 +75,195 @@
   --color-accent-yellow-muted: var(--accent-yellow-muted);
 
   --font-sans: var(--font-sans-face);
-  --font-mono: var(--font-geist-mono);
-  --font-display: var(--font-display-face), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face);
+  --font-display: var(--font-sans-face), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Square corners everywhere: the terminal has no rounded cards. Dots keep
+   rounded-full. */
+@theme {
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
+  --radius-4xl: 0px;
+}
+
+@layer base {
+/* 15px root (as a percentage, so the reader's own font-size setting still
+   scales it): terminal density across every rem-based size and space. */
+html {
+  font-size: 93.75%;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  font-variant-numeric: tabular-nums;
+  caret-color: var(--accent-blue);
+}
 }
 
-/* Scrollbar styling for dark mode */
+@layer components {
+/* ── Terminal vocabulary ─────────────────────────────────────────────── */
+
+/* Field label: condensed, uppercase, warm grey. Replaces mono-as-label. */
+.label {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 78;
+  font-size: 0.733rem; /* 11px */
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  line-height: 1.2;
+}
+
+/* Condensed display: page titles, panel titles, big figures' captions. */
+.cond {
+  font-variation-settings: "wdth" 80;
+}
+
+/* Panel: the one container. Hairline, square, title bar on top. */
+.panel {
+  background: var(--background-subtle);
+  border: 1px solid var(--border);
+  min-width: 0;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.95rem;
+  padding: 0 0.6rem;
+  background: var(--background-elevated);
+  border-bottom: 1px solid var(--border);
+}
+.panel-title {
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 78;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-blue);
+  white-space: nowrap;
+}
+.panel-meta {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Function mnemonic tag (CMP, YLD, FEE…): amber block, black ink. */
+.fn-tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.733rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  padding: 0.3rem 0.4rem;
+  background: var(--accent-blue);
+  color: var(--signal-ink);
+}
+
+/* Figures */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.up { color: var(--accent-green); }
+.down { color: var(--accent-red); }
+
+/* Primary action: amber fill, black ink. Secondary: hairline. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 2.1rem;
+  padding: 0 0.85rem;
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 85;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid transparent;
+  transition: background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out;
+  white-space: nowrap;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-primary { background: var(--accent-blue); color: var(--signal-ink); }
+.btn-primary:not(:disabled):hover { background: var(--accent-blue-hover); }
+.btn-ghost { border-color: var(--border-strong); color: var(--text-primary); background: transparent; }
+.btn-ghost:not(:disabled):hover { border-color: var(--accent-blue); color: var(--accent-blue); }
+
+/* Text field */
+.field {
+  width: 100%;
+  height: 2.2rem;
+  padding: 0 0.7rem;
+  background: var(--background);
+  border: 1px solid var(--border-strong);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  transition: border-color 150ms ease-out;
+}
+.field::placeholder { color: var(--text-muted); }
+.field:focus { outline: none; border-color: var(--accent-blue); }
+}
+
+/* Scrollbars — thin, square, from the palette */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 ::-webkit-scrollbar-track {
-  background: var(--background-subtle);
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: 4px;
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(40% 0.012 250);
+  background: var(--text-muted);
 }
 
-/* Selection styling */
+@layer base {
 ::selection {
-  background: oklch(70% 0.13 235 / 0.3);
+  background: oklch(79% 0.16 66 / 0.35);
   color: var(--text-primary);
 }
 
-/* Focus ring styling */
 *:focus-visible {
-  outline: 2px solid var(--accent-blue);
-  outline-offset: 2px;
+  outline: 1px solid var(--accent-blue);
+  outline-offset: 1px;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* AG Grid Dark Theme — CuratorWatch */
@@ -110,13 +275,14 @@ body {
   --ag-border-color: var(--border);
   --ag-secondary-border-color: var(--border-subtle);
   --ag-row-hover-color: var(--background-hover);
-  --ag-selected-row-background-color: oklch(70% 0.13 235 / 0.08);
+  --ag-selected-row-background-color: oklch(79% 0.16 66 / 0.08);
   --ag-odd-row-background-color: transparent;
   --ag-font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   --ag-font-size: 13px;
-  --ag-header-height: 40px;
-  --ag-row-height: 44px;
-  --ag-cell-horizontal-padding: 16px;
+  --ag-data-font-size: 13px;
+  --ag-header-height: 30px;
+  --ag-row-height: 30px;
+  --ag-cell-horizontal-padding: 10px;
   --ag-header-column-separator-display: none;
   --ag-header-column-resize-handle-display: block;
   --ag-header-column-resize-handle-color: var(--border-strong);
@@ -125,8 +291,8 @@ body {
   --ag-range-selection-border-color: var(--accent-blue);
   --ag-input-focus-border-color: var(--accent-blue);
   --ag-checkbox-checked-color: var(--accent-blue);
-  --ag-wrapper-border-radius: 12px;
-  --ag-card-radius: 8px;
+  --ag-wrapper-border-radius: 0px;
+  --ag-card-radius: 0px;
   --ag-borders: solid 1px;
 }
 
@@ -135,6 +301,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-variation-settings: "wdth" 78;
 }
 
 .ag-theme-curatorwatch .ag-row {
@@ -172,7 +339,7 @@ body {
 }
 
 .ag-theme-curatorwatch .ag-root-wrapper {
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
 }
 

@@ -1,17 +1,18 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Lock } from "lucide-react";
 import { useGate } from "@/lib/gate/GateProvider";
 import { trackGate } from "@/lib/gate/track";
 import { FREE_RANKING_ROWS } from "@/lib/gate/config";
+import { RANKING_COLS } from "@/components/curators/ranking-cols";
 
-// The locked continuation of the curator ranking. Six decoy rows that are
-// pixel-identical in geometry to real rows (same grid, avatar, type scale) but
-// carry NO data — anonymous payloads genuinely stop at the free window; these
-// are pure decoration. Static blur, no shimmer: shimmer reads as "loading",
-// static reads as "locked".
+// The locked continuation of the curator ranking: decoy rows in the real
+// row geometry carrying NO data (anonymous payloads genuinely stop at the
+// free window), dimmed under a static blur, with the sign-up panel docked on
+// top. Static, not shimmering: shimmer reads as "loading", static as "locked".
 
-const DECOY_WIDTHS = [96, 118, 74, 108, 84, 122]; // deterministic — no hydration drift
+const DECOY_WIDTHS = [96, 118, 74, 108, 84, 122, 90]; // deterministic — no hydration drift
 
 export function GateTableOverlay({
   totalCount,
@@ -33,58 +34,51 @@ export function GateTableOverlay({
   const remaining = Math.max(0, totalCount - FREE_RANKING_ROWS);
   const tease =
     teaseNames.length > 0
-      ? `${teaseNames.slice(0, 2).join(", ")} + ${remaining - Math.min(2, teaseNames.length)} more`
+      ? `${teaseNames.slice(0, 2).join(", ")} and ${remaining - Math.min(2, teaseNames.length)} more`
       : `${remaining} more curators`;
 
   return (
     <div className="relative">
-      {/* Decoy rows under a static blur, fading out into the overlay card */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none select-none"
-        style={{
-          maskImage: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent 92%)",
-          WebkitMaskImage: "linear-gradient(to bottom, rgba(0,0,0,.7), transparent 92%)",
-        }}
-      >
+      <div aria-hidden="true" className="pointer-events-none select-none opacity-50 blur-[3px]">
         {DECOY_WIDTHS.map((w, i) => (
-          <div
-            key={i}
-            className="grid grid-cols-[34px_1fr_96px_132px] gap-4 items-center px-3 py-3 border-t border-border-subtle blur-[5px] opacity-55"
-          >
-            <span className="font-mono text-sm text-text-tertiary text-right tabular-nums">
-              {FREE_RANKING_ROWS + 1 + i}
+          <div key={i} className={`${RANKING_COLS} gap-3 items-center px-3 h-9 border-b border-border-subtle`}>
+            <span className="num text-xs text-text-tertiary text-right">{FREE_RANKING_ROWS + 1 + i}</span>
+            <span className="flex items-center gap-2.5">
+              <span className="w-5 h-5 bg-background-elevated" />
+              <span className="h-2.5 bg-background-hover" style={{ width: w }} />
             </span>
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="w-9 h-9 rounded-[9px] flex-none bg-background-elevated border border-border" />
-              <span
-                className="h-3.5 rounded bg-background-elevated"
-                style={{ width: w }}
-              />
-            </div>
-            <span className="hidden sm:block h-3 w-6 justify-self-end rounded bg-background-elevated" />
-            <span className="h-3.5 w-16 justify-self-end rounded bg-background-elevated" />
+            <span className="hidden md:block h-2.5 w-5 justify-self-end bg-background-hover" />
+            <span className="hidden xl:block h-2.5 w-8 justify-self-end bg-background-hover" />
+            <span className="hidden sm:block h-2.5 w-9 justify-self-end bg-background-hover" />
+            <span className="hidden xl:block h-2.5 w-7 justify-self-end bg-background-hover" />
+            <span className="h-2.5 w-16 justify-self-end bg-background-hover" />
           </div>
         ))}
       </div>
 
-      {/* Overlay card */}
-      <div className="absolute inset-x-0 top-10 flex justify-center">
-        <button
-          type="button"
-          onClick={() => openGate("table")}
-          className="rounded-2xl border border-border bg-background-elevated/90 backdrop-blur-md px-6 py-5 text-center shadow-2xl hover:border-accent-blue transition-colors max-w-sm"
-        >
-          <div className="font-display font-bold text-base text-text-primary">
-            {tease}
+      <div className="absolute inset-0 flex items-center justify-center p-3">
+        <div className="w-full max-w-[26rem] bg-background-subtle border border-accent-blue shadow-[0_16px_40px_-12px_oklch(0%_0_0/0.8)]">
+          <div className="panel-head">
+            <Lock className="w-3.5 h-3.5 text-accent-blue" aria-hidden="true" />
+            <span className="panel-title">{remaining} more curators</span>
           </div>
-          <div className="mt-1 text-sm text-text-secondary">
-            The full ranking — searchable, sortable, free.
+          <div className="p-3.5">
+            <p className="text-sm text-text-primary">
+              {tease}. Sort, filter, and open every profile with a free account.
+            </p>
+            <p className="label mt-1.5 normal-case tracking-normal font-normal">
+              Email and a 6-digit code. No password, no card.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button type="button" onClick={() => openGate("table")} className="btn btn-primary flex-1">
+                Create free account
+              </button>
+              <button type="button" onClick={() => openGate("signin")} className="btn btn-ghost">
+                Sign in
+              </button>
+            </div>
           </div>
-          <div className="mt-3 inline-block rounded-lg bg-accent-blue px-4 py-2 text-sm font-semibold text-background">
-            Unlock the full table
-          </div>
-        </button>
+        </div>
       </div>
     </div>
   );

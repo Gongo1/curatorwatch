@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Open_Sans, JetBrains_Mono, Libre_Franklin } from "next/font/google";
+import { Archivo, JetBrains_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import { ClerkProvider } from "@clerk/nextjs";
 import { AppShell } from "@/components/layout/AppShell";
@@ -7,24 +7,19 @@ import { GateProvider } from "@/lib/gate/GateProvider";
 import { GATE_ENABLED } from "@/lib/gate/config";
 import "./globals.css";
 
-// Body / UI sans — Open Sans, the body face in the J.P. Morgan type model.
-const openSans = Open_Sans({
+// One UI family. Archivo's width axis does the terminal work: condensed for
+// labels, titles and the function bar (`.label`, `.cond`, `.panel-title`),
+// normal width for prose.
+const archivo = Archivo({
   variable: "--font-sans-face",
   subsets: ["latin"],
+  axes: ["wdth"],
   display: "swap",
 });
 
+// Figures, codes and the command line only — never as a label costume.
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  display: "swap",
-});
-
-// Display / headings — Libre Franklin, a Franklin Gothic revival standing in
-// for J.P. Morgan's Amplitude (licensed, so unavailable here). It's a variable
-// font, so the bold/extrabold headings come from the one downloaded file.
-const libreFranklin = Libre_Franklin({
-  variable: "--font-display-face",
+  variable: "--font-mono-face",
   subsets: ["latin"],
   display: "swap",
 });
@@ -75,7 +70,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${openSans.variable} ${jetbrainsMono.variable} ${libreFranklin.variable} antialiased`}
+        className={`${archivo.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {GATE_ENABLED ? <ClerkProvider>{shell}</ClerkProvider> : shell}
         <Analytics />
