@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronRight } from "lucide-react";
 import { isStablecoin } from "@/lib/utils/asset-class";
 import { getCuratorDossier } from "@/lib/curator-dossier";
 import { composeBlurbSentences } from "@/lib/curator-blurb-text";
@@ -81,7 +81,7 @@ export function CuratorBlurb({
           <ul className="mt-2.5 space-y-1">
             {enrich.highlights.slice(0, 3).map((h, i) => (
               <li key={i} className="flex gap-2 text-sm text-text-secondary">
-                <span className="text-accent-blue flex-none" aria-hidden="true">›</span>
+                <ChevronRight className="w-3.5 h-3.5 mt-[3px] text-accent-blue flex-none" aria-hidden="true" />
                 <span>{h}</span>
               </li>
             ))}

@@ -1,3 +1,4 @@
+import {  } from "lucide-react";
 import type { Metadata } from "next";
 import { fetchLiquidationsOverview } from "@/lib/lens-overviews";
 import { LiquidationsChart } from "./liquidations-chart";
@@ -40,15 +41,15 @@ export default async function LiquidationsPage() {
       {/* ── Quote line: the window in one row ── */}
       <section aria-label="Liquidation summary" className="panel">
         <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-          <Quote k="Collateral seized" v={compactUsd(o.totalSeizedUsd)} sub={`${WINDOW}d`} lead />
+          <Quote k="Collateral seized" v={compactUsd(o.totalSeizedUsd)} sub={`${WINDOW}d`} />
           <Quote k="Events" v={o.totalEvents.toLocaleString()} sub={`${WINDOW}d`} />
           <Quote k="Active days" v={String(activeDays)} sub={`of ${WINDOW}`} />
           <Quote k="Debt repaid" v={compactUsd(o.totalRepaidUsd)} />
           <Quote
             k="Bad debt"
-            v={o.totalBadDebtUsd > 0 ? compactUsd(o.totalBadDebtUsd) : "None"}
-            sub={o.totalBadDebtUsd > 0 ? `${o.daysWithBadDebt}d` : undefined}
-            tone={o.totalBadDebtUsd > 0 ? "down" : "up"}
+            v={o.totalBadDebtUsd >= 0.005 ? compactUsd(o.totalBadDebtUsd) : "None"}
+            sub={o.totalBadDebtUsd >= 0.005 ? `${o.daysWithBadDebt}d` : undefined}
+            tone={o.totalBadDebtUsd >= 0.005 ? "down" : undefined}
           />
         </dl>
       </section>
@@ -58,7 +59,7 @@ export default async function LiquidationsPage() {
         title="Daily collateral seized"
         meta={
           <>
-            {WINDOW} days · hover any day · <span className="text-accent-red">●</span> bad debt
+            {WINDOW} days · hover any day · <span className="inline-block w-2 h-2 rounded-full bg-accent-red align-[1px]" aria-hidden="true" /> bad debt
           </>
         }
         bodyClassName="p-3"

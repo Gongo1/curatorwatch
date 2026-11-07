@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { VaultCurator } from "@/lib/types/api";
 import { formatCurrency, formatPercentage, formatTimeAgo } from "@/lib/utils/format";
@@ -177,7 +178,7 @@ export function CuratorSection({ curator }: CuratorSectionProps) {
               href={profileHref}
               className="flex items-center justify-center h-8 border-t border-border-subtle label text-accent-blue hover:bg-background-hover transition-colors"
             >
-              View all {curator.vaultCount} vaults →
+              View all {curator.vaultCount} vaults <ArrowRight className="inline w-3.5 h-3.5 align-[-2px]" aria-hidden="true" />
             </Link>
           )}
         </div>
@@ -222,7 +223,7 @@ export function CuratorSection({ curator }: CuratorSectionProps) {
               href={profileHref}
               className="flex items-center justify-center h-8 border-t border-border-subtle label text-accent-blue hover:bg-background-hover transition-colors"
             >
-              View all news →
+              View all news <ArrowRight className="inline w-3.5 h-3.5 align-[-2px]" aria-hidden="true" />
             </Link>
           )}
         </div>

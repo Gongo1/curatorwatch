@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ExternalLink, Plus, Check, Globe, GitCompare } from "lucide-react";
+import { ExternalLink, Plus, Check, Globe, GitCompare, ArrowDown, ArrowUp } from "lucide-react";
 import { Newswire } from "@/components/news/Newswire";
 import { CuratorBlurb } from "@/components/curators/CuratorBlurb";
 import { CuratorDisclosureBanner } from "@/components/CuratorDisclosureBanner";
@@ -217,7 +217,7 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
       {/* ── Key quotes: the curator in one row ── */}
       <section aria-label="Key figures" className="panel">
         <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-          <Quote k="Total value locked" v={formatCurrency(derived.totalTVL)} sub={`${countedVaults.length} vaults`} lead />
+          <Quote k="Total value locked" v={formatCurrency(derived.totalTVL)} sub={`${countedVaults.length} vaults`} />
           <Quote k="Avg net APY" v={`${(derived.weightedApy * 100).toFixed(1)}%`} sub="TVL-wtd" />
           <Quote k="Annual yield to LPs" v={formatCurrency(derived.annualYield)} />
           <Quote
@@ -234,8 +234,8 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
           />
           <Quote
             k="Bad debt"
-            v={badDebt > 0 ? formatCurrency(badDebt) : "None"}
-            valueClass={badDebt > 0 ? "down" : "up"}
+            v={badDebt >= 0.005 ? formatCurrency(badDebt) : "None"}
+            valueClass={badDebt >= 0.005 ? "down" : undefined}
           />
         </dl>
         <div className="border-t border-border px-3 py-1.5 min-h-[1.9rem]">
@@ -313,9 +313,10 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
               <>
                 <div className="label mb-2">Bar = $ paid per year · figure = net APY</div>
                 <div className="flex flex-col">
-                  {derived.yieldByVault.map((y) => (
+                  {derived.yieldByVault.map((y, i) => (
                     <div
-                      key={y.name}
+                      // Names repeat across a curator's vaults ("Sentora USD" ×2).
+                      key={`${y.name}-${i}`}
                       className="grid grid-cols-[minmax(0,8.5rem)_minmax(2rem,1fr)_auto] sm:grid-cols-[minmax(0,13rem)_1fr_auto] gap-3 items-center h-7"
                     >
                       <span className="text-sm text-text-primary truncate" title={y.name}>{y.name}</span>
@@ -392,8 +393,8 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
                 <KV k="Seized" v={formatCurrency(data.liquidationSummary.totalSeizedUsd)} />
                 <KV
                   k="Bad debt"
-                  v={data.liquidationSummary.totalBadDebtUsd > 0 ? formatCurrency(data.liquidationSummary.totalBadDebtUsd) : "None"}
-                  valueClass={data.liquidationSummary.totalBadDebtUsd > 0 ? "down" : "up"}
+                  v={data.liquidationSummary.totalBadDebtUsd >= 0.005 ? formatCurrency(data.liquidationSummary.totalBadDebtUsd) : "None"}
+                  valueClass={data.liquidationSummary.totalBadDebtUsd >= 0.005 ? "down" : undefined}
                 />
               </dl>
             ) : (
@@ -424,7 +425,6 @@ function Quote({
   v,
   sub,
   subTitle,
-  lead = false,
   text = false,
   valueClass,
 }: {
@@ -432,7 +432,6 @@ function Quote({
   v: string;
   sub?: string;
   subTitle?: string;
-  lead?: boolean;
   text?: boolean;
   valueClass?: string;
 }) {
@@ -442,7 +441,7 @@ function Quote({
       <dd className="flex items-baseline gap-2 mt-1.5 min-w-0">
         <span
           className={`${text ? "cond font-bold text-[1.3rem] truncate" : "num font-semibold text-[1.45rem]"} leading-none ${
-            valueClass ?? (lead ? "text-accent-blue" : "text-text-primary")
+            valueClass ?? "text-text-primary"
           }`}
         >
           {v}
@@ -733,8 +732,8 @@ function VTh({ k, sort, onSort, className = "", children }: { k: VSortKey; sort:
     <th scope="col" aria-sort={active ? (sort.dir < 0 ? "descending" : "ascending") : undefined} className={`px-3 font-normal ${className}`}>
       <button type="button" onClick={() => onSort(k)} className={`label whitespace-nowrap hover:text-text-primary transition-colors ${active ? "text-accent-blue" : ""}`}>
         {children}
-        <span className="inline-block w-2.5 text-center" aria-hidden="true">
-          {active ? (sort.dir < 0 ? "↓" : "↑") : ""}
+        <span className="inline-flex w-3 justify-center align-[-2px]" aria-hidden="true">
+          {active && (sort.dir < 0 ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />)}
         </span>
       </button>
     </th>

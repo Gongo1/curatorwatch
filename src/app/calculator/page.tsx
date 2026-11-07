@@ -511,7 +511,7 @@ export default function CalculatorPage() {
                               <AssetTag vault={vault} />
                             </td>
                             <td className="px-3 py-1 num text-right text-text-primary">{vault.rate.toFixed(2)}%</td>
-                            <td className="px-3 py-1 num text-right up">
+                            <td className="px-3 py-1 num text-right text-text-primary">
                               ${earnings.toLocaleString("en-US", { maximumFractionDigits: 0 })}
                             </td>
                             <td className="px-3 py-1 num text-right text-text-secondary">{formatCurrency(vault.tvl)}</td>
@@ -603,7 +603,7 @@ function VaultCard({
 
       <div className="text-sm text-text-secondary mt-2">
         <span className="num">${formatUSD(depositAmount)}</span> earns{" "}
-        <span className="num font-semibold up">${yearlyReturn.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr</span>
+        <span className="num font-semibold text-text-primary">${yearlyReturn.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr</span>
       </div>
 
       <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border-subtle text-xs">
@@ -679,7 +679,6 @@ function ResultsView({
             k="First payment"
             v={usd2(result.firstMonthEarnings)}
             sub={isTurtle ? "Day 30 (monthly)" : "Day 1 (compounds every block)"}
-            lead
           />
           <Metric
             k="Month 1 earnings"
@@ -710,7 +709,7 @@ function ResultsView({
             <Row
               k="Your % of vault"
               v={
-                <span className={`num ${sharePct > 10 ? "text-accent-yellow" : "up"}`}>
+                <span className={`num ${sharePct > 10 ? "text-accent-yellow" : "text-text-primary"}`}>
                   {sharePct.toFixed(1)}%
                 </span>
               }
@@ -788,7 +787,7 @@ function ResultsView({
         <div className="mt-3 pt-2.5 border-t border-border-subtle text-sm text-text-secondary">
           <span className="label mr-2">After 12 months</span>
           Your <span className="num">${formatUSD(depositAmount)}</span> grows to{" "}
-          <span className="num font-semibold up">{usd0(depositAmount + result.yearOneTotal)}</span>
+          <span className="num font-semibold text-text-primary">{usd0(depositAmount + result.yearOneTotal)}</span>
           {isTurtle && <span>. Paid monthly.</span>}
         </div>
       </Panel>
@@ -809,7 +808,7 @@ function ResultsView({
               {result.schedule.map((row) => (
                 <tr key={row.month} className="h-8 border-b border-border-subtle hover:bg-background-hover transition-colors">
                   <td className="px-3 text-text-primary">Month <span className="num">{row.month}</span></td>
-                  <td className="px-3 num text-right up">{usd0(row.payment)}</td>
+                  <td className="px-3 num text-right text-text-primary">{usd0(row.payment)}</td>
                   <td className="px-3 num text-right text-text-secondary">{usd0(row.cumulative)}</td>
                   <td className="px-3 num text-right text-text-primary">{usd0(row.balance)}</td>
                 </tr>
@@ -819,7 +818,7 @@ function ResultsView({
               <tr className="h-9 font-semibold">
                 <td className="px-3 text-text-primary whitespace-nowrap">Total year 1</td>
                 <td className="px-3 num text-right text-text-muted">-</td>
-                <td className="px-3 num text-right up">{usd0(result.yearOneTotal)}</td>
+                <td className="px-3 num text-right text-text-primary">{usd0(result.yearOneTotal)}</td>
                 <td className="px-3 num text-right text-text-primary">{usd0(depositAmount + result.yearOneTotal)}</td>
               </tr>
             </tfoot>
@@ -850,11 +849,11 @@ function ResultsView({
   );
 }
 
-function Metric({ k, v, sub, lead = false }: { k: string; v: string; sub?: string; lead?: boolean }) {
+function Metric({ k, v, sub }: { k: string; v: string; sub?: string }) {
   return (
     <div className="px-3 py-2.5 border-border border-r border-b lg:border-b-0 min-w-0">
       <dt className="label">{k}</dt>
-      <dd className={`num font-semibold text-[1.35rem] leading-none mt-1.5 truncate ${lead ? "text-accent-blue" : "text-text-primary"}`}>
+      <dd className={`num font-semibold text-[1.35rem] leading-none mt-1.5 truncate text-text-primary`}>
         {v}
       </dd>
       {sub && <dd className="text-xs text-text-tertiary mt-1">{sub}</dd>}

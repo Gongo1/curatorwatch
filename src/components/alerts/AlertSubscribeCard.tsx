@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 interface CuratorOption {
@@ -83,7 +84,7 @@ export function AlertSubscribeCard() {
   if (state === "sent" || state === "updated") {
     return (
       <div className="panel px-3 py-2.5 text-sm text-text-secondary">
-        <span className="up" aria-hidden="true">✓</span>{" "}
+        <Check className="inline w-4 h-4 up align-[-3px]" aria-hidden="true" />{" "}
         {state === "sent"
           ? <>Check <span className="num text-text-primary">{email}</span> and select the confirmation link to start the alerts.</>
           : "Preferences updated."}
@@ -106,7 +107,7 @@ export function AlertSubscribeCard() {
               rel="noopener noreferrer"
               className="btn btn-ghost"
             >
-              Telegram channel →
+              Telegram channel <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
             </a>
           )}
           <button type="button" onClick={() => setOpen(true)} className="btn btn-primary">

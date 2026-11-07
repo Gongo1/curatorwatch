@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -83,7 +84,7 @@ function Bullets({ items }: { items: ReactNode[] }) {
     <ul className="space-y-1.5">
       {items.map((it, i) => (
         <li key={i} className="flex gap-2">
-          <span className="text-accent-blue flex-none">›</span>
+          <ChevronRight className="w-3.5 h-3.5 mt-[3px] text-accent-blue flex-none" aria-hidden="true" />
           <span>{it}</span>
         </li>
       ))}

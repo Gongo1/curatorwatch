@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   formatTokenAmount,
@@ -193,7 +194,7 @@ export function UserDistribution({
                   aria-label="Previous page"
                   className="label text-text-secondary hover:text-accent-blue disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  ← Prev
+                  <ArrowLeft className="inline w-3.5 h-3.5 align-[-2px]" aria-hidden="true" /> Prev
                 </button>
                 <span className="num text-xs text-text-tertiary">
                   {page + 1} / {totalPages}
@@ -205,7 +206,7 @@ export function UserDistribution({
                   aria-label="Next page"
                   className="label text-text-secondary hover:text-accent-blue disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  Next →
+                  Next <ArrowRight className="inline w-3.5 h-3.5 align-[-2px]" aria-hidden="true" />
                 </button>
               </div>
             )}

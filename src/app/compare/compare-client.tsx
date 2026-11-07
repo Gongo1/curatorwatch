@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Search, X, Plus } from "lucide-react";
+import { Search, X, Plus, ArrowUp } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
 import { hasCuratorDisclosure } from "@/lib/curator-disclosures";
@@ -220,7 +220,7 @@ export function CompareClient() {
       )}
 
       {selected.length > 0 && (
-        <Panel title="Side by side" meta="latest 6h snapshot · ▲ highest">
+        <Panel title="Side by side" meta="latest 6h snapshot · arrow marks the highest">
           <div className="overflow-x-auto">
             <table className="w-full table-fixed border-collapse min-w-[640px] text-sm">
               <thead>
@@ -350,7 +350,7 @@ function Row({
           className={`px-3 py-2 align-top ${num ? "num" : ""} ${tones?.[i] || "text-text-primary"} ${i === highlight ? "font-semibold" : ""}`}
         >
           {v}
-          {i === highlight && <span className="text-accent-blue ml-1.5" title="Highest">▲</span>}
+          {i === highlight && <ArrowUp className="inline w-3.5 h-3.5 ml-1 text-accent-blue align-[-2px]" aria-label="Highest" />}
         </td>
       ))}
     </tr>

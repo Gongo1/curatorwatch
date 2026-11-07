@@ -83,7 +83,7 @@ export function EmailDeliveryCard() {
           ) : busy ? (
             "Saving"
           ) : (
-            "Send it"
+            "Email me"
           )}
         </button>
       </div>

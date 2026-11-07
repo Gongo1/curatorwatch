@@ -24,7 +24,7 @@
   --text-primary: oklch(95% 0.01 85);
   --text-secondary: oklch(78% 0.012 80);
   --text-tertiary: oklch(66% 0.012 78);
-  --text-muted: oklch(54% 0.01 75);
+  --text-muted: oklch(58% 0.01 75);
 
   /* The signal: amber (legacy token name `accent-blue`) */
   --accent-blue: oklch(79% 0.16 66);
@@ -155,8 +155,9 @@ body {
 }
 .panel-meta {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-family: var(--font-sans);
+  font-variation-settings: "wdth" 85;
+  font-size: 0.75rem;
   color: var(--text-tertiary);
   white-space: nowrap;
   overflow: hidden;
@@ -280,8 +281,8 @@ a {
   --ag-font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
   --ag-font-size: 13px;
   --ag-data-font-size: 13px;
-  --ag-header-height: 30px;
-  --ag-row-height: 30px;
+  --ag-header-height: 28px;
+  --ag-row-height: 28px;
   --ag-cell-horizontal-padding: 10px;
   --ag-header-column-separator-display: none;
   --ag-header-column-resize-handle-display: block;

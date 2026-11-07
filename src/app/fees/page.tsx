@@ -49,7 +49,7 @@ export default async function FeesPage() {
       {/* ── Quote line: the fee summary in one row ── */}
       <section aria-label="Fee summary" className="panel">
         <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-          <Quote k="Annualized curator fees" v={compactUsd(o.totalAnnualFees)} lead />
+          <Quote k="Annualized curator fees" v={compactUsd(o.totalAnnualFees)} />
           <Quote k="Median performance fee" v={`${(o.medianPerfFee * 100).toFixed(0)}%`} />
           <Quote k="Fee-earning curators" v={String(o.curatorsCharging)} />
           <Quote k="Zero-fee vaults" v={String(o.zeroFeeVaults)} sub={`of ${o.totalVaults}`} />

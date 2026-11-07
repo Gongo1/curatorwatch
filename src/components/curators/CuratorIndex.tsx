@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Search, ArrowDown, ArrowUp } from "lucide-react";
 import type { CuratorDashboardItem } from "@/lib/types/api";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
@@ -41,6 +41,42 @@ const PAGE = 25;
 
 function pct(n: number, digits = 1): string {
   return `${n.toFixed(digits)}%`;
+}
+
+function Th({
+  k,
+  children,
+  className = "",
+  title,
+  sortKey,
+  sortDir,
+  truncated,
+  onSort,
+}: {
+  k: SortKey;
+  children: React.ReactNode;
+  className?: string;
+  title?: string;
+  sortKey: SortKey;
+  sortDir: 1 | -1;
+  truncated: boolean;
+  onSort: (k: SortKey) => void;
+}) {
+  const activeKey = sortKey === k;
+  return (
+    <button
+      type="button"
+      onClick={() => onSort(k)}
+      aria-pressed={activeKey}
+      title={truncated ? "Sort the full ranking — free account" : title}
+      className={`label hover:text-text-primary transition-colors ${activeKey ? "text-accent-blue" : ""} ${className}`}
+    >
+      {children}
+      <span className="inline-flex w-3 justify-center align-[-2px]" aria-hidden="true">
+        {activeKey && (sortDir < 0 ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />)}
+      </span>
+    </button>
+  );
 }
 
 export function CuratorIndex({
@@ -109,36 +145,6 @@ export function CuratorIndex({
 
   const shown = rows.slice(0, limit);
 
-  const Th = ({
-    k,
-    children,
-    className = "",
-    title,
-  }: {
-    k: SortKey;
-    children: React.ReactNode;
-    className?: string;
-    title?: string;
-  }) => {
-    const activeKey = sortKey === k;
-    return (
-      <button
-        type="button"
-        onClick={() => onSort(k)}
-        aria-pressed={activeKey}
-        title={truncated ? "Sort the full ranking — free account" : title}
-        className={`label hover:text-text-primary transition-colors ${
-          activeKey ? "text-accent-blue" : ""
-        } ${truncated ? "cursor-pointer" : ""} ${className}`}
-      >
-        {children}
-        <span className="inline-block w-2.5 text-center" aria-hidden="true">
-          {activeKey ? (sortDir < 0 ? "↓" : "↑") : ""}
-        </span>
-      </button>
-    );
-  };
-
   return (
     <div>
       {/* toolbar */}
@@ -191,12 +197,12 @@ export function CuratorIndex({
       {/* column header */}
       <div className={`${RANKING_COLS} gap-3 px-3 h-7 items-center border-b border-border bg-background`}>
         <span className="label text-right">#</span>
-        <Th k="name" className="text-left">Curator</Th>
-        <Th k="vaults" className="text-right hidden md:block">Vaults</Th>
-        <Th k="stable" className="text-right hidden xl:block" title="Stablecoin share of the curator's TVL">Stable</Th>
-        <Th k="apy" className="text-right hidden sm:block" title="TVL-weighted net APY">Net APY</Th>
+        <Th sortKey={sortKey} sortDir={sortDir} truncated={truncated} onSort={onSort} k="name" className="text-left">Curator</Th>
+        <Th sortKey={sortKey} sortDir={sortDir} truncated={truncated} onSort={onSort} k="vaults" className="text-right hidden md:block">Vaults</Th>
+        <Th sortKey={sortKey} sortDir={sortDir} truncated={truncated} onSort={onSort} k="stable" className="text-right hidden xl:block" title="Stablecoin share of the curator's TVL">Stable</Th>
+        <Th sortKey={sortKey} sortDir={sortDir} truncated={truncated} onSort={onSort} k="apy" className="text-right hidden sm:block" title="TVL-weighted net APY">Net APY</Th>
         <span className="label text-right hidden xl:block" title="Share of tracked TVL">Share</span>
-        <Th k="tvl" className="text-right">TVL</Th>
+        <Th sortKey={sortKey} sortDir={sortDir} truncated={truncated} onSort={onSort} k="tvl" className="text-right">TVL</Th>
       </div>
 
       {/* rows */}
@@ -212,7 +218,7 @@ export function CuratorIndex({
               <li key={c.curatorId}>
                 <Link
                   href={`/curator/${curatorSlug(c.name, c.curatorAddress)}`}
-                  className={`${RANKING_COLS} gap-3 items-center px-3 h-9 border-b border-border-subtle hover:bg-background-hover focus-visible:bg-background-hover transition-colors duration-100 group`}
+                  className={`${RANKING_COLS} gap-3 items-center px-3 h-[1.875rem] border-b border-border-subtle hover:bg-background-hover focus-visible:bg-background-hover transition-colors duration-100 group`}
                 >
                   <span className="num text-xs text-text-tertiary text-right">{i + 1}</span>
                   <span className="flex items-center gap-2.5 min-w-0">

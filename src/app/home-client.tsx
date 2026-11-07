@@ -22,7 +22,11 @@ import { Quote } from "@/components/layout/Quote";
 
 export type { ApyDistribution };
 
-const ChartSkeleton = () => <div className="h-[310px] bg-background animate-pulse" />;
+const ChartSkeleton = () => (
+  <div className="h-[310px] grid place-items-center bg-background border border-border-subtle">
+    <span className="label">Loading 30-day history…</span>
+  </div>
+);
 
 const CuratorTvlChart = dynamic(
   () => import("@/components/curators/CuratorTvlChart").then((m) => m.CuratorTvlChart),
@@ -124,7 +128,7 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
       {/* ── Market line: the curator market in one row of quotes ── */}
       <section aria-label="Curator market" className="panel">
         <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-          <Quote k="Tracked TVL" v={compactUsd(stats.totalAUM)} lead />
+          <Quote k="Tracked TVL" v={compactUsd(stats.totalAUM)} />
           <Quote k="Curators" v={String(stats.totalCurators)} />
           <Quote k="Vaults" v={String(stats.totalVaults)} />
           <Quote k="Stablecoin share" v={`${Math.round(mix.stablePct)}%`} />
@@ -148,14 +152,20 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
         </div>
       </section>
 
-      {/* ── Ranking (the work) + market context ── */}
+      {/* ── Ranking + its history (the work) | market context + flow ── */}
       <div className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_23rem] items-start">
-        <Panel
-          title="Curator ranking"
-          meta={`${gate?.totalCount ?? liveCurators.length} curators · by TVL`}
-        >
-          <CuratorIndex curators={liveCurators} gate={liveGate} totalAUM={stats.totalAUM} />
-        </Panel>
+        <div className="grid gap-1.5 min-w-0">
+          <Panel
+            title="Curator ranking"
+            meta={`${gate?.totalCount ?? liveCurators.length} curators · by TVL`}
+          >
+            <CuratorIndex curators={liveCurators} gate={liveGate} totalAUM={stats.totalAUM} />
+          </Panel>
+          <Panel title="Tracked TVL by curator" meta="top 6 · stacked · 30 days" bodyClassName="p-3">
+            <ChartWhenVisible />
+          </Panel>
+          {news.length > 0 && <Newswire variant="bar" items={news} limit={6} title="Newswire" />}
+        </div>
 
         <div className="grid gap-1.5">
           {stress && (
@@ -223,7 +233,7 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
                           <span className="text-text-secondary">{f.topCurator || "—"}</span>
                         )}
                       </td>
-                      <td className="num text-right pr-3 text-accent-yellow">{Math.round(f.topCuratorPct)}%</td>
+                      <td className="num text-right pr-3 text-text-primary">{Math.round(f.topCuratorPct)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -236,19 +246,10 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
               <ApyDistViz d={apyDist} label="Vault count by net APY band" tall />
             </Panel>
           )}
-        </div>
-      </div>
-
-      {/* ── History + flow ── */}
-      <div className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_23rem] items-start">
-        <Panel title="Tracked TVL by curator" meta="top 6 · stacked · 30 days" bodyClassName="p-3">
-          <ChartWhenVisible />
-        </Panel>
-        <div className="grid gap-1.5">
-          {news.length > 0 && <Newswire variant="bar" items={news} title="Newswire" />}
           <EmailDeliveryCard />
         </div>
       </div>
+
     </div>
   );
 }

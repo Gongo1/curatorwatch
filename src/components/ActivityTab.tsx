@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown, ArrowUp, ArrowLeftRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   formatTimeAgo,
@@ -104,13 +105,13 @@ export function ActivityTab({
   const getTypeGlyph = (type: string) => {
     switch (type.toLowerCase()) {
       case "deposit":
-        return "↓";
+        return <ArrowDown className="w-3 h-3" />;
       case "withdraw":
-        return "↑";
+        return <ArrowUp className="w-3 h-3" />;
       case "reallocate":
-        return "⇄";
+        return <ArrowLeftRight className="w-3 h-3" />;
       default:
-        return "·";
+        return null;
     }
   };
 
@@ -206,7 +207,7 @@ export function ActivityTab({
                 className="flex items-center gap-3 px-3 h-9 border-b border-border-subtle last:border-b-0 hover:bg-background-hover transition-colors text-sm"
               >
                 <span className={`flex items-center gap-1.5 w-28 flex-none ${getTypeColor(item.type)}`}>
-                  <span className="num w-3 text-center" aria-hidden="true">{getTypeGlyph(item.type)}</span>
+                  <span className="w-3 flex justify-center" aria-hidden="true">{getTypeGlyph(item.type)}</span>
                   <span className="font-medium truncate">{item.type}</span>
                 </span>
 

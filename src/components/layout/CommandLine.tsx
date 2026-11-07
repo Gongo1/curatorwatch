@@ -20,17 +20,22 @@ interface CuratorHit {
 type Result =
   | { kind: "fn"; id: string; code: string; label: string; href: string }
   | { kind: "curator"; id: string; label: string; href: string; aum: number }
-  | { kind: "gate"; id: string; label: string };
+  | { kind: "gate"; id: string; label: string }
+  | { kind: "loading"; id: string; label: string }
+  | { kind: "error"; id: string; label: string };
 
 let curatorCache: Promise<CuratorHit[]> | null = null;
 
 function loadCurators(): Promise<CuratorHit[]> {
   if (!curatorCache) {
     curatorCache = fetch("/api/curators?page=1&pageSize=100&sortBy=aum&sortOrder=desc")
-      .then((r) => (r.ok ? r.json() : null))
+      .then((r) => {
+        if (!r.ok) throw new Error(`curators ${r.status}`);
+        return r.json();
+      })
       .then((j) => {
         const list = j?.data?.curators;
-        if (!Array.isArray(list)) return [];
+        if (!Array.isArray(list)) throw new Error("curators: bad payload");
         return list
           .filter((c: { name?: string | null }) => !!c.name)
           .map((c: { name: string; curatorAddress: string; totalAUM: number }) => ({
@@ -39,9 +44,9 @@ function loadCurators(): Promise<CuratorHit[]> {
             aum: c.totalAUM,
           }));
       })
-      .catch(() => {
-        curatorCache = null;
-        return [];
+      .catch((e) => {
+        curatorCache = null; // retry on the next focus
+        throw e;
       });
   }
   return curatorCache;
@@ -70,6 +75,8 @@ export function CommandLine({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [curators, setCurators] = useState<CuratorHit[]>([]);
+  const [loadingCurators, setLoadingCurators] = useState(false);
+  const [curatorsFailed, setCuratorsFailed] = useState(false);
 
   // "/" and ⌘K / Ctrl+K focus the command line from anywhere.
   useEffect(() => {
@@ -87,12 +94,22 @@ export function CommandLine({
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Load curator names on first focus or first keystroke, whichever comes first.
+  const ensureCurators = useCallback(() => {
+    if (canSearchCurators && curators.length === 0 && !loadingCurators) {
+      setLoadingCurators(true);
+      setCuratorsFailed(false);
+      loadCurators()
+        .then(setCurators)
+        .catch(() => setCuratorsFailed(true))
+        .finally(() => setLoadingCurators(false));
+    }
+  }, [canSearchCurators, curators.length, loadingCurators]);
+
   const onFocus = useCallback(() => {
     setOpen(true);
-    if (canSearchCurators && curators.length === 0) {
-      loadCurators().then(setCurators);
-    }
-  }, [canSearchCurators, curators.length]);
+    ensureCurators();
+  }, [ensureCurators]);
 
   const results = useMemo<Result[]>(() => {
     const q = query.trim().toLowerCase();
@@ -115,7 +132,11 @@ export function CommandLine({
     if (!q) return fns.slice(0, 9);
 
     const out: Result[] = [...fns.slice(0, 4)];
-    if (canSearchCurators) {
+    if (canSearchCurators && loadingCurators && curators.length === 0) {
+      out.push({ kind: "loading", id: "loading", label: "Loading curator names…" });
+    } else if (canSearchCurators && curatorsFailed && curators.length === 0) {
+      out.push({ kind: "error", id: "error", label: "Curator names did not load. Click the field again to retry." });
+    } else if (canSearchCurators) {
       curators
         .filter((c) => c.name.toLowerCase().includes(q))
         .slice(0, 6)
@@ -126,11 +147,11 @@ export function CommandLine({
       out.push({ kind: "gate", id: "gate", label: `Search curators for “${query.trim()}”` });
     }
     return out;
-  }, [query, curators, canSearchCurators]);
+  }, [query, curators, canSearchCurators, loadingCurators, curatorsFailed]);
 
   const run = useCallback(
     (r: Result | undefined) => {
-      if (!r) return;
+      if (!r || r.kind === "loading" || r.kind === "error") return;
       setOpen(false);
       setQuery("");
       inputRef.current?.blur();
@@ -194,6 +215,7 @@ export function CommandLine({
           setQuery(e.target.value);
           setActive(0);
           setOpen(true);
+          ensureCurators();
         }}
         onFocus={onFocus}
         onBlur={() => setTimeout(() => setOpen(false), 120)}
@@ -243,6 +265,12 @@ export function CommandLine({
                   <span className="text-sm text-text-primary truncate">{r.label}</span>
                   <span className="ml-auto num text-xs text-text-secondary">{compactUsd(r.aum)}</span>
                 </>
+              )}
+              {r.kind === "error" && (
+                <span className="pl-14 text-sm text-accent-red">{r.label}</span>
+              )}
+              {r.kind === "loading" && (
+                <span className="pl-14 text-sm text-text-tertiary">{r.label}</span>
               )}
               {r.kind === "gate" && (
                 <>

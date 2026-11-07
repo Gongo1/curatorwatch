@@ -41,7 +41,7 @@ export function GateTableOverlay({
     <div className="relative">
       <div aria-hidden="true" className="pointer-events-none select-none opacity-50 blur-[3px]">
         {DECOY_WIDTHS.map((w, i) => (
-          <div key={i} className={`${RANKING_COLS} gap-3 items-center px-3 h-9 border-b border-border-subtle`}>
+          <div key={i} className={`${RANKING_COLS} gap-3 items-center px-3 h-[1.875rem] border-b border-border-subtle`}>
             <span className="num text-xs text-text-tertiary text-right">{FREE_RANKING_ROWS + 1 + i}</span>
             <span className="flex items-center gap-2.5">
               <span className="w-5 h-5 bg-background-elevated" />

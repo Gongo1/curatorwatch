@@ -88,7 +88,7 @@ export function Newswire({
           <h2 className="panel-title">{title}</h2>
           <span className="panel-meta">{rows.length} headlines</span>
         </div>
-        <ul className="divide-y divide-border-subtle max-h-[19rem] overflow-y-auto">
+        <ul className="divide-y divide-border-subtle">
           {rows.map((r) => {
             const inner = (
               <span className="block px-3 py-2 w-full">

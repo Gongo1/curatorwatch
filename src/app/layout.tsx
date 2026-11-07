@@ -68,10 +68,10 @@ export default function RootLayout({
     </GateProvider>
   );
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${archivo.variable} ${jetbrainsMono.variable} antialiased`}
-      >
+    // Font variables live on <html>: the theme tokens (--font-sans/--font-mono)
+    // resolve at :root, so the face variables must exist there too.
+    <html lang="en" className={`dark ${archivo.variable} ${jetbrainsMono.variable}`}>
+      <body className="antialiased">
         {GATE_ENABLED ? <ClerkProvider>{shell}</ClerkProvider> : shell}
         <Analytics />
       </body>

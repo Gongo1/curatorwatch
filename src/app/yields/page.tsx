@@ -68,7 +68,7 @@ export default async function YieldsPage() {
       {/* ── Quote line: the yield summary in one row ── */}
       <section aria-label="Yield summary" className="panel">
         <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-          <Quote k="Annual yield to LPs" v={compactUsd(totalYield)} lead />
+          <Quote k="Annual yield to LPs" v={compactUsd(totalYield)} />
           <Quote k="TVL-weighted net APY" v={`${(weightedApy * 100).toFixed(2)}%`} />
           <Quote k="Yield-generating curators" v={String(rows.length)} />
           <Quote k="Vaults" v={String(stats.totalVaults)} />

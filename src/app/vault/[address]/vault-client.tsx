@@ -153,7 +153,6 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
           <MetricCard
             label="Total Deposits"
             value={formatCurrency(snapshot?.totalAssetsUsd)}
-            highlight
           />
           {!isTurtleVault && (
             <MetricCard
@@ -411,20 +410,20 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
                 </div>
                 <div className="px-3 py-2 border-b lg:border-b-0 lg:border-r border-border-subtle">
                   <dt className="label">Last 30 days</dt>
-                  <dd className={`num text-base font-semibold mt-1 ${vault.liquidationSummary.recent30d > 0 ? "text-accent-red" : "text-text-primary"}`}>
+                  <dd className={`num text-base font-semibold mt-1 text-text-primary`}>
                     {vault.liquidationSummary.recent30d}
                   </dd>
                 </div>
                 <div className="px-3 py-2 border-r border-border-subtle">
                   <dt className="label">Collateral seized</dt>
-                  <dd className="num text-base font-semibold text-accent-red mt-1">
+                  <dd className="num text-base font-semibold text-text-primary mt-1">
                     {formatCurrency(vault.liquidationSummary.totalSeizedUsd)}
                   </dd>
                 </div>
                 <div className="px-3 py-2">
                   <dt className="label">Bad debt</dt>
-                  <dd className={`num text-base font-semibold mt-1 ${vault.liquidationSummary.totalBadDebtUsd > 0 ? "text-accent-red" : "text-text-muted"}`}>
-                    {vault.liquidationSummary.totalBadDebtUsd > 0 ? formatCurrency(vault.liquidationSummary.totalBadDebtUsd) : "-"}
+                  <dd className={`num text-base font-semibold mt-1 ${vault.liquidationSummary.totalBadDebtUsd >= 0.005 ? "text-accent-red" : "text-text-primary"}`}>
+                    {vault.liquidationSummary.totalBadDebtUsd >= 0.005 ? formatCurrency(vault.liquidationSummary.totalBadDebtUsd) : "-"}
                   </dd>
                 </div>
               </dl>
@@ -444,7 +443,7 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
                       {vault.liquidations.map((liq: { txHash: string; timestamp: string; seizedAssetsUsd: number; repaidAssetsUsd: number; badDebtAssetsUsd: number }, i: number) => (
                         <tr key={`${liq.txHash}-${i}`} className="h-8 border-b border-border-subtle last:border-b-0 hover:bg-background-hover transition-colors">
                           <td className="px-3 whitespace-nowrap num text-text-secondary">{formatDate(liq.timestamp)}</td>
-                          <td className="px-3 whitespace-nowrap text-right num text-accent-red">{formatCurrency(liq.seizedAssetsUsd)}</td>
+                          <td className="px-3 whitespace-nowrap text-right num text-text-primary">{formatCurrency(liq.seizedAssetsUsd)}</td>
                           <td className="px-3 whitespace-nowrap text-right num text-text-primary">{formatCurrency(liq.repaidAssetsUsd)}</td>
                           <td className={`px-3 whitespace-nowrap text-right num ${liq.badDebtAssetsUsd > 0 ? "text-accent-red" : "text-text-muted"}`}>
                             {liq.badDebtAssetsUsd > 0 ? formatCurrency(liq.badDebtAssetsUsd) : "-"}
@@ -495,12 +494,10 @@ export function VaultDetailView({ address, vault }: VaultDetailViewProps) {
 function MetricCard({
   label,
   value,
-  highlight,
   tooltip,
 }: {
   label: string;
   value: string;
-  highlight?: boolean;
   tooltip?: string;
 }) {
   return (
@@ -510,9 +507,7 @@ function MetricCard({
         {tooltip && <InfoTooltip content={tooltip} />}
       </dt>
       <dd
-        className={`mt-1.5 num font-semibold text-[1.45rem] leading-none truncate ${
-          highlight ? "text-accent-blue" : "text-text-primary"
-        }`}
+        className="mt-1.5 num font-semibold text-[1.45rem] leading-none truncate text-text-primary"
       >
         {value}
       </dd>

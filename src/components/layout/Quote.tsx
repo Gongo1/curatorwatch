@@ -1,15 +1,14 @@
 import Link from "next/link";
 
 // One cell of a quote line (`<dl className="panel grid …">`): a label over a
-// figure, with an optional qualifier. `lead` paints the figure amber; `tone`
-// is a class for up/down figures; `text` sets a name instead of a number.
+// figure, with an optional qualifier. Values are off-white; `tone` is a class
+// for signed change (up/down); `text` sets a name instead of a number.
 export function Quote({
   k,
   v,
   sub,
   subClass = "label",
   tone,
-  lead = false,
   text = false,
   href,
 }: {
@@ -18,7 +17,6 @@ export function Quote({
   sub?: string;
   subClass?: string;
   tone?: string;
-  lead?: boolean;
   text?: boolean;
   href?: string;
 }) {
@@ -26,7 +24,7 @@ export function Quote({
     <dd className="flex items-baseline gap-2 mt-1.5 min-w-0">
       <span
         className={`${text ? "cond font-bold text-[1.3rem] truncate" : "num font-semibold text-[1.45rem]"} leading-none ${
-          lead ? "text-accent-blue" : tone ?? "text-text-primary"
+          tone ?? "text-text-primary"
         }`}
       >
         {v}

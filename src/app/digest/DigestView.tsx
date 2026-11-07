@@ -3,6 +3,7 @@
  * (no interactivity) shared by /digest and /digest/[slug].
  */
 
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import type { DigestData } from "@/lib/digest/types";
 import { BAND_STYLE } from "@/lib/stress-band-style";
@@ -140,7 +141,7 @@ export function DigestView({
                       </span>
                     </td>
                     <td className="num text-right text-text-secondary hidden sm:table-cell">{usd(c.totalUsd)}</td>
-                    <td className="num text-right pr-3 text-accent-yellow">{Math.round(c.topCuratorPct)}%</td>
+                    <td className="num text-right pr-3 text-text-primary">{Math.round(c.topCuratorPct)}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -261,7 +262,7 @@ export function DigestView({
               href={`/curator/${data.spotlight.slug}`}
               className="inline-block text-xs text-accent-blue hover:underline mt-2"
             >
-              Full profile →
+              Full profile <ArrowRight className="inline w-3.5 h-3.5 align-[-2px]" aria-hidden="true" />
             </a>
           </Panel>
         )}
