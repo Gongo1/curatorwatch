@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { LiquidationDay } from "@/lib/lens-overviews";
 
 function compactUsd(n: number): string {
@@ -21,12 +21,23 @@ function fmtMonth(iso: string): string {
 
 // Daily collateral-seized bars across the trailing window, with Y-axis, month
 // ticks, and a hover tooltip. Dependency-free SVG (no chart library).
+// The viewBox tracks the rendered width so axis text stays at true 10px on
+// every screen instead of scaling with the chart.
 export function LiquidationsChart({ series }: { series: LiquidationDay[] }) {
   const [hover, setHover] = useState<number | null>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(900);
+
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setW(Math.max(300, Math.round(el.clientWidth))));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   const n = series.length;
-  const W = 900;
-  const H = 260;
+  const H = W < 600 ? 200 : 260;
   const PAD_L = 54;
   const PAD_R = 12;
   const PAD_T = 12;
@@ -62,7 +73,7 @@ export function LiquidationsChart({ series }: { series: LiquidationDay[] }) {
   const hp = hover != null ? series[hover] : null;
 
   return (
-    <div className="relative border border-border rounded-2xl bg-background-subtle p-4">
+    <div ref={boxRef} className="relative">
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto block overflow-visible"
@@ -81,10 +92,9 @@ export function LiquidationsChart({ series }: { series: LiquidationDay[] }) {
                 x2={W - PAD_R}
                 y1={yy}
                 y2={yy}
-                stroke="var(--border)"
+                stroke="var(--border-subtle)"
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
-                opacity={0.5}
               />
               <text
                 x={PAD_L - 8}
@@ -92,7 +102,7 @@ export function LiquidationsChart({ series }: { series: LiquidationDay[] }) {
                 textAnchor="end"
                 dominantBaseline="middle"
                 fill="var(--text-tertiary)"
-                fontSize="11"
+                fontSize="10"
                 fontFamily="var(--font-mono, monospace)"
               >
                 {compactUsd(v)}
@@ -139,7 +149,7 @@ export function LiquidationsChart({ series }: { series: LiquidationDay[] }) {
             y={H - 8}
             textAnchor="start"
             fill="var(--text-tertiary)"
-            fontSize="11"
+            fontSize="10"
             fontFamily="var(--font-mono, monospace)"
           >
             {fmtMonth(series[i].date)}
@@ -164,17 +174,17 @@ export function LiquidationsChart({ series }: { series: LiquidationDay[] }) {
 
       {hp && (
         <div
-          className="absolute pointer-events-none -translate-x-1/2 -translate-y-full bg-background-elevated border border-border rounded-lg px-2.5 py-1.5 shadow-xl whitespace-nowrap z-10"
+          className="absolute pointer-events-none -translate-x-1/2 -translate-y-full bg-background-elevated border border-border-strong px-2.5 py-1.5 whitespace-nowrap z-10"
           style={{
             left: `${((x(hover as number) + bw / 2) / W) * 100}%`,
             top: `calc(${((PAD_T + plotH - barH(hp.seizedUsd)) / H) * 100}% - 8px)`,
           }}
         >
-          <div className="font-mono text-[0.62rem] text-text-tertiary">{fmtDay(hp.date)}</div>
-          <div className="font-mono text-sm font-semibold tabular-nums text-text-primary">
+          <div className="num text-[0.68rem] text-text-tertiary">{fmtDay(hp.date)}</div>
+          <div className="num text-sm font-semibold text-text-primary">
             {compactUsd(hp.seizedUsd)} seized
           </div>
-          <div className="font-mono text-[0.6rem] text-text-tertiary tabular-nums">
+          <div className="num text-[0.68rem] text-text-tertiary">
             {hp.events} event{hp.events === 1 ? "" : "s"}
             {hp.badDebtUsd > 0 ? ` · ${compactUsd(hp.badDebtUsd)} bad debt` : ""}
           </div>

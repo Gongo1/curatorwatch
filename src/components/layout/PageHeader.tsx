@@ -45,7 +45,7 @@ export function PageHeader({ title, description, breadcrumbs, actions, code }: P
             {description && <p className="text-sm text-text-secondary mt-1.5 max-w-[75ch]">{description}</p>}
           </div>
         </div>
-        {actions && <div className="flex-shrink-0">{actions}</div>}
+        {actions && <div className="flex flex-wrap items-center gap-1.5 max-w-full">{actions}</div>}
       </div>
     </div>
   );

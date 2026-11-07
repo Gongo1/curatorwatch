@@ -60,25 +60,26 @@ export function PendingConfigBanner({ configs }: { configs?: PendingConfig[] }) 
   if (!configs || configs.length === 0) return null;
 
   return (
-    <div className="mb-4 p-4 rounded-lg bg-amber-500/10 border border-amber-500/30">
-      <div className="flex items-center gap-2 mb-2">
-        <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <section aria-label="Pending governance change" className="panel border-accent-yellow-muted">
+      <div className="panel-head">
+        <svg className="w-3.5 h-3.5 text-accent-yellow flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
-        <span className="text-sm font-semibold text-amber-500">PENDING GOVERNANCE CHANGE</span>
+        <h2 className="panel-title text-accent-yellow">Pending governance change</h2>
+        <span className="panel-meta">{configs.length} queued</span>
       </div>
-      <ul className="space-y-1.5">
+      <ul>
         {configs.map((config, i) => (
-          <li key={`${config.txHash}-${i}`} className="flex items-center justify-between text-sm">
-            <span className="text-text-primary font-medium">{getLabel(config.functionName)}</span>
-            <span className={`text-xs font-mono tabular-nums ${
-              config.validAt * 1000 <= Date.now() ? "text-accent-green" : "text-amber-500"
+          <li key={`${config.txHash}-${i}`} className="flex items-center justify-between gap-3 px-3 h-8 border-b border-border-subtle last:border-b-0 text-sm">
+            <span className="text-text-primary font-medium truncate">{getLabel(config.functionName)}</span>
+            <span className={`num text-xs flex-none ${
+              config.validAt * 1000 <= Date.now() ? "text-accent-green" : "text-accent-yellow"
             }`}>
               {formatCountdown(config.validAt)}
             </span>
           </li>
         ))}
       </ul>
-    </div>
+    </section>
   );
 }

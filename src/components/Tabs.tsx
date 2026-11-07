@@ -41,7 +41,7 @@ interface TabsListProps {
 export function TabsList({ children, className = "" }: TabsListProps) {
   return (
     <div
-      className={`flex border-b border-border bg-background-subtle ${className}`}
+      className={`flex w-fit max-w-full overflow-x-auto border border-border-strong ${className}`}
       role="tablist"
     >
       {children}
@@ -65,12 +65,13 @@ export function TabsTrigger({
 
   return (
     <button
+      type="button"
       role="tab"
       aria-selected={isActive}
       onClick={() => setActiveTab(value)}
-      className={`px-4 py-3 text-sm font-medium transition-colors relative ${
+      className={`flex-none h-7 px-3 cond text-[0.78rem] font-semibold uppercase tracking-[0.04em] whitespace-nowrap border-r border-border-strong last:border-r-0 transition-colors ${
         isActive
-          ? "text-accent-blue border-b-2 border-accent-blue -mb-px"
+          ? "bg-accent-blue text-signal-ink"
           : "text-text-secondary hover:text-text-primary hover:bg-background-hover"
       } ${className}`}
     >

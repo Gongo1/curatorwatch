@@ -1,11 +1,12 @@
 import type { StressBand } from "@/lib/stress-index";
 
 /** Product-standard band chip classes — shared by the /digest page and the
- *  home stress strip so a band always wears the same color + printed label. */
+ *  home stress strip so a band always wears the same color + printed label.
+ *  Terminal chip: square hairline in the band color, no fill. */
 export const BAND_STYLE: Record<StressBand, string> = {
-  Calm: "text-accent-green border-accent-green/40 bg-accent-green/10",
-  Normal: "text-accent-green border-accent-green/40 bg-accent-green/10",
-  Elevated: "text-accent-yellow border-accent-yellow/40 bg-accent-yellow/10",
-  Stressed: "text-accent-yellow border-accent-yellow/40 bg-accent-yellow/10",
-  Critical: "text-accent-red border-accent-red/40 bg-accent-red/10",
+  Calm: "border text-accent-green border-accent-green/60",
+  Normal: "border text-accent-green border-accent-green/60",
+  Elevated: "border text-accent-yellow border-accent-yellow/60",
+  Stressed: "border text-accent-yellow border-accent-yellow/60",
+  Critical: "border text-accent-red border-accent-red/60",
 };

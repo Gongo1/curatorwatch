@@ -128,8 +128,6 @@ export function CommandLine({
     return out;
   }, [query, curators, canSearchCurators]);
 
-  useEffect(() => setActive(0), [query]);
-
   const run = useCallback(
     (r: Result | undefined) => {
       if (!r) return;
@@ -194,6 +192,7 @@ export function CommandLine({
         value={query}
         onChange={(e) => {
           setQuery(e.target.value);
+          setActive(0);
           setOpen(true);
         }}
         onFocus={onFocus}

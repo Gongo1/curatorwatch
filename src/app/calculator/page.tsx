@@ -9,12 +9,13 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Legend,
   CartesianGrid,
 } from "recharts";
+import { ChevronLeft, ExternalLink, Search } from "lucide-react";
 import { calculateVaultEarnings, calculateAnnualEarnings } from "@/lib/utils/calculator";
 import { formatCurrency } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
 import { getVaultDepositUrl, getDepositLabel } from "@/lib/utils/morpho";
 import type { VaultData } from "@/lib/types/api";
 
@@ -202,7 +203,7 @@ export default function CalculatorPage() {
     <>
       <PageHeader
         title="LP Return Calculator"
-        description="Configure your preferences and see matching vaults instantly"
+        description="Set a deposit and a collateral type, then see the matching vaults and their projected earnings."
         breadcrumbs={[
           { label: "Dashboard", href: "/" },
           { label: "LP Calculator" },
@@ -217,17 +218,18 @@ export default function CalculatorPage() {
           onBack={() => setSelectedVault(null)}
         />
       ) : (
-        <>
-          {/* ── Filter Row ── */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-            {/* Column 1: Deposit Amount */}
-            <div className="bg-background-subtle rounded-xl border border-border p-5">
-              <label className="text-xs font-medium text-text-secondary mb-2 block">
-                Deposit Amount
+        <div className="space-y-1.5">
+          {/* ── Inputs ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
+            {/* Deposit Amount */}
+            <Panel title="Deposit amount" meta="USD" bodyClassName="p-3">
+              <label htmlFor="calc-deposit" className="label block mb-1.5">
+                Amount
               </label>
-              <div className="relative mb-3">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xl text-text-muted">$</span>
+              <div className="relative mb-2.5">
+                <span className="num absolute left-2.5 top-1/2 -translate-y-1/2 text-lg text-text-muted">$</span>
                 <input
+                  id="calc-deposit"
                   type="text"
                   inputMode="numeric"
                   value={isFocused ? displayAmount : formatUSD(depositAmount)}
@@ -243,104 +245,88 @@ export default function CalculatorPage() {
                     setDepositAmount(clamped);
                     setDisplayAmount(formatUSD(clamped));
                   }}
-                  className="w-full pl-9 pr-4 py-3 text-2xl font-bold bg-background-elevated border-2 border-border rounded-lg text-text-primary tabular-nums focus:outline-none focus:ring-2 focus:ring-accent-blue/50 focus:border-accent-blue"
+                  className="field num h-10 pl-7 text-xl font-semibold"
                   placeholder="1,000,000"
                 />
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div role="group" aria-label="Preset amounts" className="inline-flex flex-wrap border border-border-strong">
                 {[100_000, 500_000, 1_000_000, 5_000_000, 10_000_000].map((preset) => (
                   <button
                     key={preset}
+                    type="button"
+                    aria-pressed={depositAmount === preset}
                     onClick={() => {
                       setDepositAmount(preset);
                       setDisplayAmount(formatUSD(preset));
                     }}
-                    className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                      depositAmount === preset
-                        ? "bg-accent-blue text-white"
-                        : "bg-background-elevated text-text-muted hover:text-text-primary border border-border"
+                    className={`${SEG_BTN} num normal-case ${
+                      depositAmount === preset ? SEG_ON : SEG_OFF
                     }`}
                   >
                     ${preset >= 1_000_000 ? `${preset / 1_000_000}M` : `${preset / 1_000}K`}
                   </button>
                 ))}
               </div>
-            </div>
+            </Panel>
 
-            {/* Column 2: Collateral Type */}
-            <div className="bg-background-subtle rounded-xl border border-border p-5">
-              <label className="text-xs font-medium text-text-secondary mb-2 block">
-                Collateral Type
-              </label>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setSelectedCollateral(selectedCollateral === "blue-chip" ? null : "blue-chip")}
-                  className={`w-full p-3 border-2 rounded-lg text-left transition ${
-                    selectedCollateral === "blue-chip"
-                      ? "border-accent-blue bg-accent-blue/5"
-                      : "border-border bg-background-elevated hover:border-accent-blue/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <svg className="w-4 h-4 text-accent-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                    <span className="font-semibold text-sm text-text-primary">Blue-Chip Only</span>
-                  </div>
-                  <p className="text-[11px] text-text-tertiary ml-6">USDC, USDT, wstETH, WBTC...</p>
-                </button>
-
-                <button
-                  onClick={() => setSelectedCollateral(selectedCollateral === "all" ? null : "all")}
-                  className={`w-full p-3 border-2 rounded-lg text-left transition ${
-                    selectedCollateral === "all"
-                      ? "border-accent-purple bg-accent-purple/5"
-                      : "border-border bg-background-elevated hover:border-accent-purple/50"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <svg className="w-4 h-4 text-accent-purple" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span className="font-semibold text-sm text-text-primary">All Collateral</span>
-                  </div>
-                  <p className="text-[11px] text-text-tertiary ml-6">Include exotic assets</p>
-                </button>
+            {/* Collateral Type */}
+            <Panel title="Collateral type" meta="required" bodyClassName="p-3">
+              <div role="group" aria-label="Collateral type" className="grid grid-cols-2 border border-border-strong">
+                {(
+                  [
+                    { key: "blue-chip", title: "Blue-chip only", sub: "USDC, USDT, wstETH, WBTC…" },
+                    { key: "all", title: "All collateral", sub: "Include exotic assets" },
+                  ] as const
+                ).map((opt) => {
+                  const on = selectedCollateral === opt.key;
+                  return (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => setSelectedCollateral(on ? null : opt.key)}
+                      className={`px-3 py-2.5 text-left border-r border-border-strong last:border-r-0 transition-colors ${
+                        on ? "bg-accent-blue text-signal-ink" : "hover:bg-background-hover"
+                      }`}
+                    >
+                      <span className={`block cond text-[0.85rem] font-bold uppercase tracking-[0.04em] ${on ? "" : "text-text-primary"}`}>
+                        {opt.title}
+                      </span>
+                      <span className={`block text-xs mt-0.5 ${on ? "opacity-80" : "text-text-tertiary"}`}>{opt.sub}</span>
+                    </button>
+                  );
+                })}
               </div>
-            </div>
+            </Panel>
           </div>
 
           {/* ── Advanced Filters (Collapsible) ── */}
-          <div className="bg-background-subtle rounded-xl border border-border mb-6">
-            <button
-              onClick={() => setAdvancedOpen(!advancedOpen)}
-              className="w-full flex items-center justify-between px-5 py-3 text-sm font-medium text-text-secondary hover:text-text-primary transition-colors"
-            >
-              <span className="flex items-center gap-2">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                Advanced Filters
-                {hasAdvancedFilters && (
-                  <span className="px-1.5 py-0.5 bg-accent-blue/10 text-accent-blue text-[10px] rounded font-medium">
-                    Active
-                  </span>
-                )}
-              </span>
-              <svg className={`w-4 h-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
+          <Panel
+            title="Advanced filters"
+            meta={hasAdvancedFilters ? <span className="text-accent-blue">active</span> : "protocol · asset · rate · curator"}
+            action={
+              <button
+                type="button"
+                onClick={() => setAdvancedOpen(!advancedOpen)}
+                aria-expanded={advancedOpen}
+                className="label hover:text-accent-blue transition-colors inline-flex items-center gap-1"
+              >
+                {advancedOpen ? "Hide" : "Show"}
+                <span aria-hidden="true">{advancedOpen ? "▴" : "▾"}</span>
+              </button>
+            }
+          >
             {advancedOpen && (
-              <div className="px-5 pb-4 pt-1 border-t border-border">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-3 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Protocol */}
                   <div>
-                    <label className="text-xs font-medium text-text-secondary mb-1.5 block">Protocol</label>
+                    <label htmlFor="calc-protocol" className="label block mb-1.5">Protocol</label>
                     <select
+                      id="calc-protocol"
                       value={selectedProtocol || ""}
                       onChange={(e) => { setSelectedProtocol(e.target.value || null); setHasSearched(false); }}
-                      className="w-full px-3 py-2 text-sm bg-background-elevated border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
+                      className="field text-sm"
                     >
                       <option value="">All Protocols</option>
                       {protocols.map((p) => (
@@ -351,11 +337,12 @@ export default function CalculatorPage() {
 
                   {/* Asset */}
                   <div>
-                    <label className="text-xs font-medium text-text-secondary mb-1.5 block">Asset</label>
+                    <label htmlFor="calc-asset" className="label block mb-1.5">Asset</label>
                     <select
+                      id="calc-asset"
                       value={selectedAsset || ""}
                       onChange={(e) => { setSelectedAsset(e.target.value || null); setHasSearched(false); }}
-                      className="w-full px-3 py-2 text-sm bg-background-elevated border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
+                      className="field text-sm"
                     >
                       <option value="">All Assets</option>
                       {assetSymbols.map((s) => (
@@ -366,38 +353,41 @@ export default function CalculatorPage() {
 
                   {/* Min APR */}
                   <div>
-                    <label className="text-xs font-medium text-text-secondary mb-1.5 block">Min APR %</label>
+                    <label htmlFor="calc-min" className="label block mb-1.5">Min APR %</label>
                     <input
+                      id="calc-min"
                       type="number"
                       step="0.1"
                       value={minAPR}
                       onChange={(e) => { setMinAPR(e.target.value); setHasSearched(false); }}
                       placeholder="e.g. 3"
-                      className="w-full px-3 py-2 text-sm bg-background-elevated border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
+                      className="field num text-sm"
                     />
                   </div>
 
                   {/* Max APR */}
                   <div>
-                    <label className="text-xs font-medium text-text-secondary mb-1.5 block">Max APR %</label>
+                    <label htmlFor="calc-max" className="label block mb-1.5">Max APR %</label>
                     <input
+                      id="calc-max"
                       type="number"
                       step="0.1"
                       value={maxAPR}
                       onChange={(e) => { setMaxAPR(e.target.value); setHasSearched(false); }}
                       placeholder="e.g. 20"
-                      className="w-full px-3 py-2 text-sm bg-background-elevated border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
+                      className="field num text-sm"
                     />
                   </div>
                 </div>
 
                 {/* Curator */}
-                <div className="mt-4">
-                  <label className="text-xs font-medium text-text-secondary mb-1.5 block">Curator</label>
+                <div className="max-w-xs">
+                  <label htmlFor="calc-curator" className="label block mb-1.5">Curator</label>
                   <select
+                    id="calc-curator"
                     value={selectedCurator || ""}
                     onChange={(e) => { setSelectedCurator(e.target.value || null); setHasSearched(false); }}
-                    className="w-full max-w-xs px-3 py-2 text-sm bg-background-elevated border border-border rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-blue/50"
+                    className="field text-sm"
                   >
                     <option value="">All Curators</option>
                     {curatorNames.map((name) => (
@@ -407,33 +397,29 @@ export default function CalculatorPage() {
                 </div>
               </div>
             )}
-          </div>
+          </Panel>
 
           {/* ── Search Button ── */}
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-3 flex-wrap py-1">
             <button
+              type="button"
               onClick={handleSearch}
               disabled={!canSearch}
-              className={`px-6 py-3 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
-                canSearch
-                  ? "bg-accent-blue text-white hover:bg-accent-blue-hover"
-                  : "bg-background-elevated text-text-muted cursor-not-allowed border border-border"
-              }`}
+              className="btn btn-primary"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              Find Matching Vaults
+              <Search className="w-3.5 h-3.5" aria-hidden="true" />
+              Find matching vaults
             </button>
             {!canSearch && (
-              <p className="text-xs text-text-muted">
-                Select a collateral type to search
+              <p className="text-xs text-text-tertiary">
+                Select a collateral type to search.
               </p>
             )}
             {hasSearched && (
               <button
+                type="button"
                 onClick={resetAllFilters}
-                className="text-xs text-accent-blue hover:text-accent-blue-hover font-medium"
+                className="text-xs text-accent-blue hover:underline"
               >
                 Reset all
               </button>
@@ -442,63 +428,49 @@ export default function CalculatorPage() {
 
           {/* ── Results ── */}
           {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-background-subtle rounded-xl border border-border p-6 animate-pulse">
-                  <div className="h-5 w-40 bg-background-elevated rounded mb-3" />
-                  <div className="h-4 w-24 bg-background-elevated rounded" />
-                </div>
-              ))}
-            </div>
+            <Panel title="Matching vaults" meta="loading">
+              <div className="animate-pulse">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-3 px-3 h-9 border-b border-border-subtle last:border-0">
+                    <div className="h-3 w-40 bg-background-elevated" />
+                    <div className="h-3 w-16 bg-background-elevated ml-auto" />
+                  </div>
+                ))}
+              </div>
+            </Panel>
           ) : !hasSearched ? (
             /* Empty state — before search */
-            <div className="bg-background-subtle rounded-xl border border-border p-12 text-center">
-              <svg className="w-12 h-12 mx-auto text-text-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">Ready to find your perfect vault?</h3>
-              <p className="text-sm text-text-secondary max-w-md mx-auto">
-                Select your collateral type above, then click <span className="font-semibold text-accent-blue">Find Matching Vaults</span> to see personalized results.
+            <Panel title="Matching vaults" meta="no search yet" bodyClassName="px-3 py-6 text-center">
+              <p className="text-sm text-text-secondary">
+                Select a collateral type above, then select{" "}
+                <span className="font-semibold text-accent-blue">Find matching vaults</span>.
               </p>
-            </div>
+            </Panel>
           ) : matchingVaults.length === 0 ? (
             /* No results state */
-            <div className="bg-background-subtle rounded-xl border border-border p-12 text-center">
-              <svg className="w-12 h-12 mx-auto text-text-muted mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-lg font-semibold text-text-primary mb-2">No vaults match your criteria</h3>
-              <p className="text-sm text-text-secondary mb-4">
-                Try adjusting your filters or removing advanced filter constraints.
+            <Panel title="Matching vaults" meta="0 vaults" bodyClassName="px-3 py-6 text-center">
+              <p className="text-sm text-text-primary">No vault matches these filters.</p>
+              <p className="text-sm text-text-secondary mt-1 mb-3">
+                Widen the rate range or remove an advanced filter.
               </p>
-              <div className="flex items-center justify-center gap-3">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
                 {hasAdvancedFilters && (
-                  <button
-                    onClick={resetAdvancedFilters}
-                    className="px-4 py-2 text-sm font-medium text-accent-blue border border-accent-blue/20 rounded-lg hover:bg-accent-blue/5 transition-colors"
-                  >
-                    Reset Advanced Filters
+                  <button type="button" onClick={resetAdvancedFilters} className="btn btn-ghost">
+                    Reset advanced filters
                   </button>
                 )}
-                <button
-                  onClick={resetAllFilters}
-                  className="px-4 py-2 text-sm font-medium text-text-secondary border border-border rounded-lg hover:bg-background-hover transition-colors"
-                >
-                  Reset All Filters
+                <button type="button" onClick={resetAllFilters} className="btn btn-ghost">
+                  Reset all filters
                 </button>
               </div>
-            </div>
+            </Panel>
           ) : (
-            <>
-              {/* Match count */}
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-sm text-text-secondary">
-                  <span className="font-semibold text-text-primary">{matchingVaults.length}</span> vault{matchingVaults.length !== 1 ? "s" : ""} match your criteria
-                </p>
-              </div>
-
-              {/* Top 3 Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <Panel
+              title="Matching vaults"
+              meta={`${matchingVaults.length} vault${matchingVaults.length !== 1 ? "s" : ""} · by rate`}
+            >
+              {/* Top 3 */}
+              <div className="grid grid-cols-1 sm:grid-cols-3">
                 {matchingVaults.slice(0, 3).map((vault, i) => (
                   <VaultCard
                     key={vault.address}
@@ -512,71 +484,79 @@ export default function CalculatorPage() {
 
               {/* Remaining Vaults Table */}
               {matchingVaults.length > 3 && (
-                <div className="bg-background-subtle rounded-xl border border-border overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full">
-                      <thead className="bg-background-elevated border-b border-border">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Vault</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Asset</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Rate</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Year 1 Earnings</th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">TVL</th>
-                          <th className="px-4 py-3"></th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border-subtle">
-                        {matchingVaults.slice(3).map((vault) => {
-                          const earnings = calculateAnnualEarnings(depositAmount, vault.dataSource, vault.netAPR, vault.avgNetApy);
-                          return (
-                            <tr key={vault.address} className="hover:bg-background-hover transition-colors">
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-sm font-medium text-text-primary">{vault.name}</span>
-                                </div>
-                                <span className="text-xs text-text-tertiary">{vault.curatorName || "Self-Curated"}</span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                                  vault.isBlueChip
-                                    ? "bg-accent-blue/10 text-accent-blue border border-accent-blue/20"
-                                    : "bg-accent-yellow/10 text-accent-yellow border border-accent-yellow/20"
-                                }`}>
-                                  {vault.assetSymbol}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-sm font-semibold text-accent-green tabular-nums">{vault.rate.toFixed(2)}%</span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-sm font-medium text-text-primary tabular-nums">
-                                  ${earnings.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-right">
-                                <span className="text-sm text-text-secondary tabular-nums">{formatCurrency(vault.tvl)}</span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <button
-                                  onClick={() => setSelectedVault(vault)}
-                                  className="px-3 py-1.5 bg-accent-blue text-white rounded-lg text-xs font-medium hover:bg-accent-blue-hover transition-colors"
-                                >
-                                  Calculate
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="relative overflow-x-auto border-t border-border">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-background">
+                      <tr className="h-7 border-b border-border">
+                        <th scope="col" className="label text-left px-3">Vault</th>
+                        <th scope="col" className="label text-left px-3 hidden md:table-cell">Curator</th>
+                        <th scope="col" className="label text-left px-3">Asset</th>
+                        <th scope="col" className="label text-right px-3">Rate</th>
+                        <th scope="col" className="label text-right px-3 whitespace-nowrap">Year 1 earnings</th>
+                        <th scope="col" className="label text-right px-3">TVL</th>
+                        <th scope="col" className="px-3"><span className="sr-only">Action</span></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matchingVaults.slice(3).map((vault) => {
+                        const earnings = calculateAnnualEarnings(depositAmount, vault.dataSource, vault.netAPR, vault.avgNetApy);
+                        return (
+                          <tr key={vault.address} className="h-8 border-b border-border-subtle last:border-0 hover:bg-background-hover transition-colors">
+                            <td className="px-3 py-1">
+                              <div className="text-text-primary font-medium leading-tight">{vault.name}</div>
+                              <div className="md:hidden text-xs text-text-tertiary leading-tight">{vault.curatorName || "Self-Curated"}</div>
+                            </td>
+                            <td className="px-3 py-1 hidden md:table-cell text-text-secondary">{vault.curatorName || "Self-Curated"}</td>
+                            <td className="px-3 py-1">
+                              <AssetTag vault={vault} />
+                            </td>
+                            <td className="px-3 py-1 num text-right text-text-primary">{vault.rate.toFixed(2)}%</td>
+                            <td className="px-3 py-1 num text-right up">
+                              ${earnings.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+                            </td>
+                            <td className="px-3 py-1 num text-right text-text-secondary">{formatCurrency(vault.tvl)}</td>
+                            <td className="px-3 py-1 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedVault(vault)}
+                                className="btn btn-ghost h-6 px-2 text-[0.7rem]"
+                              >
+                                Calculate
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               )}
-            </>
+            </Panel>
           )}
-        </>
+        </div>
       )}
     </>
+  );
+}
+
+// Segmented control (hairline group, active = amber fill) — copies CuratorIndex.
+const SEG_BTN =
+  "h-[1.625rem] px-2.5 cond text-[0.75rem] font-semibold uppercase tracking-[0.04em] border-r border-border-strong last:border-r-0 transition-colors";
+const SEG_ON = "bg-accent-blue text-signal-ink";
+const SEG_OFF = "text-text-secondary hover:text-text-primary hover:bg-background-hover";
+
+function AssetTag({ vault }: { vault: ProcessedVault }) {
+  return (
+    <span
+      className={`num inline-block text-[0.7rem] px-1.5 py-px border ${
+        vault.isBlueChip
+          ? "text-text-secondary border-border-strong"
+          : "text-accent-yellow border-accent-yellow-muted"
+      }`}
+      title={vault.isBlueChip ? "Blue-chip collateral" : "Not on the blue-chip list"}
+    >
+      {vault.assetSymbol}
+    </span>
   );
 }
 
@@ -597,54 +577,40 @@ function VaultCard({
   const yearlyReturn = calculateAnnualEarnings(depositAmount, vault.dataSource, vault.netAPR, vault.avgNetApy);
   const yourPercentage = vault.tvl > 0 ? (depositAmount / vault.tvl) * 100 : 0;
 
-  const rankColors = [
-    "bg-accent-yellow/10 text-accent-yellow border-accent-yellow/20",
-    "bg-text-muted/10 text-text-muted border-text-muted/20",
-    "bg-amber-700/10 text-amber-600 border-amber-700/20",
-  ];
-
   return (
     <button
+      type="button"
       onClick={onClick}
-      className="bg-background-subtle p-5 rounded-xl border-2 border-border hover:border-accent-blue text-left w-full transition-colors group"
+      className="p-3 text-left w-full min-w-0 border-b sm:border-b-0 sm:border-r border-border last:border-0 hover:bg-background-hover transition-colors group"
     >
-      {/* Rank */}
-      <div className="flex items-center justify-between mb-3">
-        <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold border ${rankColors[rank - 1] || rankColors[2]}`}>
-          {rank}
-        </span>
+      <div className="flex items-start gap-2">
+        <span className="num text-xs text-accent-blue pt-0.5">{String(rank).padStart(2, "0")}</span>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-text-primary leading-tight truncate group-hover:text-accent-blue transition-colors">
+            {vault.name}
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-xs text-text-tertiary truncate">{vault.curatorName || "Self-Curated"}</span>
+            <AssetTag vault={vault} />
+          </div>
+        </div>
       </div>
 
-      {/* Vault Info */}
-      <div className="font-bold text-text-primary mb-0.5 group-hover:text-accent-blue transition-colors">{vault.name}</div>
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className="text-xs text-text-tertiary">{vault.curatorName || "Self-Curated"}</span>
-        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${
-          vault.isBlueChip
-            ? "bg-accent-blue/10 text-accent-blue border border-accent-blue/20"
-            : "bg-accent-yellow/10 text-accent-yellow border border-accent-yellow/20"
-        }`}>
-          {vault.assetSymbol}
-        </span>
+      <div className="mt-3 flex items-baseline gap-2">
+        <span className="num text-[1.45rem] font-semibold leading-none text-text-primary">{vault.rate.toFixed(2)}%</span>
+        <span className="label">{vault.dataSource === "turtle" ? "Net APR" : "Net APY"}</span>
       </div>
 
-      {/* Rate */}
-      <div className="mb-3">
-        <div className="text-2xl font-bold text-accent-green tabular-nums">{vault.rate.toFixed(2)}%</div>
-        <div className="text-[11px] text-text-muted">{vault.dataSource === "turtle" ? "Net APR" : "Net APY"}</div>
+      <div className="text-sm text-text-secondary mt-2">
+        <span className="num">${formatUSD(depositAmount)}</span> earns{" "}
+        <span className="num font-semibold up">${yearlyReturn.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr</span>
       </div>
 
-      {/* Returns */}
-      <div className="text-sm text-text-secondary mb-3">
-        ${formatUSD(depositAmount)} earns{" "}
-        <span className="font-bold text-accent-green">${yearlyReturn.toLocaleString("en-US", { maximumFractionDigits: 0 })}/yr</span>
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center gap-3 text-xs text-text-muted border-t border-border pt-3">
-        <span>TVL: {formatCurrency(vault.tvl)}</span>
+      <div className="flex items-center gap-3 mt-2 pt-2 border-t border-border-subtle text-xs">
+        <span className="label">TVL</span>
+        <span className="num text-text-secondary -ml-2">{formatCurrency(vault.tvl)}</span>
         {yourPercentage > 10 && (
-          <span className="text-accent-yellow">{yourPercentage.toFixed(1)}% of vault</span>
+          <span className="num text-accent-yellow ml-auto">{yourPercentage.toFixed(1)}% of vault</span>
         )}
       </div>
     </button>
@@ -680,246 +646,227 @@ function ResultsView({
     return data;
   }, [result, depositAmount]);
 
+  const sharePct = vault.tvl > 0 ? (depositAmount / vault.tvl) * 100 : 0;
+  const usd0 = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+  const usd2 = (n: number) => `$${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-1.5">
       {/* Back button */}
-      <button
-        onClick={onBack}
-        className="flex items-center gap-1.5 text-sm text-text-secondary hover:text-text-primary transition-colors"
-      >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
+      <button type="button" onClick={onBack} className="btn btn-ghost">
+        <ChevronLeft className="w-3.5 h-3.5" aria-hidden="true" />
         Back to vault list
       </button>
 
       {/* Header */}
-      <div className="bg-gradient-to-br from-accent-green/20 to-accent-green/5 p-6 rounded-xl border border-accent-green/20">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div>
-            <h2 className="text-xl font-bold text-text-primary mb-1">{vault.name}</h2>
-            <p className="text-sm text-text-secondary">
-              {vault.assetSymbol} — {vault.curatorName || "Self-Curated"} — Returns for ${formatUSD(depositAmount)} deposit
+      <section className="panel" aria-label="Selected vault">
+        <div className="flex items-center justify-between flex-wrap gap-3 px-3 py-2.5">
+          <div className="min-w-0">
+            <h2 className="cond text-[1.2rem] font-bold leading-tight text-text-primary">{vault.name}</h2>
+            <p className="text-sm text-text-secondary mt-0.5">
+              <span className="num">{vault.assetSymbol}</span> · {vault.curatorName || "Self-Curated"} · Returns for a{" "}
+              <span className="num">${formatUSD(depositAmount)}</span> deposit
             </p>
           </div>
-          <Link
-            href={`/vault/${vault.address}`}
-            className="px-4 py-2 bg-accent-blue text-white rounded-lg text-sm font-medium hover:bg-accent-blue-hover transition-colors"
-          >
-            View Vault Details
+          <Link href={`/vault/${vault.address}`} className="btn btn-ghost">
+            View vault details
           </Link>
         </div>
-      </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="rounded-xl border-2 border-accent-green/30 bg-accent-green/5 p-4">
-          <p className="text-xs text-text-secondary mb-0.5">First Payment</p>
-          <p className="text-2xl font-bold text-accent-green tabular-nums">
-            ${result.firstMonthEarnings.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-          </p>
-          <p className="text-xs text-text-muted mt-1">
-            {isTurtle ? "Day 30 (monthly)" : "Day 1 (compounds every block)"}
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background-subtle p-4">
-          <p className="text-xs text-text-secondary mb-0.5">Month 1 Earnings</p>
-          <p className="text-2xl font-bold text-text-primary tabular-nums">
-            ${result.firstMonthEarnings.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-          </p>
-          <p className="text-xs text-text-muted mt-1">
-            {((result.firstMonthEarnings / depositAmount) * 100).toFixed(3)}% return
-          </p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background-subtle p-4">
-          <p className="text-xs text-text-secondary mb-0.5">Year 1 Total</p>
-          <p className="text-2xl font-bold text-text-primary tabular-nums">
-            ${result.yearOneTotal.toLocaleString("en-US", { maximumFractionDigits: 2 })}
-          </p>
-          <p className="text-xs text-accent-green mt-1">{vault.rate.toFixed(2)}% net return</p>
-        </div>
-
-        <div className="rounded-xl border border-border bg-background-subtle p-4">
-          <p className="text-xs text-text-secondary mb-0.5">{isTurtle ? "Net APR" : "Net APY"}</p>
-          <p className="text-2xl font-bold text-accent-blue tabular-nums">{vault.rate.toFixed(2)}%</p>
-        </div>
-      </div>
+        {/* Key Metrics */}
+        <dl className="grid grid-cols-2 lg:grid-cols-4 border-t border-border">
+          <Metric
+            k="First payment"
+            v={usd2(result.firstMonthEarnings)}
+            sub={isTurtle ? "Day 30 (monthly)" : "Day 1 (compounds every block)"}
+            lead
+          />
+          <Metric
+            k="Month 1 earnings"
+            v={usd2(result.firstMonthEarnings)}
+            sub={`${((result.firstMonthEarnings / depositAmount) * 100).toFixed(3)}% return`}
+          />
+          <Metric
+            k="Year 1 total"
+            v={usd2(result.yearOneTotal)}
+            sub={`${vault.rate.toFixed(2)}% net return`}
+          />
+          <Metric k={isTurtle ? "Net APR" : "Net APY"} v={`${vault.rate.toFixed(2)}%`} />
+        </dl>
+      </section>
 
       {/* Liquidity Info */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="bg-background-subtle rounded-xl border border-border p-5">
-          <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-            </svg>
-            Withdrawal Terms
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-text-secondary">Lock period:</span>
-              <span className="font-medium text-text-primary">None</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-text-secondary">Withdraw anytime:</span>
-              <span className="font-medium text-accent-green">Yes</span>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <Panel title="Withdrawal terms">
+          <dl className="text-sm">
+            <Row k="Lock period" v={<span className="text-text-primary">None</span>} />
+            <Row k="Withdraw anytime" v={<span className="up">Yes</span>} />
+          </dl>
+        </Panel>
 
-        <div className="bg-background-subtle rounded-xl border border-border p-5">
-          <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <svg className="w-4 h-4 text-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Liquidity Check
-          </h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-text-secondary">Current TVL:</span>
-              <span className="font-medium text-text-primary">{formatCurrency(vault.tvl)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-text-secondary">Your % of vault:</span>
-              {(() => {
-                const pct = vault.tvl > 0 ? (depositAmount / vault.tvl) * 100 : 0;
-                return (
-                  <span className={`font-medium ${pct > 10 ? "text-accent-yellow" : "text-accent-green"}`}>
-                    {pct.toFixed(1)}%
-                  </span>
-                );
-              })()}
-            </div>
-          </div>
-          {vault.tvl > 0 && (depositAmount / vault.tvl) * 100 > 10 && (
-            <p className="mt-3 pt-3 border-t border-border text-xs text-accent-yellow">
-              Your deposit is {">"}10% of vault TVL. May experience slippage on large withdrawals.
+        <Panel title="Liquidity check">
+          <dl className="text-sm">
+            <Row k="Current TVL" v={<span className="num text-text-primary">{formatCurrency(vault.tvl)}</span>} />
+            <Row
+              k="Your % of vault"
+              v={
+                <span className={`num ${sharePct > 10 ? "text-accent-yellow" : "up"}`}>
+                  {sharePct.toFixed(1)}%
+                </span>
+              }
+            />
+          </dl>
+          {vault.tvl > 0 && sharePct > 10 && (
+            <p className="px-3 py-2 border-t border-border-subtle text-xs text-accent-yellow">
+              Your deposit is more than 10% of the vault TVL. A large withdrawal can see slippage.
             </p>
           )}
-        </div>
+        </Panel>
       </div>
 
       {/* Cumulative Earnings Chart */}
-      <div className="bg-background-subtle rounded-xl border border-border p-5">
-        <h3 className="text-sm font-semibold text-text-primary mb-4">
-          Growth of ${formatUSD(depositAmount)} over 12 months
-        </h3>
-        <div className="h-[350px]">
+      <Panel title="Growth" meta={`$${formatUSD(depositAmount)} · 12 months`} bodyClassName="p-3">
+        <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 5 }}>
-              <defs>
-                <linearGradient id="calcGradEarnings" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="calcGradPrincipal" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6B7280" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#6B7280" stopOpacity={0.05} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.3} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={false} tickFormatter={(v) => `M${v}`} />
+            <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -4, bottom: 0 }}>
+              <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: "var(--text-tertiary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
+                tickLine={false}
+                axisLine={{ stroke: "var(--border)" }}
+                tickFormatter={(v) => `M${v}`}
+              />
               <YAxis
-                tick={{ fontSize: 11, fill: "#6B7280" }} tickLine={false} axisLine={false} width={65}
+                tick={{ fill: "var(--text-tertiary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
+                tickLine={false}
+                axisLine={false}
+                width={56}
                 tickFormatter={(v) => {
                   if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
                   if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
                   return `$${v}`;
                 }}
               />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend wrapperStyle={{ fontSize: "12px", color: "#9CA3AF" }} />
-              <Area type="monotone" dataKey="principal" stackId="1" stroke="#6B7280" fill="url(#calcGradPrincipal)" strokeWidth={1} name="Principal" />
-              <Area type="monotone" dataKey="earnings" stackId="1" stroke="#10B981" fill="url(#calcGradEarnings)" strokeWidth={1.5} name="Earnings" />
+              <Tooltip content={<ChartTooltip />} cursor={{ stroke: "var(--border-strong)", strokeWidth: 1 }} />
+              <Area
+                type="monotone"
+                dataKey="principal"
+                stackId="1"
+                stroke="var(--chart-3)"
+                fill="var(--chart-3)"
+                fillOpacity={0.12}
+                strokeWidth={1}
+                name="Principal"
+                isAnimationActive={false}
+              />
+              <Area
+                type="monotone"
+                dataKey="earnings"
+                stackId="1"
+                stroke="var(--chart-1)"
+                fill="var(--chart-1)"
+                fillOpacity={0.45}
+                strokeWidth={1.25}
+                name="Earnings"
+                isAnimationActive={false}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <div className="mt-4 rounded-lg bg-accent-green/5 border border-accent-green/20 p-4 flex items-start gap-3">
-          <svg className="w-5 h-5 text-accent-green flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <div>
-            <p className="text-sm font-semibold text-text-primary">After 12 months:</p>
-            <p className="text-sm text-text-secondary">
-              Your ${formatUSD(depositAmount)} grows to{" "}
-              <span className="font-bold text-accent-green">
-                ${(depositAmount + result.yearOneTotal).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-              </span>
-              {isTurtle && <span> — Paid monthly</span>}
-            </p>
-          </div>
+        <div className="flex gap-4 flex-wrap mt-2">
+          {[
+            { name: "Principal", color: "var(--chart-3)" },
+            { name: "Earnings", color: "var(--chart-1)" },
+          ].map((s) => (
+            <span key={s.name} className="label normal-case tracking-normal font-normal text-text-secondary inline-flex items-center gap-1.5">
+              <span className="inline-block w-3 h-[3px]" style={{ background: s.color }} />
+              {s.name}
+            </span>
+          ))}
         </div>
-      </div>
+        <div className="mt-3 pt-2.5 border-t border-border-subtle text-sm text-text-secondary">
+          <span className="label mr-2">After 12 months</span>
+          Your <span className="num">${formatUSD(depositAmount)}</span> grows to{" "}
+          <span className="num font-semibold up">{usd0(depositAmount + result.yearOneTotal)}</span>
+          {isTurtle && <span>. Paid monthly.</span>}
+        </div>
+      </Panel>
 
       {/* Payment Schedule */}
-      <div className="bg-background-subtle rounded-xl border border-border overflow-hidden">
-        <div className="px-5 py-4 border-b border-border">
-          <h3 className="text-sm font-semibold text-text-primary">Payment Schedule</h3>
-        </div>
+      <Panel title="Payment schedule" meta="12 months">
         <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-background-elevated border-b border-border">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">Month</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Payment</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Cumulative</th>
-                <th className="px-4 py-2.5 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">Balance</th>
+          <table className="min-w-full text-sm">
+            <thead className="bg-background">
+              <tr className="h-7 border-b border-border">
+                <th scope="col" className="label text-left px-3">Month</th>
+                <th scope="col" className="label text-right px-3">Payment</th>
+                <th scope="col" className="label text-right px-3">Cumulative</th>
+                <th scope="col" className="label text-right px-3">Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border-subtle">
+            <tbody>
               {result.schedule.map((row) => (
-                <tr key={row.month} className="hover:bg-background-hover transition-colors">
-                  <td className="px-4 py-2.5 text-sm text-text-primary tabular-nums">Month {row.month}</td>
-                  <td className="px-4 py-2.5 text-sm text-right text-accent-green tabular-nums">
-                    ${row.payment.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-4 py-2.5 text-sm text-right text-text-secondary tabular-nums">
-                    ${row.cumulative.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                  </td>
-                  <td className="px-4 py-2.5 text-sm text-right font-medium text-text-primary tabular-nums">
-                    ${row.balance.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                  </td>
+                <tr key={row.month} className="h-8 border-b border-border-subtle hover:bg-background-hover transition-colors">
+                  <td className="px-3 text-text-primary">Month <span className="num">{row.month}</span></td>
+                  <td className="px-3 num text-right up">{usd0(row.payment)}</td>
+                  <td className="px-3 num text-right text-text-secondary">{usd0(row.cumulative)}</td>
+                  <td className="px-3 num text-right text-text-primary">{usd0(row.balance)}</td>
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-background-elevated border-t border-border font-semibold">
-              <tr>
-                <td className="px-4 py-3 text-sm text-text-primary">Total Year 1</td>
-                <td className="px-4 py-3 text-sm text-right text-text-muted">-</td>
-                <td className="px-4 py-3 text-sm text-right text-accent-green tabular-nums">
-                  ${result.yearOneTotal.toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                </td>
-                <td className="px-4 py-3 text-sm text-right text-text-primary tabular-nums">
-                  ${(depositAmount + result.yearOneTotal).toLocaleString("en-US", { maximumFractionDigits: 0 })}
-                </td>
+            <tfoot className="bg-background-elevated border-t border-border">
+              <tr className="h-9 font-semibold">
+                <td className="px-3 text-text-primary whitespace-nowrap">Total year 1</td>
+                <td className="px-3 num text-right text-text-muted">-</td>
+                <td className="px-3 num text-right up">{usd0(result.yearOneTotal)}</td>
+                <td className="px-3 num text-right text-text-primary">{usd0(depositAmount + result.yearOneTotal)}</td>
               </tr>
             </tfoot>
           </table>
         </div>
-      </div>
+      </Panel>
 
       {/* Action Buttons */}
-      <div className="flex gap-4">
-        <button
-          onClick={onBack}
-          className="flex-1 py-4 border-2 border-border rounded-xl font-semibold text-text-primary hover:bg-background-hover transition-colors"
-        >
-          Try Different Vault
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        <button type="button" onClick={onBack} className="btn btn-ghost w-full">
+          Try a different vault
         </button>
         <a
           href={getVaultDepositUrl(vault.address, vault.name, vault.dataSource, vault.turtleId)}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 py-4 bg-accent-green text-white rounded-xl font-semibold hover:bg-accent-green/90 transition-colors text-center"
+          className="btn btn-ghost w-full"
         >
           {getDepositLabel(vault.dataSource)}
+          <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
         </a>
       </div>
 
-      <p className="text-[11px] text-text-muted text-center">
-        Projections based on current rates. Actual returns may vary.
+      <p className="text-xs text-text-muted text-center">
+        Projections use the current rates. Actual returns can differ.
       </p>
+    </div>
+  );
+}
+
+function Metric({ k, v, sub, lead = false }: { k: string; v: string; sub?: string; lead?: boolean }) {
+  return (
+    <div className="px-3 py-2.5 border-border border-r border-b lg:border-b-0 min-w-0">
+      <dt className="label">{k}</dt>
+      <dd className={`num font-semibold text-[1.35rem] leading-none mt-1.5 truncate ${lead ? "text-accent-blue" : "text-text-primary"}`}>
+        {v}
+      </dd>
+      {sub && <dd className="text-xs text-text-tertiary mt-1">{sub}</dd>}
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between h-8 px-3 border-b border-border-subtle last:border-0">
+      <dt className="text-text-secondary">{k}</dt>
+      <dd className="font-medium">{v}</dd>
     </div>
   );
 }
@@ -929,22 +876,22 @@ function ChartTooltip({ active, payload, label }: { active?: boolean; payload?: 
   if (!active || !payload?.length) return null;
   const total = payload.reduce((sum, p) => sum + p.value, 0);
   return (
-    <div className="bg-background-elevated border border-border rounded-lg shadow-lg px-3 py-2">
-      <p className="text-xs text-text-secondary mb-1">Month {label}</p>
+    <div className="bg-background-elevated border border-border-strong px-2.5 py-2 num text-xs">
+      <p className="text-text-tertiary mb-1">Month {label}</p>
       {payload.map((item) => (
-        <div key={item.name} className="flex items-center justify-between gap-4 text-xs">
+        <div key={item.name} className="flex items-center justify-between gap-4">
           <span className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
+            <span className="w-2 h-2" style={{ backgroundColor: item.color }} />
             <span className="text-text-secondary">{item.name}</span>
           </span>
-          <span className="font-medium text-text-primary tabular-nums">
+          <span className="text-text-primary">
             ${item.value.toLocaleString("en-US", { maximumFractionDigits: 0 })}
           </span>
         </div>
       ))}
-      <div className="border-t border-border mt-1.5 pt-1.5 flex justify-between text-xs">
+      <div className="border-t border-border mt-1.5 pt-1.5 flex justify-between">
         <span className="text-text-secondary">Total</span>
-        <span className="font-semibold text-text-primary tabular-nums">
+        <span className="font-semibold text-text-primary">
           ${total.toLocaleString("en-US", { maximumFractionDigits: 0 })}
         </span>
       </div>

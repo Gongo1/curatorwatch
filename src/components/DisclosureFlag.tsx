@@ -11,18 +11,18 @@ import { Flag } from "lucide-react";
 export function DisclosureFlag({ size = "sm" }: { size?: "sm" | "lg" }) {
   if (size === "lg") {
     return (
-      <div className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 rounded-2xl border border-red-500/40 bg-red-500/10 text-red-400">
+      <div className="flex h-20 w-20 shrink-0 flex-col items-center justify-center gap-1 border border-accent-red-muted bg-accent-red/10 text-accent-red">
         <Flag className="h-7 w-7" aria-hidden />
-        <span className="text-[10px] font-semibold uppercase tracking-wide">Flagged</span>
+        <span className="label text-accent-red">Flagged</span>
       </div>
     );
   }
   return (
     <span
       title="Material disclosure — see curator profile."
-      className="inline-flex items-center gap-1 rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-red-400"
+      className="label inline-flex flex-none items-center gap-1 border border-accent-red-muted px-1 py-0.5 text-accent-red"
     >
-      <Flag className="h-3 w-3" aria-hidden /> Flagged
+      <Flag className="h-2.5 w-2.5" aria-hidden /> Flagged
     </span>
   );
 }

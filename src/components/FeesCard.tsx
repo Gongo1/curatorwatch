@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { formatCurrency, formatPercentage } from "@/lib/utils/format";
+import { Panel } from "@/components/layout/Panel";
 
 interface FeesData {
   vault: {
@@ -71,166 +72,107 @@ export function FeesCard({ vaultAddress }: FeesCardProps) {
 
   if (loading) {
     return (
-      <section className="bg-background-subtle rounded-lg border border-border">
-        <div className="px-6 py-4 border-b border-border">
-          <div className="h-5 w-32 bg-background-elevated rounded animate-pulse" />
-        </div>
-        <div className="px-6 py-6 space-y-4">
-          <div className="h-20 bg-background-elevated rounded animate-pulse" />
-          <div className="h-20 bg-background-elevated rounded animate-pulse" />
-        </div>
-      </section>
+      <Panel title="Fee analysis" bodyClassName="p-3 space-y-2 animate-pulse">
+        <div className="h-14 bg-background-elevated" />
+        <div className="h-24 bg-background-elevated" />
+      </Panel>
     );
   }
 
   if (error || !fees) {
     return (
-      <section className="bg-background-subtle rounded-lg border border-border">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-base font-semibold text-text-primary">Fee Analysis</h2>
-        </div>
-        <div className="px-6 py-8 text-center">
-          <p className="text-sm text-text-tertiary">Unable to calculate fees</p>
-        </div>
-      </section>
+      <Panel title="Fee analysis" bodyClassName="p-3">
+        <p className="text-sm text-text-tertiary">
+          Fee estimates could not be calculated for this vault. Reload the page to try again.
+        </p>
+      </Panel>
     );
   }
 
   const { feeRates, estimatedFees, annualized, curator } = fees;
+  const isMorpho = fees.dataSource === "morpho";
 
   return (
-    <section className="bg-background-subtle rounded-lg border border-border">
-      <div className="px-6 py-4 border-b border-border">
-        <h2 className="text-base font-semibold text-text-primary">Fee Analysis</h2>
-        <p className="text-sm text-text-tertiary">
-          Estimated fees based on {estimatedFees.period} of operation
-        </p>
+    <Panel title="Fee analysis" meta={`est. over ${estimatedFees.period}`}>
+      {/* Fee Rates */}
+      <dl className={`grid ${isMorpho ? "grid-cols-3" : "grid-cols-2"} border-b border-border`}>
+        <Stat k="Performance fee" v={`${feeRates.performanceFee.toFixed(1)}%`} />
+        <Stat k="Management fee" v={`${feeRates.managementFee.toFixed(2)}%`} />
+        {isMorpho && <Stat k="Protocol fee" v={`${feeRates.protocolFee.toFixed(0)}%`} />}
+      </dl>
+
+      {/* Estimated Fees Breakdown */}
+      <div className="px-3 pt-2.5">
+        <h3 className="label mb-1">Estimated fees paid ({estimatedFees.period})</h3>
       </div>
+      <table className="w-full text-sm">
+        <caption className="sr-only">Estimated fees paid over {estimatedFees.period}</caption>
+        <tbody>
+          <tr className="h-9 border-b border-border-subtle">
+            <th scope="row" className="pl-3 text-left font-normal">
+              <span className="text-text-primary">Curator fees</span>
+              <span className="ml-2 text-xs text-text-tertiary">{curator.name} (performance + management)</span>
+            </th>
+            <td className="pr-3 text-right num font-semibold text-text-primary">
+              {formatCurrency(estimatedFees.curatorFees.total)}
+            </td>
+          </tr>
+          <tr className="h-7 border-b border-border-subtle">
+            <th scope="row" className="pl-6 text-left font-normal text-xs text-text-tertiary">Performance fees</th>
+            <td className="pr-3 text-right num text-xs text-text-secondary">
+              {formatCurrency(estimatedFees.curatorFees.performance)}
+            </td>
+          </tr>
+          <tr className="h-7 border-b border-border-subtle">
+            <th scope="row" className="pl-6 text-left font-normal text-xs text-text-tertiary">Management fees</th>
+            <td className="pr-3 text-right num text-xs text-text-secondary">
+              {formatCurrency(estimatedFees.curatorFees.management)}
+            </td>
+          </tr>
+          {/* Protocol Fees — only shown for Morpho vaults */}
+          {isMorpho && (
+            <tr className="h-9 border-b border-border-subtle">
+              <th scope="row" className="pl-3 text-left font-normal">
+                <span className="text-text-primary">Morpho protocol fees</span>
+                <span className="ml-2 text-xs text-text-tertiary">15% of interest earned</span>
+              </th>
+              <td className="pr-3 text-right num font-semibold text-text-primary">
+                {formatCurrency(estimatedFees.morphoFees)}
+              </td>
+            </tr>
+          )}
+          <tr className="h-9 border-b border-border bg-background-elevated">
+            <th scope="row" className="pl-3 text-left label text-text-secondary">Total fees</th>
+            <td className="pr-3 text-right num font-bold text-text-primary">
+              {formatCurrency(estimatedFees.totalFees)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
-      <div className="px-6 py-4 space-y-6">
-        {/* Fee Rates */}
-        <div>
-          <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3">
-            Fee Rates
-          </h3>
-          <div className={`grid gap-4 ${fees.dataSource === "morpho" ? "grid-cols-3" : "grid-cols-2"}`}>
-            <div className="bg-background-elevated rounded-lg p-3">
-              <p className="text-xs text-text-tertiary">Performance Fee</p>
-              <p className="text-lg font-semibold text-text-primary tabular-nums">
-                {feeRates.performanceFee.toFixed(1)}%
-              </p>
-            </div>
-            <div className="bg-background-elevated rounded-lg p-3">
-              <p className="text-xs text-text-tertiary">Management Fee</p>
-              <p className="text-lg font-semibold text-text-primary tabular-nums">
-                {feeRates.managementFee.toFixed(2)}%
-              </p>
-            </div>
-            {fees.dataSource === "morpho" && (
-              <div className="bg-background-elevated rounded-lg p-3">
-                <p className="text-xs text-text-tertiary">Protocol Fee</p>
-                <p className="text-lg font-semibold text-text-primary tabular-nums">
-                  {feeRates.protocolFee.toFixed(0)}%
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Estimated Fees Breakdown */}
-        <div>
-          <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3">
-            Estimated Fees Paid ({estimatedFees.period})
-          </h3>
-          <div className="space-y-2">
-            {/* Curator Fees */}
-            <div className="flex items-center justify-between py-2 border-b border-border-subtle">
-              <div>
-                <p className="text-sm text-text-primary">Curator Fees</p>
-                <p className="text-xs text-text-tertiary">
-                  {curator.name} (Performance + Management)
-                </p>
-              </div>
-              <p className="text-sm font-semibold text-accent-blue tabular-nums">
-                {formatCurrency(estimatedFees.curatorFees.total)}
-              </p>
-            </div>
-
-            {/* Breakdown */}
-            <div className="pl-4 space-y-1">
-              <div className="flex items-center justify-between py-1">
-                <p className="text-xs text-text-tertiary">Performance fees</p>
-                <p className="text-xs text-text-secondary tabular-nums">
-                  {formatCurrency(estimatedFees.curatorFees.performance)}
-                </p>
-              </div>
-              <div className="flex items-center justify-between py-1">
-                <p className="text-xs text-text-tertiary">Management fees</p>
-                <p className="text-xs text-text-secondary tabular-nums">
-                  {formatCurrency(estimatedFees.curatorFees.management)}
-                </p>
-              </div>
-            </div>
-
-            {/* Protocol Fees — only shown for Morpho vaults */}
-            {fees.dataSource === "morpho" && (
-              <div className="flex items-center justify-between py-2 border-b border-border-subtle">
-                <div>
-                  <p className="text-sm text-text-primary">Morpho Protocol Fees</p>
-                  <p className="text-xs text-text-tertiary">
-                    15% of interest earned
-                  </p>
-                </div>
-                <p className="text-sm font-semibold text-accent-purple tabular-nums">
-                  {formatCurrency(estimatedFees.morphoFees)}
-                </p>
-              </div>
-            )}
-
-            {/* Total */}
-            <div className="flex items-center justify-between py-3 bg-background-elevated rounded-lg px-3 mt-3">
-              <p className="text-sm font-medium text-text-primary">Total Fees</p>
-              <p className="text-lg font-bold text-text-primary tabular-nums">
-                {formatCurrency(estimatedFees.totalFees)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Annualized Projections */}
-        <div>
-          <h3 className="text-xs font-medium text-text-secondary uppercase tracking-wider mb-3">
-            Annualized Projections
-          </h3>
-          <div className={`grid gap-4 ${fees.dataSource === "morpho" ? "grid-cols-3" : "grid-cols-2"}`}>
-            <div className="text-center p-3 rounded-lg border border-accent-blue/20 bg-accent-blue/5">
-              <p className="text-xs text-text-tertiary mb-1">Curator</p>
-              <p className="text-base font-semibold text-accent-blue tabular-nums">
-                {formatCurrency(annualized.curatorFees)}
-              </p>
-            </div>
-            {fees.dataSource === "morpho" && (
-              <div className="text-center p-3 rounded-lg border border-accent-purple/20 bg-accent-purple/5">
-                <p className="text-xs text-text-tertiary mb-1">Morpho Protocol</p>
-                <p className="text-base font-semibold text-accent-purple tabular-nums">
-                  {formatCurrency(annualized.morphoFees)}
-                </p>
-              </div>
-            )}
-            <div className="text-center p-3 rounded-lg border border-border bg-background-elevated">
-              <p className="text-xs text-text-tertiary mb-1">Total</p>
-              <p className="text-base font-semibold text-text-primary tabular-nums">
-                {formatCurrency(annualized.totalFees)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Disclaimer */}
-        <p className="text-[10px] text-text-muted text-center pt-2 border-t border-border-subtle">
-          Estimates based on current deposits and APY. Actual fees vary with market conditions.
-        </p>
+      {/* Annualized Projections */}
+      <div className="px-3 pt-2.5">
+        <h3 className="label">Annualized projections</h3>
       </div>
-    </section>
+      <dl className={`grid ${isMorpho ? "grid-cols-3" : "grid-cols-2"} border-b border-border-subtle`}>
+        <Stat k="Curator" v={formatCurrency(annualized.curatorFees)} />
+        {isMorpho && <Stat k="Morpho protocol" v={formatCurrency(annualized.morphoFees)} />}
+        <Stat k="Total" v={formatCurrency(annualized.totalFees)} />
+      </dl>
+
+      {/* Disclaimer */}
+      <p className="px-3 py-2 text-xs text-text-muted">
+        Estimates use current deposits and APY. Actual fees vary with market conditions.
+      </p>
+    </Panel>
+  );
+}
+
+function Stat({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="px-3 py-2 border-r border-border-subtle last:border-r-0 min-w-0">
+      <dt className="label">{k}</dt>
+      <dd className="num text-base font-semibold text-text-primary mt-1 truncate">{v}</dd>
+    </div>
   );
 }

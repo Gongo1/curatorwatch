@@ -6,6 +6,9 @@
 import Link from "next/link";
 import type { DigestData } from "@/lib/digest/types";
 import { BAND_STYLE } from "@/lib/stress-band-style";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
+import { Quote } from "@/components/layout/Quote";
 
 function usd(n: number): string {
   const a = Math.abs(n);
@@ -19,185 +22,236 @@ function signedPct(n: number, d = 1): string {
   return `${n >= 0 ? "+" : ""}${n.toFixed(d)}%`;
 }
 
-function SectionHead({ title, meta }: { title: string; meta?: string }) {
-  return (
-    <div className="flex items-baseline gap-3 mb-3 pb-2 border-b border-border flex-wrap mt-8">
-      <span className="w-[7px] h-[7px] rounded-sm bg-accent-blue -translate-y-0.5" />
-      <span className="font-display font-bold text-lg tracking-tight">{title}</span>
-      {meta && <span className="font-mono text-xs text-text-tertiary ml-auto text-right">{meta}</span>}
-    </div>
-  );
-}
-
 export function DigestView({
   title,
   summary,
   date,
   generatedBy,
   data,
+  actions,
 }: {
   title: string;
   summary: string | null;
   date: Date;
   generatedBy: string;
   data: DigestData;
+  /** Page-bar actions (e.g. the RSS link on /digest). */
+  actions?: React.ReactNode;
 }) {
   const e = data.ecosystem;
   const band = data.stress.band;
 
   return (
-    <article>
-      <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-tertiary">
-        Curator Daily · {data.slug} ·{" "}
-        {generatedBy === "template" ? "deterministic" : `written by ${generatedBy}`}
-      </div>
-      <h1 className="font-display font-bold text-[clamp(1.6rem,3.4vw,2.2rem)] leading-tight tracking-tight mt-2 mb-3">
-        {title}
-      </h1>
-      {summary && <p className="text-text-secondary text-[15px] leading-relaxed max-w-[720px]">{summary}</p>}
+    <article className="space-y-1.5">
+      <PageHeader
+        title={title}
+        description={summary ?? undefined}
+        breadcrumbs={[{ label: "Curator Daily", href: "/digest" }, { label: data.slug }]}
+        actions={actions}
+      />
 
-      {/* Stress index + ecosystem stats */}
-      <div className="grid sm:grid-cols-[auto_1fr] gap-5 items-center mt-6 p-5 rounded-2xl border border-border bg-background-subtle">
-        <div className={`rounded-xl border px-5 py-4 text-center ${BAND_STYLE[band]}`}>
-          <div className="font-mono text-[10px] uppercase tracking-[0.1em] opacity-80">Curator stress</div>
-          <div className="font-mono font-bold text-3xl tabular-nums mt-1">{data.stress.score}</div>
-          <div className="font-mono text-sm font-semibold">{band}</div>
+      {/* ── Quote line: stress index + ecosystem in one row ── */}
+      <section aria-label="Curator stress and ecosystem" className="panel">
+        <div className="panel-head">
+          <h2 className="panel-title">Curator stress · ecosystem</h2>
+          <span className="panel-meta">
+            {data.slug} · {generatedBy === "template" ? "deterministic" : `written by ${generatedBy}`}
+          </span>
         </div>
-        <div className="font-mono text-xs text-text-secondary leading-relaxed">
-          <div className="flex gap-x-6 gap-y-1 flex-wrap mb-2">
-            <span><span className="text-text-tertiary">TVL</span> <b className="text-text-primary">{usd(e.totalTvl)}</b></span>
-            <span><span className="text-text-tertiary">stable</span> <b className="text-text-primary">{Math.round(e.stablePct)}%</b></span>
-            <span><span className="text-text-tertiary">24h flow</span> <b className={e.netFlowUsd >= 0 ? "text-accent-green" : "text-accent-red"}>{usd(e.netFlowUsd)} ({signedPct(e.netFlowPct)})</b></span>
-            <span><span className="text-text-tertiary">curators</span> <b className="text-text-primary">{e.curatorCount}</b></span>
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="px-3 py-2.5 border-border border-b lg:border-b-0 border-r min-w-0">
+            <dt className="label">Stress index</dt>
+            <dd className="flex items-baseline gap-2 mt-1.5">
+              <span className="num font-semibold text-[1.45rem] leading-none text-accent-blue">{data.stress.score}</span>
+              <span className={`label px-1.5 py-0.5 ${BAND_STYLE[band]}`}>{band}</span>
+            </dd>
           </div>
-          <div className="text-text-tertiary">
-            concentration {data.stress.components.concentration} · flow {data.stress.components.flow ?? "—"} — {data.stress.drivers.join("; ")}.
-          </div>
+          <Quote k="Tracked TVL" v={usd(e.totalTvl)} />
+          <Quote k="Stablecoin share" v={`${Math.round(e.stablePct)}%`} />
+          <Quote
+            k="24h net flow"
+            v={usd(e.netFlowUsd)}
+            sub={signedPct(e.netFlowPct)}
+            tone={e.netFlowUsd >= 0 ? "up" : "down"}
+            subClass={`num text-xs ${e.netFlowUsd >= 0 ? "up" : "down"}`}
+          />
+          <Quote k="Curators" v={String(e.curatorCount)} />
+        </dl>
+        <div className="border-t border-border px-3 py-2 text-xs text-text-secondary leading-relaxed">
+          <p className="max-w-[70ch]">
+            <span className="label mr-2">Drivers</span>
+            concentration <span className="num text-text-primary">{data.stress.components.concentration}</span> ·
+            flow <span className="num text-text-primary">{data.stress.components.flow ?? "—"}</span> ·{" "}
+            {data.stress.drivers.join("; ")}.
+          </p>
+          {/* Per-source as-of (digests since 2026-09-30) */}
+          {data.asOf && data.asOf.some((s) => s.lastAt) && (
+            <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <span className="label">Data as of</span>
+              {data.asOf
+                .filter((s) => s.lastAt)
+                .map((s) => (
+                  <span key={s.key} className="whitespace-nowrap text-text-tertiary">
+                    <span className="text-text-secondary">{s.label}</span>{" "}
+                    <span className="num">{s.lastAt!.slice(5, 16).replace("T", " ")} UTC</span>
+                    {s.stale && <span className="text-accent-yellow"> · stale</span>}
+                  </span>
+                ))}
+            </div>
+          )}
+          {(data.excludedSources?.length ?? 0) > 0 && (
+            <p className="mt-1.5 text-accent-yellow">
+              Not shown in the tables (data past SLA): {data.excludedSources!.join(", ")}.
+            </p>
+          )}
         </div>
-      </div>
+      </section>
 
-      {/* Per-source as-of (digests since 2026-09-30) */}
-      {data.asOf && data.asOf.some((s) => s.lastAt) && (
-        <div className="font-mono text-[11px] text-text-tertiary mt-3 flex flex-wrap gap-x-3 gap-y-1">
-          <span className="uppercase tracking-[0.08em]">Data as of</span>
-          {data.asOf
-            .filter((s) => s.lastAt)
-            .map((s) => (
-              <span key={s.key} className="whitespace-nowrap">
-                <span className="text-text-secondary">{s.label}</span> {s.lastAt!.slice(5, 16).replace("T", " ")} UTC
-                {s.stale && <span className="text-accent-yellow"> · stale</span>}
-              </span>
-            ))}
-        </div>
-      )}
-      {(data.excludedSources?.length ?? 0) > 0 && (
-        <p className="font-mono text-[11px] text-accent-yellow mt-1">
-          Not shown in the tables (data past SLA): {data.excludedSources!.join(", ")}.
-        </p>
-      )}
-
-      {/* Flows */}
-      {(data.topInflows.length > 0 || data.topOutflows.length > 0) && (
-        <section>
-          <SectionHead title="Flows" meta="24h · curator AUM" />
-          <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid gap-1.5 lg:grid-cols-2 items-start">
+        {/* Flows */}
+        {(data.topInflows.length > 0 || data.topOutflows.length > 0) && (
+          <>
             <FlowList label="Inflows" rows={data.topInflows} positive />
             <FlowList label="Outflows" rows={data.topOutflows} />
-          </div>
-        </section>
-      )}
+          </>
+        )}
 
-      {/* Concentration */}
-      {data.concentration.length > 0 && (
-        <section>
-          <SectionHead title="Single-manager concentration" meta="stablecoins ≥84% one curator" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-            {data.concentration.slice(0, 6).map((c) => (
-              <div key={c.symbol} className="rounded-xl border border-border bg-background-subtle px-3.5 py-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold text-text-primary truncate">{c.symbol}</span>
-                  <span className="font-mono text-xs text-accent-yellow tabular-nums">{Math.round(c.topCuratorPct)}%</span>
-                </div>
-                <div className="font-mono text-[11px] text-text-tertiary mt-1 truncate">{usd(c.totalUsd)} · {c.curatorCount} curator{c.curatorCount === 1 ? "" : "s"}</div>
-                <div className="font-mono text-[11px] text-text-secondary mt-0.5 truncate">{c.topCurator ?? "—"}</div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+        {/* Concentration */}
+        {data.concentration.length > 0 && (
+          <Panel title="Single-manager concentration" meta="stablecoins ≥84% one curator">
+            <table className="w-full text-sm table-fixed">
+              <caption className="sr-only">Stablecoins where one curator manages at least 84% of tracked supply</caption>
+              <thead>
+                <tr className="h-7 border-b border-border bg-background">
+                  <th scope="col" className="label text-left pl-3 w-[22%]">Asset</th>
+                  <th scope="col" className="label text-left">Top curator</th>
+                  <th scope="col" className="label text-right w-[5.5rem] hidden sm:table-cell">Supply</th>
+                  <th scope="col" className="label text-right pr-3 w-[4.5rem]">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.concentration.slice(0, 6).map((c) => (
+                  <tr key={c.symbol} className="h-8 border-b border-border-subtle last:border-0">
+                    <td className="pl-3 font-semibold text-text-primary truncate">{c.symbol}</td>
+                    <td className="text-text-secondary truncate">
+                      {c.topCurator ?? "—"}
+                      <span className="text-text-tertiary text-xs">
+                        {" "}· <span className="num">{c.curatorCount}</span> curator{c.curatorCount === 1 ? "" : "s"}
+                      </span>
+                    </td>
+                    <td className="num text-right text-text-secondary hidden sm:table-cell">{usd(c.totalUsd)}</td>
+                    <td className="num text-right pr-3 text-accent-yellow">{Math.round(c.topCuratorPct)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+        )}
 
-      {/* Yield movers */}
-      {data.yieldMovers.length > 0 && (
-        <section>
-          <SectionHead title="Yield movers" meta="24h · net APY" />
-          <div className="font-mono text-sm divide-y divide-border-subtle border border-border rounded-xl overflow-hidden">
-            {data.yieldMovers.map((m, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-background-subtle">
-                <span className="truncate text-text-secondary">{m.vaultName} <span className="text-text-tertiary">· {m.assetSymbol}{m.curator ? ` · ${m.curator}` : ""}</span></span>
-                <span className="tabular-nums whitespace-nowrap">
-                  {m.oldApyPct.toFixed(2)}% → {m.newApyPct.toFixed(2)}%{" "}
-                  <span className={m.deltaPct >= 0 ? "text-accent-green" : "text-accent-red"}>({signedPct(m.deltaPct, 2)})</span>
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+        {/* Yield movers */}
+        {data.yieldMovers.length > 0 && (
+          <Panel title="Yield movers" meta="24h · net APY">
+            <table className="w-full text-sm table-fixed">
+              <caption className="sr-only">Vaults with the largest 24h net APY change</caption>
+              <thead>
+                <tr className="h-7 border-b border-border bg-background">
+                  <th scope="col" className="label text-left pl-3">Vault</th>
+                  <th scope="col" className="label text-right w-[9.5rem]">Net APY</th>
+                  <th scope="col" className="label text-right pr-3 w-[5.5rem]">Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.yieldMovers.map((m, i) => (
+                  <tr key={i} className="h-8 border-b border-border-subtle last:border-0">
+                    <td className="pl-3 truncate text-text-primary" title={m.vaultName}>
+                      {m.vaultName}{" "}
+                      <span className="text-text-tertiary text-xs">
+                        · {m.assetSymbol}
+                        {m.curator ? ` · ${m.curator}` : ""}
+                      </span>
+                    </td>
+                    <td className="num text-right text-text-secondary whitespace-nowrap">
+                      {m.oldApyPct.toFixed(2)}% → <span className="text-text-primary">{m.newApyPct.toFixed(2)}%</span>
+                    </td>
+                    <td className={`num text-right pr-3 ${m.deltaPct >= 0 ? "up" : "down"}`}>
+                      {signedPct(m.deltaPct, 2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+        )}
 
-      {/* New vaults */}
-      {data.newVaults.length > 0 && (
-        <section>
-          <SectionHead title="New vaults" meta="first seen in 24h" />
-          <div className="font-mono text-sm divide-y divide-border-subtle border border-border rounded-xl overflow-hidden">
-            {data.newVaults.map((v, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-background-subtle">
-                <span className="truncate text-text-secondary">{v.name} <span className="text-text-tertiary">· {v.assetSymbol} · {v.chainName}{v.curator ? ` · ${v.curator}` : ""}</span></span>
-                <span className="tabular-nums text-text-primary">{usd(v.tvl)}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+        {/* New vaults */}
+        {data.newVaults.length > 0 && (
+          <Panel title="New vaults" meta="first seen in 24h">
+            <table className="w-full text-sm table-fixed">
+              <caption className="sr-only">Vaults first seen in the last 24 hours</caption>
+              <thead>
+                <tr className="h-7 border-b border-border bg-background">
+                  <th scope="col" className="label text-left pl-3">Vault</th>
+                  <th scope="col" className="label text-left w-[6.5rem] hidden sm:table-cell">Chain</th>
+                  <th scope="col" className="label text-right pr-3 w-[5.5rem]">TVL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.newVaults.map((v, i) => (
+                  <tr key={i} className="h-8 border-b border-border-subtle last:border-0">
+                    <td className="pl-3 truncate text-text-primary" title={v.name}>
+                      {v.name}{" "}
+                      <span className="text-text-tertiary text-xs">
+                        · {v.assetSymbol}
+                        <span className="sm:hidden"> · {v.chainName}</span>
+                        {v.curator ? ` · ${v.curator}` : ""}
+                      </span>
+                    </td>
+                    <td className="text-text-secondary truncate hidden sm:table-cell">{v.chainName}</td>
+                    <td className="num text-right pr-3 text-text-primary">{usd(v.tvl)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+        )}
 
-      {/* Newswire — fresh curator-tagged coverage (digests since 2026-08-13) */}
-      {(data.news?.length ?? 0) > 0 && (
-        <section>
-          <SectionHead title="Newswire" meta="48h · curator-tagged press" />
-          <div className="divide-y divide-border-subtle border border-border rounded-xl overflow-hidden">
-            {data.news!.map((n, i) => (
-              <a
-                key={i}
-                href={n.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block px-3.5 py-2.5 bg-background-subtle hover:bg-background-elevated transition-colors"
-              >
-                <span className="text-sm text-text-primary">{n.title}</span>
-                <span className="font-mono text-[11px] text-text-tertiary ml-2">
-                  {[n.curator, n.source].filter(Boolean).join(" · ")}
-                </span>
-              </a>
-            ))}
-          </div>
-        </section>
-      )}
+        {/* Newswire — fresh curator-tagged coverage (digests since 2026-08-13) */}
+        {(data.news?.length ?? 0) > 0 && (
+          <Panel title="Newswire" meta="48h · curator-tagged press">
+            <ul>
+              {data.news!.map((n, i) => (
+                <li key={i} className="border-b border-border-subtle last:border-0">
+                  <a
+                    href={n.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block px-3 py-1.5 hover:bg-background-hover transition-colors group"
+                  >
+                    <span className="text-sm text-text-primary group-hover:text-accent-blue">{n.title}</span>
+                    <span className="text-xs text-text-tertiary ml-2">
+                      {[n.curator, n.source].filter(Boolean).join(" · ")}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
 
-      {/* Curator spotlight — daily rotation through the vetted dossier set */}
-      {data.spotlight && (
-        <section>
-          <SectionHead title="Curator spotlight" meta={data.spotlight.name} />
-          <div className="rounded-xl border border-border bg-background-subtle px-4 py-3.5">
-            <p className="text-sm leading-relaxed text-text-secondary">
+        {/* Curator spotlight — daily rotation through the vetted dossier set */}
+        {data.spotlight && (
+          <Panel title="Curator spotlight" meta={data.spotlight.name} bodyClassName="p-3">
+            <p className="text-sm leading-relaxed text-text-secondary max-w-[70ch]">
               {data.spotlight.sentences.join(" ")}
             </p>
             {data.spotlight.quote && (
-              <p className="text-sm italic text-text-primary mt-2.5">
+              <p className="text-sm italic text-text-primary mt-2 max-w-[70ch]">
                 “{data.spotlight.quote.text}”{" "}
                 <a
                   href={data.spotlight.quote.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="not-italic font-mono text-[11px] text-text-tertiary hover:text-accent-blue"
+                  className="not-italic text-xs text-text-tertiary hover:text-accent-blue"
                 >
                   — {data.spotlight.quote.source}
                 </a>
@@ -205,41 +259,53 @@ export function DigestView({
             )}
             <a
               href={`/curator/${data.spotlight.slug}`}
-              className="inline-block font-mono text-xs text-accent-blue mt-2.5"
+              className="inline-block text-xs text-accent-blue hover:underline mt-2"
             >
               Full profile →
             </a>
-          </div>
-        </section>
-      )}
+          </Panel>
+        )}
 
-      {/* Incidents + alerts */}
-      <section>
-        <SectionHead title="Incidents & alerts" meta="24h" />
-        <p className="font-mono text-sm text-text-secondary">
-          {data.incidents.stale ? (
-            "Liquidation feed past its SLA: incidents omitted."
-          ) : data.incidents.count > 0 ? (
-            <>
-              {data.incidents.count} liquidation{data.incidents.count === 1 ? "" : "s"}, {usd(data.incidents.seizedUsd)} seized
-              {data.incidents.badDebtUsd > 0 ? <>, <b className="text-accent-red">{usd(data.incidents.badDebtUsd)} bad debt</b></> : ", no bad debt"}.
-            </>
-          ) : (
-            "No liquidations in the last 24h."
-          )}{" "}
-          <span className="text-text-tertiary">
-            Alert tape: {data.alertCounts.critical} critical · {data.alertCounts.warning} warning · {data.alertCounts.info} info.
-          </span>
-        </p>
-      </section>
+        {/* Incidents + alerts */}
+        <Panel title="Incidents & alerts" meta="24h" bodyClassName="p-3">
+          <p className="text-sm text-text-secondary leading-relaxed max-w-[70ch]">
+            {data.incidents.stale ? (
+              "Liquidation feed past its SLA: incidents omitted."
+            ) : data.incidents.count > 0 ? (
+              <>
+                <span className="num text-text-primary">{data.incidents.count}</span> liquidation
+                {data.incidents.count === 1 ? "" : "s"},{" "}
+                <span className="num text-text-primary">{usd(data.incidents.seizedUsd)}</span> seized
+                {data.incidents.badDebtUsd > 0 ? (
+                  <>
+                    , <b className="num text-accent-red">{usd(data.incidents.badDebtUsd)} bad debt</b>
+                  </>
+                ) : (
+                  ", no bad debt"
+                )}
+                .
+              </>
+            ) : (
+              "No liquidations in the last 24h."
+            )}
+          </p>
+          <p className="text-xs text-text-tertiary mt-1.5">
+            Alert tape: <span className="num">{data.alertCounts.critical}</span> critical ·{" "}
+            <span className="num">{data.alertCounts.warning}</span> warning ·{" "}
+            <span className="num">{data.alertCounts.info}</span> info.
+          </p>
+        </Panel>
+      </div>
 
-      <p className="font-mono text-[11px] text-text-tertiary mt-8 pt-4 border-t border-border-subtle leading-relaxed">
-        Generated from the CuratorWatch production database on {date.toISOString().slice(0, 16).replace("T", " ")} UTC.
-        Latest-snapshot reads; net APY sanitized at the 200% guard. Not investment advice.
+      <p className="text-xs text-text-tertiary pt-1 leading-relaxed max-w-[90ch]">
+        Generated from the CuratorWatch production database on{" "}
+        <span className="num">{date.toISOString().slice(0, 16).replace("T", " ")} UTC</span>. Latest-snapshot
+        reads; net APY sanitized at the 200% guard. Not investment advice.
       </p>
     </article>
   );
 }
+
 
 function FlowList({
   label,
@@ -250,31 +316,27 @@ function FlowList({
   rows: DigestData["topInflows"];
   positive?: boolean;
 }) {
-  if (rows.length === 0) {
-    return (
-      <div>
-        <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary mb-2">{label}</div>
-        <div className="font-mono text-sm text-text-tertiary">—</div>
-      </div>
-    );
-  }
   return (
-    <div>
-      <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary mb-2">{label}</div>
-      <div className="font-mono text-sm divide-y divide-border-subtle border border-border rounded-xl overflow-hidden">
-        {rows.map((f) => (
-          <Link
-            key={f.curatorId}
-            href={`/curator/${f.slug}`}
-            className="flex items-center justify-between gap-3 px-3.5 py-2.5 bg-background-subtle hover:bg-background-hover transition-colors"
-          >
-            <span className="truncate text-text-secondary">{f.name ?? "—"}</span>
-            <span className={`tabular-nums whitespace-nowrap ${positive ? "text-accent-green" : "text-accent-red"}`}>
-              {usd(f.deltaUsd)} ({signedPct(f.pct)})
-            </span>
-          </Link>
-        ))}
-      </div>
-    </div>
+    <Panel title={label} meta="24h · curator AUM">
+      {rows.length === 0 ? (
+        <p className="px-3 py-2 text-sm text-text-tertiary">No curator {positive ? "inflows" : "outflows"} in this window.</p>
+      ) : (
+        <ul>
+          {rows.map((f) => (
+            <li key={f.curatorId}>
+              <Link
+                href={`/curator/${f.slug}`}
+                className="flex items-center justify-between gap-3 px-3 h-8 border-b border-border-subtle hover:bg-background-hover transition-colors group"
+              >
+                <span className="truncate text-sm text-text-primary group-hover:text-accent-blue">{f.name ?? "—"}</span>
+                <span className={`num text-sm whitespace-nowrap ${positive ? "up" : "down"}`}>
+                  {usd(f.deltaUsd)} <span className="text-xs">({signedPct(f.pct)})</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   );
 }

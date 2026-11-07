@@ -60,7 +60,7 @@ export function Tooltip({ content, children, position = "top" }: TooltipProps) {
   const tooltipElement = isVisible ? (
     <div
       ref={tooltipRef}
-      className="fixed z-[9999] px-2.5 py-1.5 text-xs bg-background-elevated border border-border rounded-lg shadow-lg max-w-xs"
+      className="fixed z-[9999] px-2 py-1.5 text-xs bg-background-elevated border border-border-strong max-w-xs"
       style={{
         left: coords?.x ?? -9999,
         top: coords?.y ?? -9999,

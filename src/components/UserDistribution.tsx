@@ -7,6 +7,7 @@ import {
   formatAddress,
 } from "@/lib/utils/format";
 import { UserExposureModal } from "./UserExposureModal";
+import { Panel } from "@/components/layout/Panel";
 
 interface Depositor {
   address: string;
@@ -32,24 +33,6 @@ interface UserDistributionProps {
 }
 
 const ITEMS_PER_PAGE = 5;
-
-// Generate a deterministic avatar color from an address
-function getAvatarColor(address: string): string {
-  const colors = [
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-pink-500",
-    "bg-emerald-500",
-    "bg-amber-500",
-    "bg-cyan-500",
-    "bg-indigo-500",
-    "bg-rose-500",
-    "bg-teal-500",
-    "bg-orange-500",
-  ];
-  const hash = address.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
-  return colors[Math.abs(hash) % colors.length];
-}
 
 export function UserDistribution({
   vaultAddress,
@@ -105,53 +88,33 @@ export function UserDistribution({
 
   return (
     <>
-      <section className="bg-[#141414] rounded-lg border border-border">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-text-primary">
-              User Distribution
-            </h2>
-            <p className="text-sm text-text-tertiary">
-              Top depositors by vault share
-            </p>
-          </div>
-          {!loading && !error && totalDepositors > 0 && (
-            <span className="text-xs text-text-muted">
-              {totalDepositors} depositor{totalDepositors !== 1 ? "s" : ""}
-            </span>
-          )}
-        </div>
-
+      <Panel
+        title="User distribution"
+        meta={
+          !loading && !error && totalDepositors > 0
+            ? `${totalDepositors} depositor${totalDepositors !== 1 ? "s" : ""} · top by share`
+            : "top depositors by share"
+        }
+      >
         {/* Loading state */}
         {loading && (
-          <div className="p-6">
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div
-                  key={i}
-                  className="animate-pulse flex items-center gap-4"
-                >
-                  <div className="w-8 h-8 rounded-full bg-background-elevated" />
-                  <div className="flex-1">
-                    <div className="h-4 w-24 bg-background-elevated rounded mb-1" />
-                    <div className="h-3 w-32 bg-background-elevated rounded" />
-                  </div>
-                  <div className="w-24 h-2 bg-background-elevated rounded" />
-                  <div className="w-12 h-4 bg-background-elevated rounded" />
-                </div>
-              ))}
-            </div>
+          <div className="animate-pulse">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="flex items-center gap-3 px-3 h-9 border-b border-border-subtle last:border-b-0">
+                <div className="h-3 w-28 bg-background-elevated" />
+                <div className="flex-1" />
+                <div className="h-3 w-20 bg-background-elevated" />
+                <div className="h-3 w-16 bg-background-elevated" />
+              </div>
+            ))}
           </div>
         )}
 
         {/* Error state */}
         {error && !loading && (
-          <div className="p-6 text-center">
-            <p className="text-sm text-accent-red">{error}</p>
-            <button
-              onClick={fetchDepositors}
-              className="mt-2 text-sm text-accent-blue hover:text-accent-blue-hover"
-            >
+          <div className="p-3 text-sm">
+            <p className="text-accent-red">Depositors could not be loaded: {error}</p>
+            <button type="button" onClick={fetchDepositors} className="btn btn-ghost h-7 mt-2">
               Try again
             </button>
           </div>
@@ -159,100 +122,57 @@ export function UserDistribution({
 
         {/* Empty state */}
         {!loading && !error && depositors.length === 0 && (
-          <div className="p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-background-elevated flex items-center justify-center mx-auto">
-              <svg
-                className="h-6 w-6 text-text-muted"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-              </svg>
-            </div>
-            <p className="mt-3 text-sm text-text-secondary">
-              No depositors found
-            </p>
-          </div>
+          <p className="p-3 text-sm text-text-tertiary">No depositors found for this vault yet.</p>
         )}
 
         {/* Depositor table */}
         {!loading && !error && depositors.length > 0 && (
           <>
             <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-background-elevated/50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
-                      Deposit
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider w-48">
-                      % of Deposits
-                    </th>
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="h-7 border-b border-border bg-background">
+                    <th scope="col" className="label text-left px-3">User</th>
+                    <th scope="col" className="label text-right px-3">Deposit</th>
+                    <th scope="col" className="label text-right px-3 hidden sm:table-cell">USD</th>
+                    <th scope="col" className="label text-right px-3 w-40">% of deposits</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border-subtle">
+                <tbody>
                   {currentDepositors.map((depositor) => (
                     <tr
                       key={depositor.address}
-                      className="hover:bg-background-hover/50 transition-colors cursor-pointer"
+                      className="h-9 border-b border-border-subtle last:border-b-0 hover:bg-background-hover transition-colors cursor-pointer group"
                       onClick={() => handleUserClick(depositor.address)}
                     >
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-full ${getAvatarColor(
-                              depositor.address
-                            )} flex items-center justify-center text-white text-xs font-bold`}
-                          >
-                            {depositor.address.slice(2, 4).toUpperCase()}
-                          </div>
-                          <span className="font-mono text-sm text-text-primary hover:text-accent-blue transition-colors">
-                            {formatAddress(depositor.address)}
-                          </span>
-                        </div>
+                      <td className="px-3 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUserClick(depositor.address);
+                          }}
+                          className="num text-text-primary group-hover:text-accent-blue transition-colors"
+                          title="Show this depositor's exposure"
+                        >
+                          {formatAddress(depositor.address)}
+                        </button>
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap text-right">
-                        <div className="flex flex-col items-end gap-0.5">
-                          <span className="text-sm font-medium text-text-primary tabular-nums flex items-center gap-1.5">
-                            <span
-                              className={`w-2 h-2 rounded-full ${getAvatarColor(
-                                assetSymbol
-                              )}`}
-                            />
-                            {formatTokenAmount(
-                              depositor.assets,
-                              assetDecimals,
-                              assetSymbol
-                            )}
-                          </span>
-                          <span className="text-xs text-text-tertiary tabular-nums">
-                            {formatCurrency(depositor.assetsUsd)}
-                          </span>
-                        </div>
+                      <td className="px-3 whitespace-nowrap text-right num text-text-primary">
+                        {formatTokenAmount(depositor.assets, assetDecimals, assetSymbol)}
                       </td>
-                      <td className="px-6 py-3 whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-3">
-                          <div className="w-24 h-2 bg-background-elevated rounded-full overflow-hidden">
+                      <td className="px-3 whitespace-nowrap text-right num text-text-tertiary hidden sm:table-cell">
+                        {formatCurrency(depositor.assetsUsd)}
+                      </td>
+                      <td className="px-3 whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-2">
+                          <div className="w-16 h-1.5 bg-background-elevated overflow-hidden hidden sm:block" aria-hidden="true">
                             <div
-                              className="h-full bg-gradient-to-r from-accent-blue to-accent-blue-hover rounded-full transition-all"
-                              style={{
-                                width: `${Math.min(
-                                  depositor.depositPct,
-                                  100
-                                )}%`,
-                              }}
+                              className="h-full bg-accent-blue"
+                              style={{ width: `${Math.min(depositor.depositPct, 100)}%` }}
                             />
                           </div>
-                          <span className="text-sm font-medium text-text-primary tabular-nums w-14 text-right">
+                          <span className="num text-text-primary w-14 text-right">
                             {depositor.depositPct.toFixed(2)}%
                           </span>
                         </div>
@@ -265,53 +185,33 @@ export function UserDistribution({
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="px-6 py-3 border-t border-border flex items-center justify-between">
+              <div className="px-3 h-8 border-t border-border flex items-center justify-between">
                 <button
+                  type="button"
                   onClick={() => setPage(Math.max(0, page - 1))}
                   disabled={page === 0}
-                  className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Previous page"
+                  className="label text-text-secondary hover:text-accent-blue disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
+                  ← Prev
                 </button>
-                <span className="text-sm text-text-muted">
-                  {page + 1} of {totalPages}
+                <span className="num text-xs text-text-tertiary">
+                  {page + 1} / {totalPages}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
                   disabled={page >= totalPages - 1}
-                  className="flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Next page"
+                  className="label text-text-secondary hover:text-accent-blue disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  Next →
                 </button>
               </div>
             )}
           </>
         )}
-      </section>
+      </Panel>
 
       {/* User Exposure Modal */}
       {selectedUser && (

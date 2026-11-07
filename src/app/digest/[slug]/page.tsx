@@ -34,20 +34,17 @@ export default async function DigestSlugPage({ params }: PageProps) {
   const data = digest.structuredJson as unknown as DigestData;
 
   return (
-    <div className="max-w-[1000px]">
-      <Link
-        href="/digest"
-        className="inline-flex items-center gap-1.5 font-mono text-xs text-text-tertiary hover:text-accent-blue mb-5 transition-colors"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" /> Curator Daily
-      </Link>
-      <DigestView
-        title={digest.title}
-        summary={digest.summary}
-        date={digest.date}
-        generatedBy={digest.generatedBy}
-        data={data}
-      />
-    </div>
+    <DigestView
+      title={digest.title}
+      summary={digest.summary}
+      date={digest.date}
+      generatedBy={digest.generatedBy}
+      data={data}
+      actions={
+        <Link href="/digest" className="btn btn-ghost h-7 px-2.5">
+          <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" /> Latest edition
+        </Link>
+      }
+    />
   );
 }

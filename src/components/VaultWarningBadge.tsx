@@ -37,18 +37,21 @@ export function VaultWarningBadge({ warnings }: { warnings?: VaultWarning[] }) {
 
   const colorClasses =
     maxLevel === "RED"
-      ? "text-accent-red bg-accent-red/10 border-accent-red/20"
-      : "text-accent-yellow bg-accent-yellow/10 border-accent-yellow/20";
+      ? "text-accent-red border-accent-red-muted"
+      : "text-accent-yellow border-accent-yellow-muted";
 
   const badge = (
     <span
-      className={`ml-1 inline-flex items-center justify-center w-4 h-4 rounded border ${colorClasses}`}
+      role="img"
+      aria-label={`${significantWarnings.length} vault warning${significantWarnings.length === 1 ? "" : "s"}`}
+      className={`ml-1 inline-flex items-center justify-center w-4 h-4 border ${colorClasses}`}
     >
       <svg
         className="w-2.5 h-2.5"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"
+        aria-hidden="true"
       >
         <path
           strokeLinecap="round"

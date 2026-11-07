@@ -74,8 +74,11 @@ function SsoCallbackLive() {
   }, [clerk, signIn, signUp]);
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <p className="font-mono text-sm text-text-tertiary">Signing you in…</p>
+    <div className="flex flex-col min-h-[60vh] items-center justify-center gap-3">
+      <p className="panel flex items-center gap-2 px-3 h-9 label text-text-secondary" role="status">
+        <span className="w-1.5 h-1.5 rounded-full bg-accent-blue animate-pulse" aria-hidden="true" />
+        Signing you in…
+      </p>
       {/* A transferred sign-up may require captcha — Clerk mounts it here. */}
       <div id="clerk-captcha" />
     </div>

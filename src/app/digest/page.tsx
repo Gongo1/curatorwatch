@@ -5,6 +5,8 @@ import { getLatestDigest, getRecentDigests } from "@/lib/digest/read";
 import { DigestView } from "./DigestView";
 import { PersonalDigestPanel } from "./PersonalDigestPanel";
 import type { DigestData } from "@/lib/digest/types";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
 
 // ISR aligned to ingestion; the digest cron revalidates /digest on completion.
 export const revalidate = 21600;
@@ -21,17 +23,18 @@ export default async function DigestPage() {
 
   if (!latest) {
     return (
-      <div className="max-w-[1000px]">
-        <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-tertiary">Curator Daily</div>
-        <h1 className="font-display font-bold text-3xl tracking-tight mt-2 mb-3">The nightly curator digest</h1>
-        <p className="text-text-secondary max-w-[640px]">
-          The first edition publishes after tonight&rsquo;s build. Curator Daily covers TVL flows,
-          single-manager concentration, yield moves, new vaults, incidents, and the Curator Stress
-          Index — every claim links back to a curator or vault.
-        </p>
-        <Link href="/feed/digest.xml" className="inline-flex items-center gap-2 mt-5 font-mono text-xs text-accent-blue">
-          <Rss className="w-4 h-4" /> Subscribe via RSS
-        </Link>
+      <div className="space-y-1.5">
+        <PageHeader title="Curator Daily" description="The nightly curator digest." />
+        <Panel title="First edition pending" bodyClassName="p-3">
+          <p className="text-sm text-text-secondary leading-relaxed max-w-[70ch]">
+            The first edition publishes after tonight&rsquo;s build. Curator Daily covers TVL flows,
+            single-manager concentration, yield moves, new vaults, incidents, and the Curator Stress
+            Index. Every claim links back to a curator or vault.
+          </p>
+          <Link href="/feed/digest.xml" className="btn btn-ghost h-7 px-2.5 mt-3">
+            <Rss className="w-3.5 h-3.5" aria-hidden="true" /> Subscribe via RSS
+          </Link>
+        </Panel>
       </div>
     );
   }
@@ -40,48 +43,50 @@ export default async function DigestPage() {
   const archive = recent.filter((r) => r.slug !== latest.slug);
 
   return (
-    <div className="max-w-[1000px]">
+    <div className="space-y-1.5">
       <DigestView
         title={latest.title}
         summary={latest.summary}
         date={latest.date}
         generatedBy={latest.generatedBy}
         data={data}
+        actions={
+          <Link href="/feed/digest.xml" className="btn btn-ghost h-7 px-2.5">
+            <Rss className="w-3.5 h-3.5" aria-hidden="true" /> RSS feed
+          </Link>
+        }
       />
 
-      <PersonalDigestPanel data={data} />
+      <div className="grid gap-1.5 lg:grid-cols-2 items-start">
+        <PersonalDigestPanel data={data} />
 
-      <div className="mt-8 flex items-center gap-4 flex-wrap">
-        <Link href="/feed/digest.xml" className="inline-flex items-center gap-2 font-mono text-xs text-accent-blue">
-          <Rss className="w-4 h-4" /> RSS feed
-        </Link>
+        {archive.length > 0 && (
+          <Panel title="Archive" meta={`${archive.length} earlier editions`}>
+            <ul>
+              {archive.map((d) => (
+                <li key={d.slug}>
+                  <Link
+                    href={`/digest/${d.slug}`}
+                    className="flex items-center justify-between gap-3 px-3 h-8 border-b border-border-subtle hover:bg-background-hover transition-colors group"
+                  >
+                    <span className="flex items-baseline gap-2.5 min-w-0">
+                      <span className="num text-xs text-text-tertiary flex-none">{d.slug}</span>
+                      <span className="text-sm text-text-secondary group-hover:text-accent-blue transition-colors truncate">
+                        {d.title}
+                      </span>
+                    </span>
+                    {d.stressBand && (
+                      <span className="text-xs text-text-tertiary whitespace-nowrap">
+                        stress <span className="num text-text-secondary">{d.stressScore ?? "—"}</span> {d.stressBand}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
       </div>
-
-      {archive.length > 0 && (
-        <section className="mt-10">
-          <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary mb-3 pb-2 border-b border-border">
-            Archive
-          </div>
-          <div className="divide-y divide-border-subtle">
-            {archive.map((d) => (
-              <Link
-                key={d.slug}
-                href={`/digest/${d.slug}`}
-                className="flex items-center justify-between gap-3 py-2.5 hover:bg-background-subtle px-2 -mx-2 rounded transition-colors group"
-              >
-                <span className="font-mono text-sm text-text-secondary group-hover:text-accent-blue transition-colors truncate">
-                  {d.slug} · {d.title}
-                </span>
-                {d.stressBand && (
-                  <span className="font-mono text-[11px] text-text-tertiary whitespace-nowrap tabular-nums">
-                    stress {d.stressScore ?? "—"} {d.stressBand}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { DataAsOf } from "@/components/DataAsOf";
 import { Panel } from "@/components/layout/Panel";
 import type { StressPoint } from "@/lib/stress-trend";
 import type { StressBand } from "@/lib/stress-index";
+import { Quote } from "@/components/layout/Quote";
 
 export type { ApyDistribution };
 
@@ -131,13 +132,14 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
             k="Stress index"
             v={today ? String(Math.round(today.score)) : "—"}
             sub={band ?? undefined}
-            subClass={band ? BAND_TEXT[band] : ""}
+            subClass={`label ${band ? BAND_TEXT[band] : ""}`}
             href="/digest"
           />
           <Quote
             k="Largest curator"
             v={largest?.name || "—"}
             sub={largest ? compactUsd(largest.totalAUM) : undefined}
+            subClass="num text-xs text-text-tertiary"
             text
           />
         </dl>
@@ -251,45 +253,3 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
   );
 }
 
-function Quote({
-  k,
-  v,
-  sub,
-  subClass = "text-text-tertiary",
-  href,
-  lead = false,
-  text = false,
-}: {
-  k: string;
-  v: string;
-  sub?: string;
-  subClass?: string;
-  href?: string;
-  lead?: boolean;
-  text?: boolean;
-}) {
-  const value = (
-    <dd className="flex items-baseline gap-2 mt-1.5 min-w-0">
-      <span
-        className={`${text ? "cond font-bold text-[1.3rem] truncate" : "num font-semibold text-[1.45rem]"} leading-none ${
-          lead ? "text-accent-blue" : "text-text-primary"
-        }`}
-      >
-        {v}
-      </span>
-      {sub && <span className={`${text ? "num text-xs" : "label"} ${subClass}`}>{sub}</span>}
-    </dd>
-  );
-  return (
-    <div className="px-3 py-2.5 border-border border-b lg:border-b-0 border-r min-w-0">
-      <dt className="label">{k}</dt>
-      {href ? (
-        <Link href={href} className="block hover:underline decoration-text-muted">
-          {value}
-        </Link>
-      ) : (
-        value
-      )}
-    </div>
-  );
-}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
 
 // These documents are written in Simplified Technical English (ASD-STE100):
 // short active sentences, one idea per sentence, present tense, and one term
@@ -58,9 +59,11 @@ const GLOSSARY: { term: string; def: string }[] = [
 
 function DocSection({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section id={id} className="scroll-mt-24">
-      <h2 className="font-display text-xl font-bold text-text-primary mb-3">{title}</h2>
-      <div className="space-y-3 text-[15px] text-text-secondary leading-relaxed">{children}</div>
+    <section id={id} className="panel scroll-mt-24">
+      <div className="panel-head">
+        <h2 className="panel-title">{title}</h2>
+      </div>
+      <div className="px-4 py-3.5 space-y-3 max-w-[70ch] text-base text-text-secondary leading-relaxed">{children}</div>
     </section>
   );
 }
@@ -90,8 +93,8 @@ function Bullets({ items }: { items: ReactNode[] }) {
 
 function Note({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-lg border border-accent-yellow/30 bg-accent-yellow/5 px-4 py-3 text-sm text-text-secondary">
-      <span className="font-mono text-[11px] uppercase tracking-wide text-accent-yellow">Note</span>{" "}
+    <div className="border-t border-b border-border-subtle bg-background px-3 py-2 text-sm text-text-secondary">
+      <span className="label text-accent-blue mr-1.5">Note</span>
       {children}
     </div>
   );
@@ -109,29 +112,33 @@ export default function DocsPage() {
         ]}
       />
 
-      <p className="max-w-[760px] text-sm text-text-tertiary mb-8">
+      <p className="max-w-[70ch] text-sm text-text-tertiary mb-3">
         These documents use Simplified Technical English (ASD-STE100). The
         sentences are short and direct on purpose.
       </p>
 
-      <div className="grid lg:grid-cols-[200px_minmax(0,1fr)] gap-10 items-start">
+      <div className="grid lg:grid-cols-[13rem_minmax(0,1fr)] gap-1.5 items-start">
         {/* Sticky table of contents */}
-        <nav className="hidden lg:block sticky top-24">
-          <div className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary mb-3">
-            On this page
-          </div>
-          <ul className="space-y-1.5">
-            {TOC.map((t) => (
-              <li key={t.id}>
-                <a href={`#${t.id}`} className="text-sm text-text-secondary hover:text-accent-blue transition-colors">
-                  {t.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <div className="hidden lg:block sticky top-24">
+          <Panel title="On this page" meta={String(TOC.length)} as="aside">
+            <nav aria-label="On this page">
+              <ul>
+                {TOC.map((t) => (
+                  <li key={t.id}>
+                    <a
+                      href={`#${t.id}`}
+                      className="flex items-center px-3 h-7 border-b border-border-subtle text-sm text-text-secondary hover:text-accent-blue hover:bg-background-hover transition-colors truncate"
+                    >
+                      {t.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </Panel>
+        </div>
 
-        <article className="max-w-[760px] space-y-12 min-w-0">
+        <article className="max-w-[52rem] space-y-1.5 min-w-0">
           <DocSection id="overview" title="Overview">
             <p>CuratorWatch tracks the curators of DeFi vaults.</p>
             <p>
@@ -172,7 +179,7 @@ export default function DocsPage() {
             />
             <Note>
               An account is necessary to see more than the top 3 rows of the
-              curator list. See <a href="#accounts" className="text-accent-blue">Accounts</a>.
+              curator list. See <a href="#accounts" className="text-accent-blue hover:underline">Accounts</a>.
             </Note>
           </DocSection>
 
@@ -191,7 +198,7 @@ export default function DocsPage() {
             />
             <p>
               The Compare action opens the compare page with this curator. See{" "}
-              <a href="#compare" className="text-accent-blue">Compare</a>.
+              <a href="#compare" className="text-accent-blue hover:underline">Compare</a>.
             </p>
           </DocSection>
 
@@ -257,7 +264,7 @@ export default function DocsPage() {
             />
             <p>
               You can also get the daily digest email. See{" "}
-              <a href="#digest" className="text-accent-blue">Curator Daily</a>.
+              <a href="#digest" className="text-accent-blue hover:underline">Curator Daily</a>.
             </p>
           </DocSection>
 
@@ -347,7 +354,7 @@ export default function DocsPage() {
               {BLUE_CHIP.map((symbol) => (
                 <span
                   key={symbol}
-                  className="px-2 py-0.5 text-xs font-medium rounded bg-accent-blue/10 text-accent-blue border border-accent-blue/20"
+                  className="num px-1.5 py-px text-xs text-text-primary border border-border-strong"
                 >
                   {symbol}
                 </span>
@@ -361,10 +368,10 @@ export default function DocsPage() {
           </DocSection>
 
           <DocSection id="glossary" title="Glossary">
-            <dl className="divide-y divide-border-subtle border border-border rounded-xl overflow-hidden">
+            <dl className="divide-y divide-border-subtle border-y border-border-subtle">
               {GLOSSARY.map((g) => (
-                <div key={g.term} className="grid sm:grid-cols-[180px_1fr] gap-x-4 gap-y-1 px-4 py-3 bg-background-subtle">
-                  <dt className="font-mono text-sm font-semibold text-text-primary">{g.term}</dt>
+                <div key={g.term} className="grid sm:grid-cols-[11rem_1fr] gap-x-4 gap-y-0.5 py-2">
+                  <dt className="text-sm font-semibold text-text-primary">{g.term}</dt>
                   <dd className="text-sm text-text-secondary">{g.def}</dd>
                 </div>
               ))}
@@ -372,7 +379,7 @@ export default function DocsPage() {
           </DocSection>
 
           <DocSection id="disclaimer" title="Disclaimer">
-            <div className="rounded-xl border border-accent-yellow/30 bg-accent-yellow/5 p-5 space-y-2">
+            <div className="space-y-2">
               <p>CuratorWatch gives information only. It is not financial advice.</p>
               <p>
                 The figures come from public on-chain data. They do not guarantee
