@@ -68,7 +68,7 @@ export function ApyDistViz({
     n >= 1e9 ? `$${(n / 1e9).toFixed(1)}B` : `$${Math.round(n / 1e6)}M`;
   return (
     <div className="min-w-[190px]">
-      <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
+      <div className="label">
         {label ?? `Net APY · ${d.count} vaults`}
       </div>
       <div
@@ -78,8 +78,9 @@ export function ApyDistViz({
         {d.histogram.map((c, i) => (
           <div
             key={i}
-            className="flex-1 rounded-[2px] min-w-[6px] bg-accent-blue"
+            className="flex-1 min-w-[6px]"
             style={{
+              background: "var(--chart-1)",
               height: `${Math.max(10, (c / maxCount) * 100)}%`,
               opacity: 0.22 + 0.78 * (d.histogramTvl[i] / maxTvl),
             }}
@@ -92,16 +93,16 @@ export function ApyDistViz({
         {d.histEdges.slice(0, -1).map((edge, i) => (
           <div key={i} className="flex-1 min-w-[6px]">
             <span className="block w-px h-1 bg-border" />
-            <span className="block font-mono text-[0.55rem] leading-none text-text-muted tabular-nums mt-0.5">
+            <span className="block num text-[0.6rem] leading-none text-text-tertiary mt-0.5">
               {edge}
               {i === d.histEdges.length - 2 ? "+" : ""}
             </span>
           </div>
         ))}
       </div>
-      <div className="font-mono text-[0.62rem] text-text-tertiary mt-1.5 tabular-nums">
-        median <span className="text-text-secondary">{d.median.toFixed(1)}%</span> · 95th{" "}
-        <span className="text-text-secondary">{Math.round(d.p95)}%</span> · shade = TVL
+      <div className="text-[0.7rem] text-text-tertiary mt-1.5">
+        median <span className="num text-text-secondary">{d.median.toFixed(1)}%</span> · 95th{" "}
+        <span className="num text-text-secondary">{Math.round(d.p95)}%</span> · shade = TVL
       </div>
     </div>
   );

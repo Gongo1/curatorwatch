@@ -49,45 +49,20 @@ interface UserExposureModalProps {
   onClose: () => void;
 }
 
-function getRiskBadge(risk: "low" | "medium" | "high") {
-  switch (risk) {
-    case "low":
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
-          Low
-        </span>
-      );
-    case "medium":
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-yellow" />
-          Medium
-        </span>
-      );
-    case "high":
-      return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-accent-red/15 text-accent-red border border-accent-red/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-red" />
-          High
-        </span>
-      );
-  }
-}
+const RISK_TONE: Record<"low" | "medium" | "high", { dot: string; text: string; label: string }> = {
+  low: { dot: "bg-accent-green", text: "text-accent-green", label: "Low" },
+  medium: { dot: "bg-accent-yellow", text: "text-accent-yellow", label: "Medium" },
+  high: { dot: "bg-accent-red", text: "text-accent-red", label: "High" },
+};
 
-function getAvatarColor(address: string): string {
-  const colors = [
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-pink-500",
-    "bg-emerald-500",
-    "bg-amber-500",
-    "bg-cyan-500",
-    "bg-indigo-500",
-    "bg-rose-500",
-  ];
-  const hash = address.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
-  return colors[Math.abs(hash) % colors.length];
+function getRiskBadge(risk: "low" | "medium" | "high") {
+  const t = RISK_TONE[risk];
+  return (
+    <span className={`inline-flex items-center gap-1.5 cond font-bold text-[1.3rem] leading-none ${t.text}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${t.dot}`} aria-hidden="true" />
+      {t.label}
+    </span>
+  );
 }
 
 export function UserExposureModal({
@@ -133,74 +108,50 @@ export function UserExposureModal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-background/85" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full max-w-2xl max-h-[90vh] bg-background border border-border rounded-xl shadow-xl overflow-hidden">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="user-exposure-title"
+        className="panel relative w-full max-w-2xl max-h-[90vh] flex flex-col border-border-strong"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-background-subtle">
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-full ${getAvatarColor(
-                userAddress
-              )} flex items-center justify-center text-white font-bold`}
-            >
-              {userAddress.slice(2, 4).toUpperCase()}
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-text-primary">
-                User Exposure
-              </h2>
-              <p className="text-sm text-text-tertiary font-mono">
-                {formatAddress(userAddress)}
-              </p>
-            </div>
-          </div>
+        <div className="panel-head">
+          <h2 id="user-exposure-title" className="panel-title">User exposure</h2>
+          <span className="num text-xs text-text-secondary truncate">{formatAddress(userAddress)}</span>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 hover:bg-background-hover rounded-lg transition-colors"
+            aria-label="Close"
+            className="ml-auto -mr-1.5 p-1.5 text-text-muted hover:text-accent-blue transition-colors"
           >
-            <svg
-              className="w-5 h-5 text-text-muted"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
+        <div className="overflow-y-auto min-h-0">
           {/* Loading */}
           {loading && (
-            <div className="p-12 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent-blue border-t-transparent mx-auto" />
-              <p className="mt-4 text-sm text-text-tertiary">
-                Loading exposure data...
-              </p>
+            <div className="p-8 text-center">
+              <div className="animate-spin h-6 w-6 border-2 border-accent-blue border-t-transparent mx-auto" />
+              <p className="mt-3 label">Loading exposure data</p>
             </div>
           )}
 
           {/* Error */}
           {error && !loading && (
-            <div className="p-12 text-center">
-              <p className="text-sm text-accent-red">{error}</p>
-              <button
-                onClick={fetchUserExposure}
-                className="mt-4 text-sm text-accent-blue hover:text-accent-blue-hover"
-              >
+            <div className="p-3">
+              <p className="text-sm text-accent-red">
+                Exposure data for this address did not load. Try again; if it keeps failing, check back after the next data refresh.
+              </p>
+              <button type="button" onClick={fetchUserExposure} className="btn btn-ghost mt-2">
                 Try again
               </button>
             </div>
@@ -208,156 +159,115 @@ export function UserExposureModal({
 
           {/* Data */}
           {data && !loading && !error && (
-            <div className="p-6 space-y-6">
-              {/* Summary stats */}
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-background-subtle rounded-lg border border-border p-4 text-center">
-                  <p className="text-2xl font-semibold text-accent-blue tabular-nums">
+            <div>
+              {/* Summary quotes */}
+              <dl className="grid grid-cols-3 border-b border-border">
+                <div className="px-3 py-2.5 border-r border-border min-w-0">
+                  <dt className="label">Total exposure</dt>
+                  <dd className="num font-semibold text-[1.3rem] leading-none mt-1.5 text-accent-blue truncate">
                     {formatCurrency(data.totalExposure)}
-                  </p>
-                  <p className="text-xs text-text-tertiary mt-1">
-                    Total Exposure
-                  </p>
+                  </dd>
                 </div>
-                <div className="bg-background-subtle rounded-lg border border-border p-4 text-center">
-                  <p className="text-2xl font-semibold text-text-primary tabular-nums">
+                <div className="px-3 py-2.5 border-r border-border min-w-0">
+                  <dt className="label">Vaults</dt>
+                  <dd className="num font-semibold text-[1.3rem] leading-none mt-1.5 text-text-primary">
                     {data.vaultCount}
-                  </p>
-                  <p className="text-xs text-text-tertiary mt-1">Vaults</p>
+                  </dd>
                 </div>
-                <div className="bg-background-subtle rounded-lg border border-border p-4 text-center">
-                  <div className="flex justify-center">
-                    {getRiskBadge(data.concentrationRisk)}
-                  </div>
-                  <p className="text-xs text-text-tertiary mt-2">
-                    Concentration Risk
-                  </p>
+                <div className="px-3 py-2.5 min-w-0">
+                  <dt className="label">Concentration</dt>
+                  <dd className="mt-1.5">{getRiskBadge(data.concentrationRisk)}</dd>
                 </div>
-              </div>
+              </dl>
 
               {/* Vault exposure list */}
               {data.vaults.length > 0 && (
-                <div>
-                  <h3 className="text-sm font-semibold text-text-primary mb-3">
-                    Vault Exposure
+                <div className="border-b border-border">
+                  <h3 className="label text-accent-blue px-3 h-7 flex items-center bg-background-elevated border-b border-border">
+                    Vault exposure
                   </h3>
-                  <div className="bg-background-subtle rounded-lg border border-border divide-y divide-border-subtle">
+                  <ul>
                     {data.vaults.map((vault) => (
-                      <Link
-                        key={vault.vaultAddress}
-                        href={`/vault/${vault.vaultAddress}`}
-                        onClick={onClose}
-                        className="flex items-center justify-between px-4 py-3 hover:bg-background-hover transition-colors group"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
-                            {vault.vaultName}
-                          </p>
-                          <p className="text-xs text-text-tertiary">
-                            {vault.curatorName
-                              ? `Managed by ${vault.curatorName}`
-                              : vault.assetSymbol}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-4 flex-shrink-0">
-                          <div className="text-right">
-                            <p className="text-sm font-medium text-text-primary tabular-nums">
+                      <li key={vault.vaultAddress} className="border-b border-border-subtle last:border-b-0">
+                        <Link
+                          href={`/vault/${vault.vaultAddress}`}
+                          onClick={onClose}
+                          className="flex items-center justify-between gap-3 px-3 py-1.5 hover:bg-background-hover transition-colors group"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors truncate">
+                              {vault.vaultName}
+                            </p>
+                            <p className="text-xs text-text-tertiary truncate">
+                              {vault.curatorName
+                                ? `Managed by ${vault.curatorName}`
+                                : vault.assetSymbol}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="num text-sm text-text-primary">
                               {formatCurrency(vault.assetsUsd)}
                             </p>
-                            <p className="text-xs text-text-muted tabular-nums">
+                            <p className="num text-xs text-text-tertiary">
                               {vault.depositPct.toFixed(1)}% of vault
                             </p>
                           </div>
-                          <svg
-                            className="w-4 h-4 text-text-muted group-hover:text-accent-blue transition-colors"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5l7 7-7 7"
-                            />
-                          </svg>
-                        </div>
-                      </Link>
+                        </Link>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 </div>
               )}
 
               {/* Concentration breakdown */}
               {(data.curatorConcentration.length > 0 ||
                 data.assetConcentration.length > 0) && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid sm:grid-cols-2">
                   {/* Curator concentration */}
                   {data.curatorConcentration.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-text-primary mb-3">
-                        By Curator
-                      </h3>
+                    <div className="p-3 border-b sm:border-b-0 sm:border-r border-border-subtle">
+                      <h3 className="label mb-2">By curator</h3>
                       <div className="space-y-2">
-                        {data.curatorConcentration
-                          .slice(0, 4)
-                          .map((curator) => (
-                            <div
-                              key={curator.curatorAddress}
-                              className="flex items-center gap-3"
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between text-sm mb-1">
-                                  <span className="text-text-secondary truncate">
-                                    {curator.curatorName ||
-                                      formatAddress(curator.curatorAddress)}
-                                  </span>
-                                  <span className="text-text-muted tabular-nums">
-                                    {curator.exposurePct.toFixed(0)}%
-                                  </span>
-                                </div>
-                                <div className="h-1.5 bg-background-elevated rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full bg-accent-blue rounded-full"
-                                    style={{
-                                      width: `${curator.exposurePct}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
+                        {data.curatorConcentration.slice(0, 4).map((curator) => (
+                          <div key={curator.curatorAddress}>
+                            <div className="flex items-center justify-between gap-2 text-sm mb-1">
+                              <span className="text-text-secondary truncate">
+                                {curator.curatorName || formatAddress(curator.curatorAddress)}
+                              </span>
+                              <span className="num text-xs text-text-primary">
+                                {curator.exposurePct.toFixed(0)}%
+                              </span>
                             </div>
-                          ))}
+                            <div className="h-1.5 bg-background">
+                              <div
+                                className="h-full"
+                                style={{ width: `${curator.exposurePct}%`, background: "var(--chart-1)" }}
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
 
                   {/* Asset concentration */}
                   {data.assetConcentration.length > 0 && (
-                    <div>
-                      <h3 className="text-sm font-semibold text-text-primary mb-3">
-                        By Asset
-                      </h3>
+                    <div className="p-3">
+                      <h3 className="label mb-2">By asset</h3>
                       <div className="space-y-2">
                         {data.assetConcentration.slice(0, 4).map((asset) => (
-                          <div
-                            key={asset.assetSymbol}
-                            className="flex items-center gap-3"
-                          >
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between text-sm mb-1">
-                                <span className="text-text-secondary">
-                                  {asset.assetSymbol}
-                                </span>
-                                <span className="text-text-muted tabular-nums">
-                                  {asset.exposurePct.toFixed(0)}%
-                                </span>
-                              </div>
-                              <div className="h-1.5 bg-background-elevated rounded-full overflow-hidden">
-                                <div
-                                  className="h-full bg-purple-500 rounded-full"
-                                  style={{ width: `${asset.exposurePct}%` }}
-                                />
-                              </div>
+                          <div key={asset.assetSymbol}>
+                            <div className="flex items-center justify-between gap-2 text-sm mb-1">
+                              <span className="text-text-secondary">{asset.assetSymbol}</span>
+                              <span className="num text-xs text-text-primary">
+                                {asset.exposurePct.toFixed(0)}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 bg-background">
+                              <div
+                                className="h-full"
+                                style={{ width: `${asset.exposurePct}%`, background: "var(--chart-2)" }}
+                              />
                             </div>
                           </div>
                         ))}
@@ -369,11 +279,9 @@ export function UserExposureModal({
 
               {/* Empty state */}
               {data.vaults.length === 0 && (
-                <div className="text-center py-8">
-                  <p className="text-sm text-text-tertiary">
-                    No vault positions found for this user
-                  </p>
-                </div>
+                <p className="p-3 text-sm text-text-tertiary">
+                  No vault positions found for this address in tracked vaults.
+                </p>
               )}
             </div>
           )}

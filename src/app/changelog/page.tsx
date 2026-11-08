@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
 
 type Category = "Feature" | "Fix" | "Improvement";
 
@@ -12,11 +13,14 @@ interface ChangelogEntry {
   items: ChangelogItem[];
 }
 
+// One signal: new features carry the amber; fixes and improvements stay neutral.
 const categoryStyles: Record<Category, string> = {
-  Feature: "bg-accent-blue/20 text-accent-blue",
-  Fix: "bg-accent-red/20 text-accent-red",
-  Improvement: "bg-accent-yellow/20 text-accent-yellow",
+  Feature: "text-accent-blue border-accent-blue",
+  Fix: "text-text-primary border-border-strong",
+  Improvement: "text-text-secondary border-border",
 };
+
+const dateId = (date: string) => date.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 const entries: ChangelogEntry[] = [
   {
@@ -274,31 +278,57 @@ export default function ChangelogPage() {
         description="Recent updates and improvements to CuratorWatch"
         breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Changelog" }]}
       />
-      <div className="space-y-10 max-w-[800px]">
-        {entries.map((entry) => (
-          <section key={entry.date}>
-            <h2 className="text-sm font-semibold text-text-tertiary uppercase tracking-wider mb-4">
-              {entry.date}
-            </h2>
-            <div className="space-y-3">
-              {entry.items.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg bg-background-subtle border border-border"
-                >
-                  <span
-                    className={`flex-shrink-0 px-2 py-0.5 text-[11px] font-semibold rounded ${categoryStyles[item.category]}`}
+      <div className="grid lg:grid-cols-[12rem_minmax(0,1fr)] gap-1.5 items-start">
+        {/* Release index */}
+        <div className="hidden lg:block sticky top-24">
+          <Panel title="Releases" meta={String(entries.length)} as="aside">
+            <nav aria-label="Releases">
+              <ul>
+                {entries.map((entry) => (
+                  <li key={entry.date}>
+                    <a
+                      href={`#${dateId(entry.date)}`}
+                      className="flex items-center justify-between gap-2 px-3 h-8 border-b border-border-subtle text-sm text-text-secondary hover:text-accent-blue hover:bg-background-hover transition-colors"
+                    >
+                      <span className="truncate">{entry.date}</span>
+                      <span className="num text-xs text-text-muted">{entry.items.length}</span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </Panel>
+        </div>
+
+        <div className="space-y-1.5 min-w-0 max-w-[52rem]">
+          {entries.map((entry) => (
+            <section key={entry.date} id={dateId(entry.date)} className="panel scroll-mt-24">
+              <div className="panel-head">
+                <h2 className="panel-title">{entry.date}</h2>
+                <span className="panel-meta">
+                  {entry.items.length} change{entry.items.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+              <ul>
+                {entry.items.map((item, i) => (
+                  <li
+                    key={i}
+                    className="flex flex-col sm:flex-row items-start gap-1.5 sm:gap-3 px-3 py-2.5 border-b border-border-subtle last:border-0"
                   >
-                    {item.category}
-                  </span>
-                  <p className="text-sm text-text-primary leading-relaxed">
-                    {item.text}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+                    <span
+                      className={`label flex-none px-1.5 sm:px-0 sm:w-[5.75rem] text-center py-0.5 mt-0.5 border ${categoryStyles[item.category]}`}
+                    >
+                      {item.category}
+                    </span>
+                    <p className="text-sm text-text-primary leading-relaxed max-w-[70ch] min-w-0">
+                      {item.text}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+        </div>
       </div>
     </>
   );

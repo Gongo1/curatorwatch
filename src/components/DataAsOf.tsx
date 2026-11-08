@@ -63,8 +63,8 @@ export function DataAsOf({ sources, className = "" }: { sources?: string[]; clas
   if (shown.length === 0) return null;
 
   return (
-    <div className={`font-mono text-xs text-text-tertiary flex flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
-      <span className="uppercase tracking-[0.08em] text-[0.62rem]">Data as of</span>
+    <div className={`text-xs text-text-tertiary flex flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
+      <span className="label">Data as of</span>
       {shown.map((r) => (
         <span
           key={r.key}
@@ -72,9 +72,9 @@ export function DataAsOf({ sources, className = "" }: { sources?: string[]; clas
           title={`${r.label}: newest data ${r.lastAt ?? "never"} · SLA ${r.slaHours}h`}
         >
           <span className="text-text-secondary">{r.label}</span>
-          <span className="tabular-nums">{fmt(r.lastAt)}</span>
+          <span className="num">{fmt(r.lastAt)}</span>
           {r.stale && (
-            <span className="px-1.5 py-px rounded text-[0.62rem] uppercase tracking-[0.06em] bg-accent-yellow/10 text-accent-yellow border border-accent-yellow/30">
+            <span className="label text-accent-yellow border border-accent-yellow/40 px-1 py-px">
               stale
             </span>
           )}

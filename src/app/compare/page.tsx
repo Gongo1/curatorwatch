@@ -5,7 +5,7 @@ import { CompareClient } from "./compare-client";
 export const metadata: Metadata = {
   title: "Compare Curators - CuratorWatch",
   description:
-    "Compare DeFi vault curators side by side: AUM, track record, net APY, vault grades, fees, risk posture, and asset mix.",
+    "Compare DeFi vault curators side by side: AUM, net APY, per-vault APY spread, estimated yield, strategy, asset mix, networks, and entity.",
 };
 
 export default function ComparePage() {

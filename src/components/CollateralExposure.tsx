@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { formatCurrency, formatAddress } from "@/lib/utils/format";
+import { Panel } from "@/components/layout/Panel";
 
 interface AllocationItem {
   type: string;
@@ -25,18 +26,6 @@ interface AllocationResponse {
 
 interface CollateralExposureProps {
   vaultAddress: string;
-}
-
-// Generate a deterministic color from type
-function getTypeColor(type: string): string {
-  const colors: Record<string, string> = {
-    "MetaMorpho": "bg-blue-500",
-    "Morpho Market": "bg-purple-500",
-    "Aave": "bg-pink-500",
-    "Compound": "bg-emerald-500",
-    "Idle": "bg-gray-500",
-  };
-  return colors[type] || "bg-cyan-500";
 }
 
 export function CollateralExposure({ vaultAddress }: CollateralExposureProps) {
@@ -78,47 +67,26 @@ export function CollateralExposure({ vaultAddress }: CollateralExposureProps) {
   }
 
   return (
-    <section className="bg-background-subtle rounded-lg border border-border">
-      <div className="px-6 py-4 border-b border-border">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-text-primary">
-              Asset Allocations
-            </h2>
-            <p className="text-sm text-text-tertiary">
-              How vault assets are deployed across adapters
-            </p>
-          </div>
-        </div>
-      </div>
-
+    <Panel title="Asset allocations" meta="by adapter">
       {/* Loading state */}
       {loading && (
-        <div className="p-6">
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="animate-pulse flex items-center gap-4">
-                <div className="w-6 h-6 rounded-full bg-background-elevated" />
-                <div className="flex-1">
-                  <div className="h-4 w-24 bg-background-elevated rounded" />
-                </div>
-                <div className="w-32 h-2 bg-background-elevated rounded" />
-                <div className="w-20 h-4 bg-background-elevated rounded" />
-                <div className="w-14 h-4 bg-background-elevated rounded" />
-              </div>
-            ))}
-          </div>
+        <div className="animate-pulse">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 px-3 h-8 border-b border-border-subtle last:border-b-0">
+              <div className="h-3 w-28 bg-background-elevated" />
+              <div className="flex-1" />
+              <div className="h-1.5 w-24 bg-background-elevated" />
+              <div className="h-3 w-16 bg-background-elevated" />
+            </div>
+          ))}
         </div>
       )}
 
       {/* Error state */}
       {error && !loading && (
-        <div className="p-6 text-center">
-          <p className="text-sm text-accent-red">{error}</p>
-          <button
-            onClick={fetchAllocations}
-            className="mt-2 text-sm text-accent-blue hover:text-accent-blue-hover"
-          >
+        <div className="p-3 text-sm">
+          <p className="text-accent-red">Allocations could not be loaded: {error}</p>
+          <button type="button" onClick={fetchAllocations} className="btn btn-ghost h-7 mt-2">
             Try again
           </button>
         </div>
@@ -126,144 +94,72 @@ export function CollateralExposure({ vaultAddress }: CollateralExposureProps) {
 
       {/* Empty state */}
       {!loading && !error && allocations.length === 0 && idleUsd === 0 && (
-        <div className="p-8 text-center">
-          <div className="w-12 h-12 rounded-full bg-background-elevated flex items-center justify-center mx-auto">
-            <svg
-              className="h-6 w-6 text-text-muted"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          </div>
-          <p className="mt-3 text-sm text-text-secondary">
-            No allocation data available
-          </p>
-        </div>
+        <p className="p-3 text-sm text-text-tertiary">
+          No allocation data for this vault yet. It appears after the next data sync.
+        </p>
       )}
 
       {/* Allocation list */}
       {!loading && !error && (allocations.length > 0 || idleUsd > 0) && (
-        <div className="p-6">
-          <div className="space-y-3">
-            {allocations.map((allocation, index) => (
-              <div
+        <>
+          <ul>
+            {allocations.map((allocation) => (
+              <li
                 key={allocation.address}
-                className="flex items-center gap-4"
+                className="flex items-center gap-3 px-3 h-8 border-b border-border-subtle text-sm"
               >
-                {/* Type icon */}
-                <div
-                  className={`w-7 h-7 rounded-full ${getTypeColor(
-                    allocation.type
-                  )} flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}
-                >
-                  {allocation.type.slice(0, 2).toUpperCase()}
-                </div>
-
                 {/* Type and address */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-text-primary">
-                      {allocation.type}
-                    </span>
-                    <span className="text-xs text-text-muted font-mono hidden sm:inline">
-                      {formatAddress(allocation.address)}
-                    </span>
-                  </div>
-                </div>
+                <span className="flex-1 min-w-0 flex items-baseline gap-2">
+                  <span className="font-medium text-text-primary truncate">{allocation.type}</span>
+                  <span className="num text-xs text-text-muted hidden sm:inline">
+                    {formatAddress(allocation.address)}
+                  </span>
+                </span>
 
                 {/* Allocation bar */}
-                <div className="w-32 flex-shrink-0">
-                  <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-accent-blue rounded-full transition-all"
-                      style={{
-                        width: `${Math.min(allocation.allocationPct, 100)}%`,
-                      }}
-                    />
-                  </div>
-                </div>
+                <span className="w-24 h-1.5 bg-background-elevated flex-none hidden sm:block" aria-hidden="true">
+                  <span
+                    className="block h-full bg-accent-blue"
+                    style={{ width: `${Math.min(allocation.allocationPct, 100)}%` }}
+                  />
+                </span>
 
                 {/* Value */}
-                <div className="w-24 text-right flex-shrink-0">
-                  <span className="text-sm font-medium text-text-primary tabular-nums">
-                    {formatCurrency(allocation.assetsUsd)}
-                  </span>
-                </div>
+                <span className="w-24 text-right flex-none num text-text-primary">
+                  {formatCurrency(allocation.assetsUsd)}
+                </span>
 
                 {/* Percentage */}
-                <div className="w-14 text-right flex-shrink-0">
-                  <span className="text-sm text-text-secondary tabular-nums">
-                    {allocation.allocationPct.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
+                <span className="w-14 text-right flex-none num text-text-secondary">
+                  {allocation.allocationPct.toFixed(1)}%
+                </span>
+              </li>
             ))}
 
             {/* Idle assets */}
             {idleUsd > 0 && (
-              <div className="flex items-center gap-4 opacity-60">
-                <div className="w-7 h-7 rounded-full bg-gray-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                  --
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-sm text-text-muted italic">
-                    Idle (Unallocated)
-                  </span>
-                </div>
-                <div className="w-32 flex-shrink-0">
-                  <div className="h-2 bg-background-elevated rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gray-500 rounded-full"
-                      style={{ width: `${Math.min(idlePct, 100)}%` }}
-                    />
-                  </div>
-                </div>
-                <div className="w-24 text-right flex-shrink-0">
-                  <span className="text-sm text-text-muted tabular-nums">
-                    {formatCurrency(idleUsd)}
-                  </span>
-                </div>
-                <div className="w-14 text-right flex-shrink-0">
-                  <span className="text-sm text-text-muted tabular-nums">
-                    {idlePct.toFixed(1)}%
-                  </span>
-                </div>
-              </div>
+              <li className="flex items-center gap-3 px-3 h-8 border-b border-border-subtle text-sm">
+                <span className="flex-1 min-w-0 text-text-muted">Idle (unallocated)</span>
+                <span className="w-24 h-1.5 bg-background-elevated flex-none hidden sm:block" aria-hidden="true">
+                  <span
+                    className="block h-full bg-text-muted"
+                    style={{ width: `${Math.min(idlePct, 100)}%` }}
+                  />
+                </span>
+                <span className="w-24 text-right flex-none num text-text-muted">{formatCurrency(idleUsd)}</span>
+                <span className="w-14 text-right flex-none num text-text-muted">{idlePct.toFixed(1)}%</span>
+              </li>
             )}
-          </div>
+          </ul>
 
           {/* Note about collateral data */}
           {note && (
-            <div className="mt-4 p-3 bg-accent-blue/5 border border-accent-blue/20 rounded-lg">
-              <div className="flex items-start gap-2">
-                <svg
-                  className="w-4 h-4 text-accent-blue mt-0.5 flex-shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-                <p className="text-xs text-accent-blue">
-                  Detailed collateral exposure coming in next update. Currently showing adapter-level allocations.
-                </p>
-              </div>
-            </div>
+            <p className="px-3 py-2 text-xs text-text-tertiary">
+              Adapter-level view. Market-level collateral exposure is not broken out here yet.
+            </p>
           )}
-        </div>
+        </>
       )}
-    </section>
+    </Panel>
   );
 }

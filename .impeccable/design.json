@@ -1,0 +1,652 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-07T22:34:32.895Z",
+  "title": "Design System: CuratorWatch",
+  "extensions": {
+    "colorMeta": {
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "oklch(13% 0.004 70)",
+        "cssVariable": "--background",
+        "tonalRamp": [
+          "oklch(15% 0.004 70)",
+          "oklch(25% 0.004 70)",
+          "oklch(35% 0.004 70)",
+          "oklch(45% 0.004 70)",
+          "oklch(55% 0.004 70)",
+          "oklch(65% 0.004 70)",
+          "oklch(80% 0.004 70)",
+          "oklch(95% 0.004 70)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel",
+        "canonical": "oklch(16.5% 0.005 70)",
+        "cssVariable": "--background-subtle",
+        "tonalRamp": [
+          "oklch(15% 0.005 70)",
+          "oklch(25% 0.005 70)",
+          "oklch(35% 0.005 70)",
+          "oklch(45% 0.005 70)",
+          "oklch(55% 0.005 70)",
+          "oklch(65% 0.005 70)",
+          "oklch(80% 0.005 70)",
+          "oklch(95% 0.005 70)"
+        ]
+      },
+      "title-bar": {
+        "role": "neutral",
+        "displayName": "Title Bar",
+        "canonical": "oklch(20% 0.006 70)",
+        "cssVariable": "--background-elevated",
+        "tonalRamp": [
+          "oklch(15% 0.006 70)",
+          "oklch(25% 0.006 70)",
+          "oklch(35% 0.006 70)",
+          "oklch(45% 0.006 70)",
+          "oklch(55% 0.006 70)",
+          "oklch(65% 0.006 70)",
+          "oklch(80% 0.006 70)",
+          "oklch(95% 0.006 70)"
+        ]
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "Hover",
+        "canonical": "oklch(23.5% 0.008 70)",
+        "cssVariable": "--background-hover",
+        "tonalRamp": [
+          "oklch(15% 0.008 70)",
+          "oklch(25% 0.008 70)",
+          "oklch(35% 0.008 70)",
+          "oklch(45% 0.008 70)",
+          "oklch(55% 0.008 70)",
+          "oklch(65% 0.008 70)",
+          "oklch(80% 0.008 70)",
+          "oklch(95% 0.008 70)"
+        ]
+      },
+      "hairline": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "oklch(30% 0.008 70)",
+        "cssVariable": "--border",
+        "tonalRamp": [
+          "oklch(15% 0.008 70)",
+          "oklch(25% 0.008 70)",
+          "oklch(35% 0.008 70)",
+          "oklch(45% 0.008 70)",
+          "oklch(55% 0.008 70)",
+          "oklch(65% 0.008 70)",
+          "oklch(80% 0.008 70)",
+          "oklch(95% 0.008 70)"
+        ]
+      },
+      "hairline-subtle": {
+        "role": "neutral",
+        "displayName": "Hairline Subtle",
+        "canonical": "oklch(23% 0.006 70)",
+        "cssVariable": "--border-subtle",
+        "tonalRamp": [
+          "oklch(15% 0.006 70)",
+          "oklch(25% 0.006 70)",
+          "oklch(35% 0.006 70)",
+          "oklch(45% 0.006 70)",
+          "oklch(55% 0.006 70)",
+          "oklch(65% 0.006 70)",
+          "oklch(80% 0.006 70)",
+          "oklch(95% 0.006 70)"
+        ]
+      },
+      "hairline-strong": {
+        "role": "neutral",
+        "displayName": "Hairline Strong",
+        "canonical": "oklch(40% 0.01 70)",
+        "cssVariable": "--border-strong",
+        "tonalRamp": [
+          "oklch(15% 0.01 70)",
+          "oklch(25% 0.01 70)",
+          "oklch(35% 0.01 70)",
+          "oklch(45% 0.01 70)",
+          "oklch(55% 0.01 70)",
+          "oklch(65% 0.01 70)",
+          "oklch(80% 0.01 70)",
+          "oklch(95% 0.01 70)"
+        ]
+      },
+      "value-white": {
+        "role": "neutral",
+        "displayName": "Value White",
+        "canonical": "oklch(95% 0.01 85)",
+        "cssVariable": "--text-primary",
+        "tonalRamp": [
+          "oklch(15% 0.01 85)",
+          "oklch(25% 0.01 85)",
+          "oklch(35% 0.01 85)",
+          "oklch(45% 0.01 85)",
+          "oklch(55% 0.01 85)",
+          "oklch(65% 0.01 85)",
+          "oklch(80% 0.01 85)",
+          "oklch(95% 0.01 85)"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Text Secondary",
+        "canonical": "oklch(78% 0.012 80)",
+        "cssVariable": "--text-secondary",
+        "tonalRamp": [
+          "oklch(15% 0.012 80)",
+          "oklch(25% 0.012 80)",
+          "oklch(35% 0.012 80)",
+          "oklch(45% 0.012 80)",
+          "oklch(55% 0.012 80)",
+          "oklch(65% 0.012 80)",
+          "oklch(80% 0.012 80)",
+          "oklch(95% 0.012 80)"
+        ]
+      },
+      "label-grey": {
+        "role": "neutral",
+        "displayName": "Label Grey",
+        "canonical": "oklch(66% 0.012 78)",
+        "cssVariable": "--text-tertiary",
+        "tonalRamp": [
+          "oklch(15% 0.012 78)",
+          "oklch(25% 0.012 78)",
+          "oklch(35% 0.012 78)",
+          "oklch(45% 0.012 78)",
+          "oklch(55% 0.012 78)",
+          "oklch(65% 0.012 78)",
+          "oklch(80% 0.012 78)",
+          "oklch(95% 0.012 78)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "canonical": "oklch(58% 0.01 75)",
+        "cssVariable": "--text-muted",
+        "tonalRamp": [
+          "oklch(15% 0.01 75)",
+          "oklch(25% 0.01 75)",
+          "oklch(35% 0.01 75)",
+          "oklch(45% 0.01 75)",
+          "oklch(55% 0.01 75)",
+          "oklch(65% 0.01 75)",
+          "oklch(80% 0.01 75)",
+          "oklch(95% 0.01 75)"
+        ]
+      },
+      "amber-signal": {
+        "role": "primary",
+        "displayName": "Amber Signal",
+        "canonical": "oklch(79% 0.16 66)",
+        "cssVariable": "--accent-blue",
+        "tonalRamp": [
+          "oklch(15% 0.16 66)",
+          "oklch(25% 0.16 66)",
+          "oklch(35% 0.16 66)",
+          "oklch(45% 0.16 66)",
+          "oklch(55% 0.16 66)",
+          "oklch(65% 0.16 66)",
+          "oklch(80% 0.16 66)",
+          "oklch(95% 0.16 66)"
+        ]
+      },
+      "amber-signal-hover": {
+        "role": "primary",
+        "displayName": "Amber Signal Hover",
+        "canonical": "oklch(85% 0.15 72)",
+        "cssVariable": "--accent-blue-hover",
+        "tonalRamp": [
+          "oklch(15% 0.15 72)",
+          "oklch(25% 0.15 72)",
+          "oklch(35% 0.15 72)",
+          "oklch(45% 0.15 72)",
+          "oklch(55% 0.15 72)",
+          "oklch(65% 0.15 72)",
+          "oklch(80% 0.15 72)",
+          "oklch(95% 0.15 72)"
+        ]
+      },
+      "signal-ink": {
+        "role": "primary",
+        "displayName": "Signal Ink",
+        "canonical": "oklch(14% 0.01 66)",
+        "cssVariable": "--signal-ink",
+        "tonalRamp": [
+          "oklch(15% 0.01 66)",
+          "oklch(25% 0.01 66)",
+          "oklch(35% 0.01 66)",
+          "oklch(45% 0.01 66)",
+          "oklch(55% 0.01 66)",
+          "oklch(65% 0.01 66)",
+          "oklch(80% 0.01 66)",
+          "oklch(95% 0.01 66)"
+        ]
+      },
+      "up-green": {
+        "role": "secondary",
+        "displayName": "Up Green",
+        "canonical": "oklch(77% 0.17 148)",
+        "cssVariable": "--accent-green",
+        "tonalRamp": [
+          "oklch(15% 0.17 148)",
+          "oklch(25% 0.17 148)",
+          "oklch(35% 0.17 148)",
+          "oklch(45% 0.17 148)",
+          "oklch(55% 0.17 148)",
+          "oklch(65% 0.17 148)",
+          "oklch(80% 0.17 148)",
+          "oklch(95% 0.17 148)"
+        ]
+      },
+      "up-green-muted": {
+        "role": "secondary",
+        "displayName": "Up Green Muted",
+        "canonical": "oklch(45% 0.1 148)",
+        "cssVariable": "--accent-green-muted",
+        "tonalRamp": [
+          "oklch(15% 0.1 148)",
+          "oklch(25% 0.1 148)",
+          "oklch(35% 0.1 148)",
+          "oklch(45% 0.1 148)",
+          "oklch(55% 0.1 148)",
+          "oklch(65% 0.1 148)",
+          "oklch(80% 0.1 148)",
+          "oklch(95% 0.1 148)"
+        ]
+      },
+      "down-red": {
+        "role": "secondary",
+        "displayName": "Down Red",
+        "canonical": "oklch(67% 0.21 27)",
+        "cssVariable": "--accent-red",
+        "tonalRamp": [
+          "oklch(15% 0.21 27)",
+          "oklch(25% 0.21 27)",
+          "oklch(35% 0.21 27)",
+          "oklch(45% 0.21 27)",
+          "oklch(55% 0.21 27)",
+          "oklch(65% 0.21 27)",
+          "oklch(80% 0.21 27)",
+          "oklch(95% 0.21 27)"
+        ]
+      },
+      "down-red-muted": {
+        "role": "secondary",
+        "displayName": "Down Red Muted",
+        "canonical": "oklch(42% 0.13 27)",
+        "cssVariable": "--accent-red-muted",
+        "tonalRamp": [
+          "oklch(15% 0.13 27)",
+          "oklch(25% 0.13 27)",
+          "oklch(35% 0.13 27)",
+          "oklch(45% 0.13 27)",
+          "oklch(55% 0.13 27)",
+          "oklch(65% 0.13 27)",
+          "oklch(80% 0.13 27)",
+          "oklch(95% 0.13 27)"
+        ]
+      },
+      "warn-yellow": {
+        "role": "secondary",
+        "displayName": "Warn Yellow",
+        "canonical": "oklch(89% 0.15 100)",
+        "cssVariable": "--accent-yellow",
+        "tonalRamp": [
+          "oklch(15% 0.15 100)",
+          "oklch(25% 0.15 100)",
+          "oklch(35% 0.15 100)",
+          "oklch(45% 0.15 100)",
+          "oklch(55% 0.15 100)",
+          "oklch(65% 0.15 100)",
+          "oklch(80% 0.15 100)",
+          "oklch(95% 0.15 100)"
+        ]
+      },
+      "warn-yellow-muted": {
+        "role": "secondary",
+        "displayName": "Warn Yellow Muted",
+        "canonical": "oklch(48% 0.09 100)",
+        "cssVariable": "--accent-yellow-muted",
+        "tonalRamp": [
+          "oklch(15% 0.09 100)",
+          "oklch(25% 0.09 100)",
+          "oklch(35% 0.09 100)",
+          "oklch(45% 0.09 100)",
+          "oklch(55% 0.09 100)",
+          "oklch(65% 0.09 100)",
+          "oklch(80% 0.09 100)",
+          "oklch(95% 0.09 100)"
+        ]
+      },
+      "chart-1": {
+        "role": "tertiary",
+        "displayName": "Chart 1",
+        "canonical": "oklch(79% 0.16 66)",
+        "cssVariable": "--chart-1",
+        "tonalRamp": [
+          "oklch(15% 0.16 66)",
+          "oklch(25% 0.16 66)",
+          "oklch(35% 0.16 66)",
+          "oklch(45% 0.16 66)",
+          "oklch(55% 0.16 66)",
+          "oklch(65% 0.16 66)",
+          "oklch(80% 0.16 66)",
+          "oklch(95% 0.16 66)"
+        ]
+      },
+      "chart-2": {
+        "role": "tertiary",
+        "displayName": "Chart 2",
+        "canonical": "oklch(80% 0.11 215)",
+        "cssVariable": "--chart-2",
+        "tonalRamp": [
+          "oklch(15% 0.11 215)",
+          "oklch(25% 0.11 215)",
+          "oklch(35% 0.11 215)",
+          "oklch(45% 0.11 215)",
+          "oklch(55% 0.11 215)",
+          "oklch(65% 0.11 215)",
+          "oklch(80% 0.11 215)",
+          "oklch(95% 0.11 215)"
+        ]
+      },
+      "chart-3": {
+        "role": "tertiary",
+        "displayName": "Chart 3",
+        "canonical": "oklch(92% 0.01 85)",
+        "cssVariable": "--chart-3",
+        "tonalRamp": [
+          "oklch(15% 0.01 85)",
+          "oklch(25% 0.01 85)",
+          "oklch(35% 0.01 85)",
+          "oklch(45% 0.01 85)",
+          "oklch(55% 0.01 85)",
+          "oklch(65% 0.01 85)",
+          "oklch(80% 0.01 85)",
+          "oklch(95% 0.01 85)"
+        ]
+      },
+      "chart-4": {
+        "role": "tertiary",
+        "displayName": "Chart 4",
+        "canonical": "oklch(70% 0.2 345)",
+        "cssVariable": "--chart-4",
+        "tonalRamp": [
+          "oklch(15% 0.2 345)",
+          "oklch(25% 0.2 345)",
+          "oklch(35% 0.2 345)",
+          "oklch(45% 0.2 345)",
+          "oklch(55% 0.2 345)",
+          "oklch(65% 0.2 345)",
+          "oklch(80% 0.2 345)",
+          "oklch(95% 0.2 345)"
+        ]
+      },
+      "chart-5": {
+        "role": "tertiary",
+        "displayName": "Chart 5",
+        "canonical": "oklch(77% 0.16 148)",
+        "cssVariable": "--chart-5",
+        "tonalRamp": [
+          "oklch(15% 0.16 148)",
+          "oklch(25% 0.16 148)",
+          "oklch(35% 0.16 148)",
+          "oklch(45% 0.16 148)",
+          "oklch(55% 0.16 148)",
+          "oklch(65% 0.16 148)",
+          "oklch(80% 0.16 148)",
+          "oklch(95% 0.16 148)"
+        ]
+      },
+      "chart-6": {
+        "role": "tertiary",
+        "displayName": "Chart 6",
+        "canonical": "oklch(68% 0.15 295)",
+        "cssVariable": "--chart-6",
+        "tonalRamp": [
+          "oklch(15% 0.15 295)",
+          "oklch(25% 0.15 295)",
+          "oklch(35% 0.15 295)",
+          "oklch(45% 0.15 295)",
+          "oklch(55% 0.15 295)",
+          "oklch(65% 0.15 295)",
+          "oklch(80% 0.15 295)",
+          "oklch(95% 0.15 295)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles beside the fn tag; condensed Archivo (wdth 80)."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Quote-line values; JetBrains Mono, tabular."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Panel titles in amber, uppercase; buttons use the same build at wdth 85."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Prose, descriptions, modal copy at normal width; 75ch cap on page descriptions."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "AG Grid cells at 28px rows; numeric cells mono and right-aligned."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, grid headers, quote keys, footer status line; condensed uppercase Label Grey."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Function mnemonics, function-key numbers, command prompt, input and GO."
+      }
+    },
+    "shadows": [
+      {
+        "name": "dropdown",
+        "value": "0 12px 32px -8px oklch(0% 0 0 / 0.7)",
+        "purpose": "Command-line result list."
+      },
+      {
+        "name": "overlay-card",
+        "value": "0 16px 40px -12px oklch(0% 0 0 / 0.8)",
+        "purpose": "Gate card over a locked table."
+      },
+      {
+        "name": "modal",
+        "value": "0 24px 60px -16px oklch(0% 0 0 / 0.9)",
+        "purpose": "Account modal, over an oklch(8% 0.004 70 / 0.78) scrim."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state",
+        "value": "150ms ease-out",
+        "purpose": "Background, border and color changes on buttons, fields, function keys, links."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "0.01ms",
+        "purpose": "prefers-reduced-motion collapses all animation and transition durations."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "max-width",
+        "value": "1680px"
+      }
+    ],
+    "focus": {
+      "value": "outline: 1px solid var(--accent-blue); outline-offset: 1px",
+      "purpose": "Global :focus-visible ring; fields shift their stroke to amber instead."
+    },
+    "rootFontSize": {
+      "value": "93.75%",
+      "purpose": "15px root at default browser settings; scales with the reader's setting."
+    },
+    "legacyTokenNames": {
+      "--accent-blue": "amber signal",
+      "--accent-blue-hover": "amber signal hover",
+      "--signal-ink": "text on an amber fill"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The primary action: amber fill, Signal Ink text, square.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Create account</button>",
+      "css": ".ds-btn { display:inline-flex; align-items:center; justify-content:center; gap:0.4rem; height:2.1rem; padding:0 0.85rem; font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-variation-settings:'wdth' 85; font-size:12px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; border:1px solid transparent; border-radius:0; cursor:pointer; transition:background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out; } .ds-btn-primary { background:var(--accent-blue, oklch(79% 0.16 66)); color:var(--signal-ink, oklch(14% 0.01 66)); } .ds-btn-primary:hover { background:var(--accent-blue-hover, oklch(85% 0.15 72)); } .ds-btn:focus-visible { outline:1px solid var(--accent-blue, oklch(79% 0.16 66)); outline-offset:1px; } .ds-btn:disabled { opacity:0.45; cursor:not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action: hairline stroke, turns amber on hover.",
+      "html": "<button class=\"ds-btn-ghost\">Sign in</button>",
+      "css": ".ds-btn-ghost { display:inline-flex; align-items:center; justify-content:center; height:2.1rem; padding:0 0.85rem; font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-variation-settings:'wdth' 85; font-size:12px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; background:transparent; color:var(--text-primary, oklch(95% 0.01 85)); border:1px solid var(--border-strong, oklch(40% 0.01 70)); border-radius:0; cursor:pointer; transition:border-color 150ms ease-out, color 150ms ease-out; } .ds-btn-ghost:hover { border-color:var(--accent-blue, oklch(79% 0.16 66)); color:var(--accent-blue, oklch(79% 0.16 66)); } .ds-btn-ghost:focus-visible { outline:1px solid var(--accent-blue, oklch(79% 0.16 66)); outline-offset:1px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Ground interior, strong hairline, amber stroke on focus.",
+      "html": "<label class=\"ds-label\" for=\"ds-email\">Work email</label><input id=\"ds-email\" class=\"ds-field\" placeholder=\"you@fund.com\">",
+      "css": ".ds-label { display:block; margin-bottom:6px; font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-variation-settings:'wdth' 78; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-tertiary, oklch(66% 0.012 78)); line-height:1.2; } .ds-field { width:100%; height:2.2rem; padding:0 0.7rem; background:var(--background, oklch(13% 0.004 70)); border:1px solid var(--border-strong, oklch(40% 0.01 70)); border-radius:0; color:var(--text-primary, oklch(95% 0.01 85)); font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-size:13.5px; transition:border-color 150ms ease-out; } .ds-field::placeholder { color:var(--text-muted, oklch(58% 0.01 75)); } .ds-field:focus { outline:none; border-color:var(--accent-blue, oklch(79% 0.16 66)); }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The one container: hairline box, title bar with amber title and grey meta.",
+      "html": "<section class=\"ds-panel\"><div class=\"ds-panel-head\"><h2 class=\"ds-panel-title\">Curator ranking</h2><span class=\"ds-panel-meta\">115 curators · by TVL</span></div><div class=\"ds-panel-body\"><div class=\"ds-row\"><span>Ether.fi</span><span class=\"ds-num\">$5.75B</span></div><div class=\"ds-row\"><span>Spark Protocol</span><span class=\"ds-num\">$5.23B</span></div></div></section>",
+      "css": ".ds-panel { background:var(--background-subtle, oklch(16.5% 0.005 70)); border:1px solid var(--border, oklch(30% 0.008 70)); border-radius:0; min-width:0; color:var(--text-primary, oklch(95% 0.01 85)); font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; } .ds-panel-head { display:flex; align-items:center; gap:0.5rem; min-height:1.95rem; padding:0 0.6rem; background:var(--background-elevated, oklch(20% 0.006 70)); border-bottom:1px solid var(--border, oklch(30% 0.008 70)); } .ds-panel-title { margin:0; font-variation-settings:'wdth' 78; font-size:12px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--accent-blue, oklch(79% 0.16 66)); white-space:nowrap; } .ds-panel-meta { margin-left:auto; font-variation-settings:'wdth' 85; font-size:11.25px; color:var(--text-tertiary, oklch(66% 0.012 78)); white-space:nowrap; } .ds-row { display:flex; justify-content:space-between; align-items:center; height:28px; padding:0 10px; font-size:13px; border-bottom:1px solid var(--border-subtle, oklch(23% 0.006 70)); } .ds-row:hover { background:var(--background-hover, oklch(23.5% 0.008 70)); } .ds-num { font-family:var(--font-mono-face), 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric:tabular-nums; }"
+    },
+    {
+      "name": "Function Bar",
+      "kind": "nav",
+      "refersTo": "function-key",
+      "description": "Numbered function keys; the active key fills amber.",
+      "html": "<nav class=\"ds-fnbar\"><a class=\"ds-fnkey ds-fnkey-active\" href=\"#\" aria-current=\"page\"><span class=\"ds-fnnum\">1</span>Curators</a><a class=\"ds-fnkey\" href=\"#\"><span class=\"ds-fnnum\">2</span>Compare</a><a class=\"ds-fnkey\" href=\"#\"><span class=\"ds-fnnum\">3</span>Yields</a></nav>",
+      "css": ".ds-fnbar { display:flex; height:2.25rem; background:var(--background-subtle, oklch(16.5% 0.005 70)); border-bottom:1px solid var(--border, oklch(30% 0.008 70)); } .ds-fnkey { display:flex; align-items:center; gap:0.5rem; padding:0 0.75rem; border-right:1px solid var(--border, oklch(30% 0.008 70)); color:var(--text-secondary, oklch(78% 0.012 80)); text-decoration:none; font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-variation-settings:'wdth' 80; font-size:12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; white-space:nowrap; transition:background-color 150ms, color 150ms; } .ds-fnkey:hover { background:var(--background-hover, oklch(23.5% 0.008 70)); color:var(--text-primary, oklch(95% 0.01 85)); } .ds-fnkey:focus-visible { outline:1px solid var(--accent-blue, oklch(79% 0.16 66)); outline-offset:1px; } .ds-fnnum { font-family:var(--font-mono-face), 'JetBrains Mono', ui-monospace, monospace; font-size:10.5px; font-weight:700; color:var(--accent-blue, oklch(79% 0.16 66)); } .ds-fnkey-active, .ds-fnkey-active:hover { background:var(--accent-blue, oklch(79% 0.16 66)); color:var(--signal-ink, oklch(14% 0.01 66)); } .ds-fnkey-active .ds-fnnum { color:var(--signal-ink, oklch(14% 0.01 66)); }"
+    },
+    {
+      "name": "Command Line",
+      "kind": "custom",
+      "refersTo": "field",
+      "description": "Signature: amber prompt, mono uppercase input, key hint, amber GO, joined on one stroke.",
+      "html": "<form class=\"ds-cmd\" onsubmit=\"return false\"><span class=\"ds-cmd-prompt\">&gt;</span><input class=\"ds-cmd-input\" placeholder=\"Function or curator name\"><kbd class=\"ds-cmd-kbd\">/</kbd><button class=\"ds-cmd-go\">GO</button></form>",
+      "css": ".ds-cmd { display:flex; align-items:stretch; width:100%; max-width:34rem; font-family:var(--font-mono-face), 'JetBrains Mono', ui-monospace, monospace; } .ds-cmd-prompt { display:flex; align-items:center; padding:0 6px 0 10px; background:var(--background, oklch(13% 0.004 70)); border:1px solid var(--border-strong, oklch(40% 0.01 70)); border-right:0; font-size:11.25px; font-weight:700; color:var(--accent-blue, oklch(79% 0.16 66)); } .ds-cmd-input { flex:1; min-width:0; height:2rem; padding:0 4px; background:var(--background, oklch(13% 0.004 70)); border:1px solid var(--border-strong, oklch(40% 0.01 70)); border-left:0; border-right:0; color:var(--text-primary, oklch(95% 0.01 85)); font-family:inherit; font-size:12px; text-transform:uppercase; } .ds-cmd-input::placeholder { text-transform:none; color:var(--text-muted, oklch(58% 0.01 75)); } .ds-cmd-input:focus { outline:none; } .ds-cmd-input:focus + .ds-cmd-kbd { display:none; } .ds-cmd-kbd { display:flex; align-items:center; padding:0 8px; background:var(--background, oklch(13% 0.004 70)); border:1px solid var(--border-strong, oklch(40% 0.01 70)); border-left:0; border-right:0; font-size:10.5px; color:var(--text-muted, oklch(58% 0.01 75)); } .ds-cmd-go { height:2rem; padding:0 12px; border:0; border-radius:0; background:var(--accent-blue, oklch(79% 0.16 66)); color:var(--signal-ink, oklch(14% 0.01 66)); font-family:inherit; font-size:11.25px; font-weight:700; letter-spacing:0.025em; cursor:pointer; transition:background-color 150ms; } .ds-cmd-go:hover { background:var(--accent-blue-hover, oklch(85% 0.15 72)); } .ds-cmd-go:focus-visible { outline:1px solid var(--accent-blue, oklch(79% 0.16 66)); outline-offset:1px; }"
+    },
+    {
+      "name": "Function Tag",
+      "kind": "chip",
+      "refersTo": "fn-tag",
+      "description": "Signature: the page mnemonic as a solid amber block beside the title.",
+      "html": "<div class=\"ds-pagebar\"><span class=\"ds-fntag\">CMP</span><h1 class=\"ds-pagetitle\">Compare curators</h1></div>",
+      "css": ".ds-pagebar { display:flex; align-items:flex-start; gap:0.75rem; } .ds-fntag { display:inline-flex; align-items:center; padding:0.3rem 0.4rem; background:var(--accent-blue, oklch(79% 0.16 66)); color:var(--signal-ink, oklch(14% 0.01 66)); font-family:var(--font-mono-face), 'JetBrains Mono', ui-monospace, monospace; font-size:11px; font-weight:700; line-height:1; letter-spacing:0.04em; } .ds-pagetitle { margin:0; font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-variation-settings:'wdth' 80; font-size:21.75px; line-height:1; font-weight:700; letter-spacing:0.01em; color:var(--text-primary, oklch(95% 0.01 85)); }"
+    },
+    {
+      "name": "Quote Cell",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Signature: label key over an off-white mono figure; colour only for state.",
+      "html": "<dl class=\"ds-quotes\"><div class=\"ds-quote\"><dt class=\"ds-qk\">Tracked TVL</dt><dd class=\"ds-qv\">$31.91B</dd></div><div class=\"ds-quote\"><dt class=\"ds-qk\">Stress index</dt><dd class=\"ds-qv\">40 <span class=\"ds-qs\">Elevated</span></dd></div></dl>",
+      "css": ".ds-quotes { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); margin:0; background:var(--background-subtle, oklch(16.5% 0.005 70)); border:1px solid var(--border, oklch(30% 0.008 70)); } .ds-quote { padding:0.625rem 0.75rem; border-right:1px solid var(--border, oklch(30% 0.008 70)); } .ds-qk { font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-variation-settings:'wdth' 78; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-tertiary, oklch(66% 0.012 78)); } .ds-qv { margin:6px 0 0; font-family:var(--font-mono-face), 'JetBrains Mono', ui-monospace, monospace; font-size:21.75px; font-weight:600; line-height:1; font-variant-numeric:tabular-nums; color:var(--text-primary, oklch(95% 0.01 85)); } .ds-qs { font-family:var(--font-sans-face), Archivo, system-ui, sans-serif; font-variation-settings:'wdth' 78; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; color:var(--accent-yellow, oklch(89% 0.15 100)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Terminal",
+    "overview": "CuratorWatch is the curator market's terminal: one warm near-black screen of dense, labeled numbers, driven from the keyboard. The form is the Bloomberg Terminal translated into standard web controls. The function bar is real navigation with number keys 1 to 8; the command line is a real combobox that takes a function mnemonic (CMP, YLD, FEE, LIQ, CALC, DLY, ALRT) or a curator name and runs on Enter or GO. Every page title carries its mnemonic as an amber code tag.\n\nDensity is the point. The root font size is 15px (93.75%, so the reader's own setting still scales it), grid rows are 28px, panels sit 0.375rem apart, and every container is the same hairline panel with a title bar. Hierarchy comes from the width axis of one family (Archivo condensed for labels and titles, normal width for prose), from a tonal step per layer, and from a single brand signal: amber. Everything that is a value reads off-white; color on a number means something.\n\nThe system rejects the rounded-card SaaS dashboard with a hero metric and the ranking buried below the fold. There are no rounded containers, no gradient surfaces, and no decorative color.",
+    "keyCharacteristics": [
+      "Warm near-black ground; elevation steps lighter, never to pure black.",
+      "1px hairline panels with square corners and an amber title bar.",
+      "Amber is the only brand color; green, red and yellow are data semantics only.",
+      "Archivo on its width axis for all UI text; JetBrains Mono for figures, codes and the command line only.",
+      "15px root, 28px rows, 0.375rem gutters: terminal density.",
+      "Keyboard first: \"/\" or Cmd+K focuses the command line; 1 to 8 jump between functions."
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "Amber is the only brand color. It marks panel titles, the active function, focus and the primary action, and nothing decorative. Text on amber is always Signal Ink.",
+        "section": "colors"
+      },
+      {
+        "name": "The Off-White Values Rule",
+        "body": "A value is off-white unless it carries meaning: green or red for signed change and good/bad state, yellow for a warning. Never color a number for emphasis or variety.",
+        "section": "colors"
+      },
+      {
+        "name": "The Plot Palette Rule",
+        "body": "Multi-series charts take Chart 1 to 6 in order, amber first. A single-series chart is amber.",
+        "section": "colors"
+      },
+      {
+        "name": "The Width Axis Rule",
+        "body": "Hierarchy comes from Archivo's width axis, weight and case, not from extra families. Condensed uppercase labels and titles; normal-width prose.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Means Data Rule",
+        "body": "JetBrains Mono carries figures, codes and the command line only. It is never a label costume.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lighter-Up Rule",
+        "body": "Elevation gets lighter, never darker; nothing is pure #000. A raised surface is the next step on the ladder plus a hairline.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Floating-Only Shadow Rule",
+        "body": "Shadows exist only on layers that float over content (dropdown, overlay card, modal). Panels, buttons and rows are flat.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Square Rule",
+        "body": "Corners are 0px. Round is reserved for status dots.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do build every container as a panel: Panel body, 1px Hairline, square corners, Title Bar head with an amber condensed uppercase title.",
+      "Do put the page's function mnemonic in an amber fn tag beside the page title.",
+      "Do keep values off-white and reserve green/red for signed change and good/bad state, yellow for warnings.",
+      "Do use Chart 1 to 6 in order for multi-series charts, amber first; use amber alone for a single series.",
+      "Do set figures in JetBrains Mono with tabular numerals, right-aligned in columns.",
+      "Do keep rows at 28px and panels on a 0.375rem gutter.",
+      "Do use Signal Ink for any text on an amber fill."
+    ],
+    "donts": [
+      "Don't round corners. The only round shape is a status dot.",
+      "Don't add a second brand color or use amber for decoration; it marks titles, the active function, focus and the primary action.",
+      "Don't use JetBrains Mono for labels; labels are condensed uppercase Archivo.",
+      "Don't shadow resting surfaces; shadows belong to dropdowns, overlay cards and modals only.",
+      "Don't use pure #000 or step elevation darker than the ground.",
+      "Don't use yellow for anything that is not a warning."
+    ]
+  }
+}

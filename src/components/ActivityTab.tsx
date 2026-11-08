@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowDown, ArrowUp, ArrowLeftRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
   formatTimeAgo,
@@ -10,6 +11,7 @@ import {
 import { UserDistribution } from "./UserDistribution";
 import { CollateralExposure } from "./CollateralExposure";
 import { TransactionVolumeChart } from "./TransactionVolumeChart";
+import { Panel } from "@/components/layout/Panel";
 
 interface ActivityItem {
   id: string;
@@ -100,80 +102,16 @@ export function ActivityTab({
     }
   }
 
-  const getActivityIcon = (type: string) => {
+  const getTypeGlyph = (type: string) => {
     switch (type.toLowerCase()) {
       case "deposit":
-        return (
-          <div className="w-8 h-8 rounded-full bg-accent-green/15 flex items-center justify-center flex-shrink-0">
-            <svg
-              className="w-4 h-4 text-accent-green"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m0 0l-4-4m4 4l4-4"
-              />
-            </svg>
-          </div>
-        );
+        return <ArrowDown className="w-3 h-3" />;
       case "withdraw":
-        return (
-          <div className="w-8 h-8 rounded-full bg-accent-red/15 flex items-center justify-center flex-shrink-0">
-            <svg
-              className="w-4 h-4 text-accent-red"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 20V4m0 0l-4 4m4-4l4 4"
-              />
-            </svg>
-          </div>
-        );
+        return <ArrowUp className="w-3 h-3" />;
       case "reallocate":
-        return (
-          <div className="w-8 h-8 rounded-full bg-accent-blue/15 flex items-center justify-center flex-shrink-0">
-            <svg
-              className="w-4 h-4 text-accent-blue"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-              />
-            </svg>
-          </div>
-        );
+        return <ArrowLeftRight className="w-3 h-3" />;
       default:
-        return (
-          <div className="w-8 h-8 rounded-full bg-background-elevated flex items-center justify-center flex-shrink-0">
-            <svg
-              className="w-4 h-4 text-text-muted"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-        );
+        return null;
     }
   };
 
@@ -183,15 +121,33 @@ export function ActivityTab({
         return "text-accent-green";
       case "withdraw":
         return "text-accent-red";
-      case "reallocate":
-        return "text-accent-blue";
       default:
         return "text-text-secondary";
     }
   };
 
+  const filterGroup = (
+    <div role="group" aria-label="Filter transactions" className="flex border border-border-strong">
+      {ACTIVITY_TYPES.map((type) => (
+        <button
+          key={type.value}
+          type="button"
+          aria-pressed={filter === type.value}
+          onClick={() => setFilter(type.value)}
+          className={`h-[1.375rem] px-2 cond text-[0.72rem] font-semibold uppercase tracking-[0.04em] border-r border-border-strong last:border-r-0 transition-colors ${
+            filter === type.value
+              ? "bg-accent-blue text-signal-ink"
+              : "text-text-secondary hover:text-text-primary hover:bg-background-hover"
+          }`}
+        >
+          {type.label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-1.5">
       {/* User Distribution Section */}
       <UserDistribution
         vaultAddress={vaultAddress}
@@ -206,47 +162,21 @@ export function ActivityTab({
       <TransactionVolumeChart vaultAddress={vaultAddress} />
 
       {/* Transaction Feed Section */}
-      <section className="bg-background-subtle rounded-lg border border-border">
-        <div className="px-6 py-4 border-b border-border flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-base font-semibold text-text-primary">
-              Transaction History
-            </h2>
-            <p className="text-sm text-text-tertiary">
-              Recent deposits, withdrawals, and reallocations
-            </p>
-          </div>
-
-          {/* Filter buttons */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-text-tertiary uppercase tracking-wider">
-              Filter
-            </span>
-            <div className="flex gap-1">
-              {ACTIVITY_TYPES.map((type) => (
-                <button
-                  key={type.value}
-                  onClick={() => setFilter(type.value)}
-                  className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                    filter === type.value
-                      ? "bg-accent-blue text-white font-medium"
-                      : "bg-background-elevated text-text-secondary hover:bg-background-hover border border-border"
-                  }`}
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
-          </div>
+      <Panel title="Transaction history">
+        {/* Filter buttons */}
+        <div className="flex items-center gap-2 px-3 h-9 border-b border-border overflow-x-auto">
+          <span className="label hidden sm:inline">Deposits, withdrawals, reallocations</span>
+          <span className="sm:ml-auto flex-none">{filterGroup}</span>
         </div>
 
         {/* Error state */}
         {error && (
-          <div className="p-6 text-center">
-            <p className="text-accent-red text-sm">{error}</p>
+          <div className="p-3 text-sm">
+            <p className="text-accent-red">Transactions could not be loaded: {error}</p>
             <button
+              type="button"
               onClick={() => fetchActivity(true)}
-              className="mt-2 text-sm text-accent-blue hover:text-accent-blue-hover"
+              className="btn btn-ghost h-7 mt-2"
             >
               Try again
             </button>
@@ -255,139 +185,88 @@ export function ActivityTab({
 
         {/* Loading state */}
         {loading && activity.length === 0 && !error && (
-          <div className="p-8 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-accent-blue border-t-transparent mx-auto" />
-            <p className="mt-4 text-sm text-text-tertiary">
-              Loading transactions...
-            </p>
-          </div>
+          <p className="p-3 label animate-pulse">Loading transactions…</p>
         )}
 
         {/* Empty state */}
         {!loading && !error && activity.length === 0 && (
-          <div className="p-12 text-center">
-            <div className="w-12 h-12 rounded-full bg-background-elevated flex items-center justify-center mx-auto">
-              <svg
-                className="h-6 w-6 text-text-muted"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <p className="mt-4 text-sm font-medium text-text-primary">
-              No transactions found
-            </p>
-            <p className="text-xs text-text-muted mt-1">
-              Transactions will appear here as they occur
+          <div className="p-3">
+            <p className="text-sm text-text-primary">No transactions found</p>
+            <p className="text-xs text-text-tertiary mt-0.5">
+              {filter ? "Nothing of this type yet. Choose All to see every transaction." : "Transactions appear here as they occur."}
             </p>
           </div>
         )}
 
         {/* Transaction list */}
         {!error && activity.length > 0 && (
-          <div className="divide-y divide-border-subtle">
+          <ul>
             {activity.map((item) => (
-              <div
+              <li
                 key={item.id}
-                className="flex items-center gap-4 px-6 py-4 hover:bg-background-hover transition-colors"
+                className="flex items-center gap-3 px-3 h-9 border-b border-border-subtle last:border-b-0 hover:bg-background-hover transition-colors text-sm"
               >
-                {getActivityIcon(item.type)}
+                <span className={`flex items-center gap-1.5 w-28 flex-none ${getTypeColor(item.type)}`}>
+                  <span className="w-3 flex justify-center" aria-hidden="true">{getTypeGlyph(item.type)}</span>
+                  <span className="font-medium truncate">{item.type}</span>
+                </span>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span
-                      className={`text-sm font-medium ${getTypeColor(
-                        item.type
-                      )}`}
-                    >
-                      {item.type}
-                    </span>
-                    {item.sender && (
-                      <span className="text-xs text-text-muted font-mono bg-background-elevated px-1.5 py-0.5 rounded">
-                        {formatAddress(item.sender)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-3 mt-1">
-                    {item.assets && (
-                      <span className="text-sm text-text-primary font-medium tabular-nums">
-                        {formatTokenAmount(
-                          item.assets,
-                          assetDecimals,
-                          assetSymbol
-                        )}
-                      </span>
-                    )}
-                    {item.assetsUsd && (
-                      <span className="text-xs text-text-tertiary tabular-nums">
-                        ({formatCurrency(item.assetsUsd)})
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 flex-shrink-0">
-                  <span className="text-xs text-text-muted">
-                    {formatTimeAgo(item.timestamp)}
+                {item.sender && (
+                  <span className="num text-xs text-text-tertiary hidden md:inline flex-none">
+                    {formatAddress(item.sender)}
                   </span>
+                )}
 
+                <span className="flex-1 min-w-0 flex items-baseline justify-end gap-2">
+                  {item.assets && (
+                    <span className="num text-text-primary truncate">
+                      {formatTokenAmount(item.assets, assetDecimals, assetSymbol)}
+                    </span>
+                  )}
+                  {item.assetsUsd && (
+                    <span className="num text-xs text-text-tertiary hidden sm:inline">
+                      {formatCurrency(item.assetsUsd)}
+                    </span>
+                  )}
+                </span>
+
+                <span className="num text-xs text-text-muted w-16 text-right flex-none">
+                  {formatTimeAgo(item.timestamp)}
+                </span>
+
+                <span className="w-4 flex-none">
                   {item.etherscanUrl && (
                     <a
                       href={item.etherscanUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-xs text-text-tertiary hover:text-accent-blue transition-colors p-1.5 rounded hover:bg-background-elevated"
+                      className="flex items-center text-text-tertiary hover:text-accent-blue transition-colors"
                       title="View on Etherscan"
+                      aria-label="View on Etherscan"
                     >
-                      <svg
-                        className="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </a>
                   )}
-                </div>
-              </div>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
 
         {/* Load more */}
         {hasMore && (
-          <div className="px-6 py-4 border-t border-border text-center">
-            <button
-              onClick={() => fetchActivity(false)}
-              disabled={loading}
-              className="px-6 py-2 text-sm font-medium text-text-primary bg-background-elevated hover:bg-background-hover border border-border rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-accent-blue border-t-transparent" />
-                  Loading...
-                </span>
-              ) : (
-                "Load more transactions"
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => fetchActivity(false)}
+            disabled={loading}
+            className="block w-full h-8 border-t border-border label text-accent-blue hover:bg-background-hover transition-colors disabled:opacity-50"
+          >
+            {loading ? "Loading…" : "Load more transactions"}
+          </button>
         )}
-      </section>
+      </Panel>
     </div>
   );
 }

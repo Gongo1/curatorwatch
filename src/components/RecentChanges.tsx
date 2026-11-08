@@ -74,7 +74,7 @@ export function RecentChanges({
     const colors = {
       critical: "bg-accent-red",
       warning: "bg-accent-yellow",
-      info: "bg-accent-blue",
+      info: "bg-text-muted",
     };
 
     return (
@@ -87,21 +87,21 @@ export function RecentChanges({
   const getSeverityBadge = (change: Change) => {
     if (isDepositChange(change)) {
       return (
-        <span className="px-1.5 py-0.5 rounded text-xs font-medium bg-accent-green/15 text-accent-green border border-accent-green/30">
+        <span className="label inline-flex items-center h-[1.15rem] px-1 border border-accent-green-muted text-accent-green">
           activity
         </span>
       );
     }
 
     const classes = {
-      critical: "bg-accent-red/15 text-accent-red border border-accent-red/30",
-      warning: "bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/30",
-      info: "bg-accent-blue/15 text-accent-blue border border-accent-blue/30",
+      critical: "border-accent-red-muted text-accent-red",
+      warning: "border-accent-yellow-muted text-accent-yellow",
+      info: "border-border-strong text-text-secondary",
     };
 
     return (
       <span
-        className={`px-1.5 py-0.5 rounded text-xs font-medium ${classes[change.severity]}`}
+        className={`label inline-flex items-center h-[1.15rem] px-1 border ${classes[change.severity]}`}
       >
         {change.severity}
       </span>
@@ -110,13 +110,13 @@ export function RecentChanges({
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-3">
+      <div className="animate-pulse space-y-2.5">
         {[...Array(3)].map((_, i) => (
           <div key={i} className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-background-elevated rounded-full" />
+            <div className="w-2 h-2 bg-background-elevated" />
             <div className="flex-1">
-              <div className="h-4 bg-background-elevated rounded w-3/4" />
-              <div className="h-3 bg-background-elevated/50 rounded w-1/2 mt-1" />
+              <div className="h-3.5 bg-background-elevated w-3/4" />
+              <div className="h-3 bg-background-elevated/50 w-1/2 mt-1" />
             </div>
           </div>
         ))}
@@ -126,32 +126,20 @@ export function RecentChanges({
 
   if (error) {
     return (
-      <div className="text-sm text-text-tertiary text-center py-4">
-        Failed to load changes
+      <div className="text-sm text-text-tertiary py-2">
+        Changes could not be loaded. Reload the page to try again.
       </div>
     );
   }
 
   if (changes.length === 0) {
     return (
-      <div className="text-center py-6">
-        <div className="w-12 h-12 rounded-full bg-accent-green/10 flex items-center justify-center mx-auto">
-          <svg
-            className="h-6 w-6 text-accent-green"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
+      <div className="py-2 flex items-start gap-2">
+        <span className="w-2 h-2 rounded-full bg-accent-green flex-shrink-0 mt-1.5" aria-hidden="true" />
+        <div>
+          <p className="text-sm text-text-secondary">No recent changes</p>
+          <p className="text-xs text-text-muted mt-0.5">Nothing was flagged in this window.</p>
         </div>
-        <p className="text-sm text-text-secondary mt-3">No recent changes</p>
-        <p className="text-xs text-text-muted mt-1">All systems operating normally</p>
       </div>
     );
   }
@@ -165,7 +153,7 @@ export function RecentChanges({
             <span className="text-sm text-text-primary truncate flex-1">
               {change.title}
             </span>
-            <span className="text-xs text-text-muted flex-shrink-0">
+            <span className="num text-xs text-text-muted flex-shrink-0">
               {formatTimeAgo(change.detectedAt)}
             </span>
           </div>
@@ -177,7 +165,7 @@ export function RecentChanges({
   return (
     <div className="divide-y divide-border-subtle">
       {changes.map((change) => (
-        <div key={change.id} className="py-3 first:pt-0 last:pb-0">
+        <div key={change.id} className="py-2 first:pt-0 last:pb-0">
           <div className="flex items-start gap-3">
             <div className="mt-1">{getSeverityDot(change)}</div>
             <div className="flex-1 min-w-0">
@@ -185,7 +173,7 @@ export function RecentChanges({
                 {showVaultName && change.vault && (
                   <Link
                     href={`/vault/${change.vault.address}`}
-                    className="text-xs font-medium text-accent-blue hover:text-accent-blue-hover transition-colors"
+                    className="text-xs font-medium text-accent-blue hover:underline"
                   >
                     {change.vault.name}
                   </Link>
@@ -194,7 +182,7 @@ export function RecentChanges({
               </div>
               <p className="text-sm font-medium text-text-primary mt-1">{change.title}</p>
               <p className="text-xs text-text-secondary mt-0.5">{change.description}</p>
-              <p className="text-xs text-text-muted mt-1">
+              <p className="num text-xs text-text-muted mt-1">
                 {formatTimeAgo(change.detectedAt)}
               </p>
             </div>
@@ -243,7 +231,7 @@ export function ChangeCountBadge({
 
   if (!counts || counts.total === 0) {
     return (
-      <span className="text-xs text-text-muted">-</span>
+      <span className="num text-xs text-text-muted">-</span>
     );
   }
 
@@ -252,12 +240,12 @@ export function ChangeCountBadge({
   return (
     <Link
       href={`/changes?vaultId=${vaultAddress}`}
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+      className={`num inline-flex items-center gap-1 h-[1.15rem] px-1 border text-xs font-medium transition-colors hover:bg-background-hover ${
         counts.critical > 0
-          ? "bg-accent-red/15 text-accent-red border border-accent-red/30 hover:bg-accent-red/25"
+          ? "text-accent-red border-accent-red-muted"
           : counts.warning > 0
-            ? "bg-accent-yellow/15 text-accent-yellow border border-accent-yellow/30 hover:bg-accent-yellow/25"
-            : "bg-accent-blue/15 text-accent-blue border border-accent-blue/30 hover:bg-accent-blue/25"
+            ? "text-accent-yellow border-accent-yellow-muted"
+            : "text-text-secondary border-border-strong"
       }`}
     >
       {hasWarning && (

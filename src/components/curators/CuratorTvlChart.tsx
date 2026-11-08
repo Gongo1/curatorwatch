@@ -17,14 +17,14 @@ interface CuratorMeta {
 }
 type Point = Record<string, number | string>;
 
-// Categorical palette — distinct hues, harmonized lightness for the dark canvas.
+// Terminal chart palette (amber, cyan, white, magenta, green, violet).
 const COLORS = [
-  "oklch(70% 0.14 235)",
-  "oklch(74% 0.13 162)",
-  "oklch(80% 0.13 78)",
-  "oklch(68% 0.17 18)",
-  "oklch(70% 0.13 305)",
-  "oklch(77% 0.11 205)",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "var(--chart-6)",
 ];
 
 function fmtAxisUsd(n: number): string {
@@ -53,18 +53,18 @@ function ChartTooltip({
   const rows = [...payload].sort((a, b) => b.value - a.value);
   const total = payload.reduce((s, r) => s + (r.value || 0), 0);
   return (
-    <div className="bg-background-elevated border border-border rounded-[9px] px-3 py-2 font-mono text-xs shadow-lg min-w-[170px]">
-      <div className="flex justify-between gap-4 text-text-tertiary mb-1.5">
-        <span>{label ? fmtDate(label) : ""}</span>
-        <span className="text-text-primary font-semibold tabular-nums">{fmtTipUsd(total)} total</span>
+    <div className="bg-background-elevated border border-border-strong px-2.5 py-2 text-xs min-w-[180px]">
+      <div className="flex justify-between gap-4 mb-1.5 pb-1.5 border-b border-border-subtle">
+        <span className="num text-text-tertiary">{label ? fmtDate(label) : ""}</span>
+        <span className="num text-text-primary font-semibold">{fmtTipUsd(total)} total</span>
       </div>
       {rows.map((r) => (
         <div key={r.name} className="flex justify-between gap-4 py-0.5 text-text-secondary">
-          <span className="flex items-center gap-1.5">
-            <span className="inline-block w-2 h-2 rounded-sm" style={{ background: r.color }} />
-            {r.name}
+          <span className="flex items-center gap-1.5 min-w-0">
+            <span className="inline-block w-2 h-2 flex-none" style={{ background: r.color }} />
+            <span className="truncate">{r.name}</span>
           </span>
-          <span className="text-text-primary font-semibold tabular-nums">{fmtTipUsd(r.value)}</span>
+          <span className="num text-text-primary font-semibold">{fmtTipUsd(r.value)}</span>
         </div>
       ))}
     </div>
@@ -106,22 +106,14 @@ export function CuratorTvlChart() {
       <div className="h-[270px] w-full">
         {loaded && (
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -8 }}>
-              <defs>
-                {meta.map((m, i) => (
-                  <linearGradient key={m.id} id={`tvlfill-${m.id}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.85} />
-                    <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.55} />
-                  </linearGradient>
-                ))}
-              </defs>
+            <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
               <CartesianGrid stroke="var(--border-subtle)" vertical={false} />
               <XAxis
                 dataKey="date"
                 tickFormatter={fmtDate}
                 tick={{ fill: "var(--text-tertiary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
                 tickLine={false}
-                axisLine={{ stroke: "var(--border)" }}
+                axisLine={{ stroke: "var(--border-subtle)" }}
                 minTickGap={32}
               />
               <YAxis
@@ -129,7 +121,7 @@ export function CuratorTvlChart() {
                 tick={{ fill: "var(--text-tertiary)", fontSize: 10, fontFamily: "var(--font-mono)" }}
                 tickLine={false}
                 axisLine={false}
-                width={48}
+                width={52}
               />
               <Tooltip
                 content={<ChartTooltip />}
@@ -147,7 +139,8 @@ export function CuratorTvlChart() {
                   name={m.name}
                   stroke={COLORS[i % COLORS.length]}
                   strokeWidth={1.25}
-                  fill={`url(#tvlfill-${m.id})`}
+                  fill={COLORS[i % COLORS.length]}
+                  fillOpacity={0.55}
                   isAnimationActive={false}
                 />
               ))}
@@ -156,11 +149,11 @@ export function CuratorTvlChart() {
         )}
       </div>
       {/* legend */}
-      <div className="flex gap-4 flex-wrap mt-4">
+      <div className="flex gap-x-4 gap-y-1 flex-wrap mt-2.5">
         {meta.map((m, i) => (
-          <span key={m.id} className="font-mono text-xs text-text-secondary inline-flex items-center gap-1.5">
+          <span key={m.id} className="text-xs text-text-secondary inline-flex items-center gap-1.5">
             <span
-              className="inline-block w-3 h-[3px] rounded-sm"
+              className="inline-block w-2 h-2"
               style={{ background: COLORS[i % COLORS.length] }}
             />
             {m.name}

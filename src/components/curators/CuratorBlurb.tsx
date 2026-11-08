@@ -1,9 +1,10 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronRight } from "lucide-react";
 import { isStablecoin } from "@/lib/utils/asset-class";
 import { getCuratorDossier } from "@/lib/curator-dossier";
 import { composeBlurbSentences } from "@/lib/curator-blurb-text";
+import { Panel } from "@/components/layout/Panel";
 import type { CuratorProfile, CuratorVaultSummary } from "@/lib/types/api";
 
 // The profile "About" blurb: one paragraph of live computed figures (every
@@ -70,62 +71,61 @@ export function CuratorBlurb({
   const quote = enrich?.quotes?.[0] ?? null;
 
   return (
-    <section className="mb-8 max-w-[820px] border border-border rounded-2xl bg-background-subtle p-5">
-      <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary mb-2">
-        About {name}
-      </div>
-      <p className="text-[15px] leading-relaxed text-text-secondary">
-        {sentences.join(" ")}
-      </p>
-
-      {enrich?.highlights && enrich.highlights.length > 0 && (
-        <ul className="mt-3 space-y-1">
-          {enrich.highlights.slice(0, 3).map((h, i) => (
-            <li key={i} className="flex gap-2 text-sm text-text-secondary">
-              <span className="text-accent-blue flex-none">›</span>
-              <span>{h}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {quote && (
-        <blockquote className="mt-4 border-l-2 border-accent-blue/50 pl-4">
-          <p className="text-sm italic text-text-primary">“{quote.text}”</p>
-          <a
-            href={quote.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-1 inline-flex items-center gap-1 font-mono text-xs text-text-tertiary hover:text-accent-blue transition-colors"
-          >
-            — {quote.source}
-            {quote.date ? `, ${quote.date}` : ""}
-            <ExternalLink className="w-3 h-3" />
-          </a>
-        </blockquote>
-      )}
-
-      {enrich?.cautions && enrich.cautions.length > 0 && (
-        <p className="mt-3 text-xs text-accent-yellow/90">
-          <span className="font-mono uppercase tracking-wide">Notable events:</span>{" "}
-          {enrich.cautions[0]}
+    <Panel title={`About ${name}`} meta={enrich ? "live figures · sourced facts" : "live figures"}>
+      <div className="p-3">
+        <p className="text-sm leading-relaxed text-text-secondary max-w-[90ch]">
+          {sentences.join(" ")}
         </p>
-      )}
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-text-muted">
+        {enrich?.highlights && enrich.highlights.length > 0 && (
+          <ul className="mt-2.5 space-y-1">
+            {enrich.highlights.slice(0, 3).map((h, i) => (
+              <li key={i} className="flex gap-2 text-sm text-text-secondary">
+                <ChevronRight className="w-3.5 h-3.5 mt-[3px] text-accent-blue flex-none" aria-hidden="true" />
+                <span>{h}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {quote && (
+          <blockquote className="mt-3 border-l border-border-strong pl-3">
+            <p className="text-sm italic text-text-primary">“{quote.text}”</p>
+            <a
+              href={quote.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-1 inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-accent-blue transition-colors"
+            >
+              {quote.source}
+              {quote.date ? `, ${quote.date}` : ""}
+              <ExternalLink className="w-3 h-3" aria-hidden="true" />
+            </a>
+          </blockquote>
+        )}
+
+        {enrich?.cautions && enrich.cautions.length > 0 && (
+          <p className="mt-2.5 text-xs text-accent-yellow">
+            <span className="label text-accent-yellow">Notable events</span>{" "}
+            {enrich.cautions[0]}
+          </p>
+        )}
+      </div>
+
+      <div className="px-3 py-1.5 border-t border-border-subtle flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
         <span>Figures computed live from tracked vaults{enrich ? " · profile facts curated with sources" : ""}</span>
         {enrich?.research && (
           <a
             href={enrich.research.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-text-tertiary hover:text-accent-blue transition-colors"
+            className="inline-flex items-center gap-1 text-accent-blue hover:underline"
           >
             Publishes {enrich.research.name}
-            <ExternalLink className="w-3 h-3" />
+            <ExternalLink className="w-3 h-3" aria-hidden="true" />
           </a>
         )}
       </div>
-    </section>
+    </Panel>
   );
 }

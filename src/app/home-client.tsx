@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { CuratorIndex } from "@/components/curators/CuratorIndex";
@@ -15,12 +15,17 @@ import { Newswire } from "@/components/news/Newswire";
 import type { RecentNewsItem } from "@/lib/news/queries";
 import { StressStrip } from "@/components/home/StressStrip";
 import { DataAsOf } from "@/components/DataAsOf";
+import { Panel } from "@/components/layout/Panel";
 import type { StressPoint } from "@/lib/stress-trend";
+import type { StressBand } from "@/lib/stress-index";
+import { Quote } from "@/components/layout/Quote";
 
 export type { ApyDistribution };
 
 const ChartSkeleton = () => (
-  <div className="h-[310px] bg-background-subtle border border-border rounded-xl animate-pulse" />
+  <div className="h-[310px] grid place-items-center bg-background border border-border-subtle">
+    <span className="label">Loading 30-day history…</span>
+  </div>
 );
 
 const CuratorTvlChart = dynamic(
@@ -48,15 +53,8 @@ function ChartWhenVisible() {
   return <div ref={ref}>{inView ? <CuratorTvlChart /> : <ChartSkeleton />}</div>;
 }
 
-// Categorical palette — distinct hues for the asset-mix bar (matches the chart).
-const MIX_COLORS = [
-  "oklch(70% 0.14 235)",
-  "oklch(74% 0.13 162)",
-  "oklch(80% 0.13 78)",
-  "oklch(68% 0.17 18)",
-  "oklch(70% 0.13 305)",
-  "oklch(77% 0.11 205)",
-];
+// Series colors for the asset-mix bar — the terminal chart palette.
+const MIX_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)", "var(--chart-6)"];
 
 function compactUsd(n: number): string {
   if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
@@ -64,14 +62,22 @@ function compactUsd(n: number): string {
   return `$${Math.round(n / 1e3)}K`;
 }
 
+const BAND_TEXT: Record<StressBand, string> = {
+  Calm: "text-accent-green",
+  Normal: "text-accent-green",
+  Elevated: "text-accent-yellow",
+  Stressed: "text-accent-yellow",
+  Critical: "text-accent-red",
+};
+
 interface CuratorsHomeProps {
   curators: CuratorDashboardItem[];
   stats: CuratorDashboardStats;
   apyDist: ApyDistribution | null;
   news: RecentNewsItem[];
   /** First-viewport aggregates — computed server-side from the FULL curator
-   *  set so the public hero reconciles with total TVL even when the account
-   *  gate truncates the ranking rows below. */
+   *  set so the public market line reconciles with total TVL even when the
+   *  account gate truncates the ranking rows. */
   overview: HomeOverview;
   /** 7-day stress readings from stored digests; null until the first edition. */
   stress?: { points: StressPoint[]; drivers: string[] } | null;
@@ -112,136 +118,139 @@ export function CuratorsHome({ curators, stats, apyDist, news, overview, stress 
     };
   }, [gateOn, gateReady, isSignedIn, gate]);
 
+  const today = stress?.points.length ? stress.points[stress.points.length - 1] : null;
+  const band = today && (today.band as StressBand) in BAND_TEXT ? (today.band as StressBand) : null;
+
   return (
-    <div>
-      {/* ── Hero: tracked TVL + asset mix ── */}
-      <header className="grid lg:grid-cols-2 gap-8 items-end mb-6">
-        <div>
-          <div className="font-mono text-xs uppercase tracking-[0.12em] text-text-tertiary">
-            Tracked curated TVL
-          </div>
-          <div className="font-mono font-semibold text-[clamp(2.6rem,7vw,4.2rem)] leading-[0.98] tracking-[-0.03em] tabular-nums my-2">
-            {compactUsd(stats.totalAUM)}
-          </div>
-          <div className="font-mono text-sm text-text-secondary">
-            across <span className="text-text-primary font-semibold">{stats.totalCurators}</span>{" "}
-            curators
-            <span className="text-text-muted mx-2">·</span>
-            <span className="text-text-primary font-semibold">{stats.totalVaults}</span> products
-            <span className="text-text-muted mx-2">·</span>
-            updated every 6h
-          </div>
-          <DataAsOf className="mt-2" />
+    <div className="space-y-1.5">
+      <h1 className="sr-only">CuratorWatch — DeFi vault curator market</h1>
+
+      {/* ── Market line: the curator market in one row of quotes ── */}
+      <section aria-label="Curator market" className="panel">
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <Quote k="Tracked TVL" v={compactUsd(stats.totalAUM)} />
+          <Quote k="Curators" v={String(stats.totalCurators)} />
+          <Quote k="Vaults" v={String(stats.totalVaults)} />
+          <Quote k="Stablecoin share" v={`${Math.round(mix.stablePct)}%`} />
+          <Quote
+            k="Stress index"
+            v={today ? String(Math.round(today.score)) : "—"}
+            sub={band ?? undefined}
+            subClass={`label ${band ? BAND_TEXT[band] : ""}`}
+            href="/digest"
+          />
+          <Quote
+            k="Largest curator"
+            v={largest?.name || "—"}
+            sub={largest ? compactUsd(largest.totalAUM) : undefined}
+            subClass="num text-xs text-text-tertiary"
+            text
+          />
+        </dl>
+        <div className="border-t border-border px-3 py-1.5">
+          <DataAsOf />
         </div>
-        <div>
-          <div className="flex justify-between items-baseline mb-2">
-            <span className="font-mono text-xs uppercase tracking-[0.06em] text-text-tertiary">
-              What the {compactUsd(stats.totalAUM)} holds
-            </span>
-            <span className="font-mono text-xs text-accent-green tabular-nums">
-              {Math.round(mix.stablePct)}% stablecoin
-            </span>
-          </div>
-          <div className="h-3 rounded-md overflow-hidden flex bg-background-elevated">
-            {mix.segments.map((s, i) => (
-              <span
-                key={s.symbol}
-                style={{
-                  width: `${s.pct}%`,
-                  background: s.symbol === "Other" ? "var(--text-tertiary)" : MIX_COLORS[i % MIX_COLORS.length],
-                }}
-              />
-            ))}
-          </div>
-          <div className="flex gap-x-4 gap-y-2 flex-wrap mt-3">
-            {mix.segments.map((s, i) => (
-              <span
-                key={s.symbol}
-                className={`font-mono text-xs inline-flex items-center gap-1.5 ${s.symbol === "Other" ? "text-text-tertiary" : "text-text-secondary"}`}
-              >
+      </section>
+
+      {/* ── Ranking + its history (the work) | market context + flow ── */}
+      <div className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_23rem] items-start">
+        <div className="grid gap-1.5 min-w-0">
+          <Panel
+            title="Curator ranking"
+            meta={`${gate?.totalCount ?? liveCurators.length} curators · by TVL`}
+          >
+            <CuratorIndex curators={liveCurators} gate={liveGate} totalAUM={stats.totalAUM} />
+          </Panel>
+          <Panel title="Tracked TVL by curator" meta="top 6 · stacked · 30 days" bodyClassName="p-3">
+            <ChartWhenVisible />
+          </Panel>
+          {news.length > 0 && <Newswire variant="bar" items={news} limit={6} title="Newswire" />}
+        </div>
+
+        <div className="grid gap-1.5">
+          {stress && (
+            <Panel title="Curator stress" href="/digest" meta="7 days · nightly">
+              <StressStrip points={stress.points} drivers={stress.drivers} />
+            </Panel>
+          )}
+
+          <Panel title="Asset mix" meta={`of ${compactUsd(stats.totalAUM)}`} bodyClassName="p-3">
+            <div className="h-2.5 flex bg-background" aria-hidden="true">
+              {mix.segments.map((s, i) => (
                 <span
-                  className="inline-block w-2 h-2 rounded-sm"
-                  style={{ background: s.symbol === "Other" ? "var(--text-tertiary)" : MIX_COLORS[i % MIX_COLORS.length] }}
+                  key={s.symbol}
+                  style={{
+                    width: `${s.pct}%`,
+                    background: s.symbol === "Other" ? "var(--text-muted)" : MIX_COLORS[i % MIX_COLORS.length],
+                  }}
                 />
-                {s.symbol} {Math.round(s.pct)}%
-              </span>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      {/* ── Curator stress: today's read + 7-day trend ── */}
-      {stress && <StressStrip points={stress.points} drivers={stress.drivers} />}
-
-      {/* ── Newswire: one-line headline bar ── */}
-      {news.length > 0 && <Newswire variant="bar" items={news} title="Newswire" />}
-
-      {/* ── Email delivery: one-click digest opt-in + alerts pointer ── */}
-      <EmailDeliveryCard />
-
-      {/* ── Signal strip: APY · largest · single-manager concentration ── */}
-      <div className="flex gap-x-10 gap-y-4 items-end flex-wrap py-4 border-b border-border-subtle mb-10">
-        {apyDist && apyDist.count > 0 && <ApyDistViz d={apyDist} />}
-        {largest && <Stat k="Largest curator" v={largest.name || "—"} sub={compactUsd(largest.totalAUM)} />}
-        {concFlags.length > 0 && (
-          <div className="min-w-0">
-            <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
-              Single-manager <span className="text-text-muted normal-case tracking-normal">≥84% one curator</span>
-            </div>
-            <div className="flex gap-x-4 gap-y-1 flex-wrap mt-1.5 font-mono text-sm">
-              {concFlags.slice(0, 4).map((f) => (
-                <Link
-                  key={f.symbol}
-                  href={f.topCuratorAddress ? `/curator/${curatorSlug(f.topCurator, f.topCuratorAddress)}` : "#"}
-                  className="group whitespace-nowrap"
-                  title={`${f.symbol}: ${compactUsd(f.totalUsd)} across ${f.curatorCount} curator${f.curatorCount === 1 ? "" : "s"} — ${Math.round(f.topCuratorPct)}% with ${f.topCurator}`}
-                >
-                  <span className="font-semibold text-text-primary">{f.symbol}</span>{" "}
-                  <span className="text-accent-yellow tabular-nums">{Math.round(f.topCuratorPct)}%</span>{" "}
-                  <span className="text-text-tertiary group-hover:text-accent-blue transition-colors">
-                    {f.topCurator || "—"}
-                  </span>
-                </Link>
               ))}
             </div>
-          </div>
-        )}
+            <table className="w-full mt-2.5 text-sm">
+              <caption className="sr-only">Share of tracked TVL by asset</caption>
+              <tbody>
+                {mix.segments.map((s, i) => (
+                  <tr key={s.symbol} className="h-6">
+                    <td className="w-4">
+                      <span
+                        className="block w-2 h-2"
+                        style={{ background: s.symbol === "Other" ? "var(--text-muted)" : MIX_COLORS[i % MIX_COLORS.length] }}
+                      />
+                    </td>
+                    <td className={s.symbol === "Other" ? "text-text-tertiary" : "text-text-primary"}>{s.symbol}</td>
+                    <td className="num text-right text-text-secondary">{s.pct.toFixed(1)}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+
+          {concFlags.length > 0 && (
+            <Panel title="Single-manager assets" meta="≥84% with one curator">
+              <table className="w-full text-sm table-fixed">
+                <caption className="sr-only">Assets where one curator manages at least 84% of tracked supply</caption>
+                <thead>
+                  <tr className="h-7 border-b border-border-subtle">
+                    <th scope="col" className="label text-left pl-3 w-[28%]">Asset</th>
+                    <th scope="col" className="label text-left">Curator</th>
+                    <th scope="col" className="label text-right pr-3 w-[18%]">Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {concFlags.slice(0, 5).map((f) => (
+                    <tr key={f.symbol} className="h-7 border-b border-border-subtle last:border-0 hover:bg-background-hover">
+                      <td className="pl-3 font-semibold text-text-primary truncate">{f.symbol}</td>
+                      <td className="truncate">
+                        {f.topCuratorAddress ? (
+                          <Link
+                            href={`/curator/${curatorSlug(f.topCurator, f.topCuratorAddress)}`}
+                            className="text-text-secondary hover:text-accent-blue"
+                            title={`${f.symbol}: ${compactUsd(f.totalUsd)} across ${f.curatorCount} curator${f.curatorCount === 1 ? "" : "s"}`}
+                          >
+                            {f.topCurator || "—"}
+                          </Link>
+                        ) : (
+                          <span className="text-text-secondary">{f.topCurator || "—"}</span>
+                        )}
+                      </td>
+                      <td className="num text-right pr-3 text-text-primary">{Math.round(f.topCuratorPct)}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </Panel>
+          )}
+
+          {apyDist && apyDist.count > 0 && (
+            <Panel title="Net APY spread" href="/yields" meta={`${apyDist.count} vaults`} bodyClassName="p-3">
+              <ApyDistViz d={apyDist} label="Vault count by net APY band" tall />
+            </Panel>
+          )}
+          <EmailDeliveryCard />
+        </div>
       </div>
 
-      {/* ── TVL by curator (30d) — the first full view ── */}
-      <section>
-        <SectionHead title="Tracked TVL by curator" meta="top 6 · stacked · 30 days · hover to inspect" />
-        <ChartWhenVisible />
-      </section>
-
-      {/* ── Curator index ── */}
-      <section>
-        <SectionHead title="All curators" meta="ranked by TVL · search & sort" />
-        <CuratorIndex curators={liveCurators} gate={liveGate} />
-      </section>
-
     </div>
   );
 }
 
-function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
-  return (
-    <div>
-      <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">{k}</div>
-      <div className="font-mono font-semibold text-xl tracking-tight mt-0.5 tabular-nums">
-        {v}
-        {sub && <span className="text-xs text-text-tertiary font-normal ml-1.5">{sub}</span>}
-      </div>
-    </div>
-  );
-}
-
-function SectionHead({ title, meta }: { title: string; meta: string }) {
-  return (
-    <div className="flex items-baseline gap-3 mb-5 pb-3 border-b border-border flex-wrap">
-      <span className="w-[7px] h-[7px] rounded-sm bg-accent-blue -translate-y-0.5" />
-      <span className="font-display font-bold text-xl tracking-tight">{title}</span>
-      <span className="font-mono text-xs text-text-tertiary ml-auto text-right">{meta}</span>
-    </div>
-  );
-}

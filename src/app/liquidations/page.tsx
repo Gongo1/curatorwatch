@@ -1,6 +1,10 @@
+import {  } from "lucide-react";
 import type { Metadata } from "next";
 import { fetchLiquidationsOverview } from "@/lib/lens-overviews";
 import { LiquidationsChart } from "./liquidations-chart";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
+import { Quote } from "@/components/layout/Quote";
 
 // ISR aligned to the ingestion cadence, like /yields.
 export const revalidate = 21600;
@@ -28,77 +32,46 @@ export default async function LiquidationsPage() {
   const activeDays = o.series.filter((d) => d.events > 0).length;
 
   return (
-    <div className="max-w-[1000px]">
-      {/* ── Executive summary ── */}
-      <header className="mb-8">
-        <div className="font-mono text-xs uppercase tracking-[0.12em] text-text-tertiary">
-          Collateral seized in liquidations · last {WINDOW} days
-        </div>
-        <div className="font-mono font-semibold text-[clamp(2.6rem,7vw,4.2rem)] leading-[0.98] tracking-[-0.03em] tabular-nums my-2">
-          {compactUsd(o.totalSeizedUsd)}
-        </div>
-        <div className="font-mono text-sm text-text-secondary">
-          across <span className="text-text-primary font-semibold">{o.totalEvents.toLocaleString()}</span>{" "}
-          liquidation events
-          <span className="text-text-muted mx-2">·</span>
-          on <span className="text-text-primary font-semibold">{activeDays}</span> of {WINDOW} days
-        </div>
-      </header>
+    <div className="space-y-1.5">
+      <PageHeader
+        title="Liquidations"
+        description={`Ecosystem liquidation activity over the last ${WINDOW} days: how much is liquidated, how often, and whether any of it turned into bad debt.`}
+      />
 
-      {/* ── Stat strip ── */}
-      <div className="flex gap-x-12 gap-y-4 flex-wrap py-4 border-y border-border-subtle mb-8">
-        <Stat k="Events" v={o.totalEvents.toLocaleString()} sub={`${WINDOW}d`} />
-        <Stat k="Collateral seized" v={compactUsd(o.totalSeizedUsd)} />
-        <Stat k="Debt repaid" v={compactUsd(o.totalRepaidUsd)} />
-        <div>
-          <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
-            Bad debt
-          </div>
-          <div
-            className={`font-mono font-semibold text-xl tracking-tight mt-0.5 tabular-nums ${
-              o.totalBadDebtUsd > 0 ? "text-accent-red" : "text-accent-green"
-            }`}
-          >
-            {o.totalBadDebtUsd > 0 ? compactUsd(o.totalBadDebtUsd) : "None"}
-            {o.totalBadDebtUsd > 0 && (
-              <span className="text-xs text-text-tertiary font-normal ml-1.5">
-                {o.daysWithBadDebt}d
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* ── Quote line: the window in one row ── */}
+      <section aria-label="Liquidation summary" className="panel">
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          <Quote k="Collateral seized" v={compactUsd(o.totalSeizedUsd)} sub={`${WINDOW}d`} />
+          <Quote k="Events" v={o.totalEvents.toLocaleString()} sub={`${WINDOW}d`} />
+          <Quote k="Active days" v={String(activeDays)} sub={`of ${WINDOW}`} />
+          <Quote k="Debt repaid" v={compactUsd(o.totalRepaidUsd)} />
+          <Quote
+            k="Bad debt"
+            v={o.totalBadDebtUsd >= 0.005 ? compactUsd(o.totalBadDebtUsd) : "None"}
+            sub={o.totalBadDebtUsd >= 0.005 ? `${o.daysWithBadDebt}d` : undefined}
+            tone={o.totalBadDebtUsd >= 0.005 ? "down" : undefined}
+          />
+        </dl>
+      </section>
 
       {/* ── Daily seized timeline ── */}
-      <section>
-        <div className="flex items-baseline gap-3 mb-5 pb-3 border-b border-border flex-wrap">
-          <span className="w-[7px] h-[7px] rounded-sm bg-accent-blue -translate-y-0.5" />
-          <span className="font-display font-bold text-xl tracking-tight">
-            Daily collateral seized
-          </span>
-          <span className="font-mono text-xs text-text-tertiary ml-auto text-right">
-            {WINDOW} days · hover any day · <span className="text-accent-red">●</span> = bad debt
-          </span>
-        </div>
+      <Panel
+        title="Daily collateral seized"
+        meta={
+          <>
+            {WINDOW} days · hover any day · <span className="inline-block w-2 h-2 rounded-full bg-accent-red align-[1px]" aria-hidden="true" /> bad debt
+          </>
+        }
+        bodyClassName="p-3"
+      >
         <LiquidationsChart series={o.series} />
-        <p className="font-mono text-xs text-text-tertiary mt-3 leading-relaxed">
+        <p className="text-xs text-text-tertiary mt-2 leading-relaxed max-w-[90ch]">
           Each bar is the USD value of collateral seized that day across all tracked
           markets; the red dot marks days that produced bad debt (a loss to lenders).
           Healthy liquidations repay lenders in full and leave no bad debt.
         </p>
-      </section>
+      </Panel>
     </div>
   );
 }
 
-function Stat({ k, v, sub }: { k: string; v: string; sub?: string }) {
-  return (
-    <div>
-      <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">{k}</div>
-      <div className="font-mono font-semibold text-xl tracking-tight mt-0.5 tabular-nums">
-        {v}
-        {sub && <span className="text-xs text-text-tertiary font-normal ml-1.5">{sub}</span>}
-      </div>
-    </div>
-  );
-}

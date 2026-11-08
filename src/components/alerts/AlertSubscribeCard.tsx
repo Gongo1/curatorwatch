@@ -1,9 +1,6 @@
 "use client";
 
-/* Hallmark · component: subscribe-form · genre: editorial · theme: Slate Terminal
- * states: default · hover · focus · active · disabled · loading · error · success
- * contrast: pass (46-50)
- */
+import { Check, ExternalLink } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 interface CuratorOption {
@@ -32,7 +29,7 @@ export function AlertSubscribeCard() {
   // Feedback after the confirm/unsubscribe redirects (?subscribe=…)
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get("subscribe");
-    if (status === "confirmed") setBanner("Subscription confirmed — you're on the wire.");
+    if (status === "confirmed") setBanner("Subscription confirmed. You will get the alerts by email.");
     else if (status === "unsubscribed") setBanner("Unsubscribed. No more emails from us.");
     else if (status === "invalid") setBanner("That link is invalid or expired.");
   }, []);
@@ -78,7 +75,7 @@ export function AlertSubscribeCard() {
 
   if (banner) {
     return (
-      <div className="border border-border rounded-2xl bg-background-subtle px-5 py-4 mb-6 font-mono text-sm text-text-secondary">
+      <div className="panel px-3 py-2.5 text-sm text-text-secondary">
         {banner}
       </div>
     );
@@ -86,10 +83,10 @@ export function AlertSubscribeCard() {
 
   if (state === "sent" || state === "updated") {
     return (
-      <div className="border border-border rounded-2xl bg-background-subtle px-5 py-4 mb-6 font-mono text-sm">
-        <span className="text-accent-green">✓</span>{" "}
+      <div className="panel px-3 py-2.5 text-sm text-text-secondary">
+        <Check className="inline w-4 h-4 up align-[-3px]" aria-hidden="true" />{" "}
         {state === "sent"
-          ? `Check ${email} — click the confirmation link and you're on the wire.`
+          ? <>Check <span className="num text-text-primary">{email}</span> and select the confirmation link to start the alerts.</>
           : "Preferences updated."}
       </div>
     );
@@ -97,26 +94,23 @@ export function AlertSubscribeCard() {
 
   if (!open) {
     return (
-      <div className="border border-border rounded-2xl bg-background-subtle px-5 py-3.5 mb-6 flex items-center gap-3 flex-wrap">
-        <span className="font-mono text-sm text-text-secondary">
-          Get alerts on the counterparties you care about — by email
+      <div className="panel px-3 py-2 flex items-center gap-3 flex-wrap">
+        <span className="text-sm text-text-secondary">
+          Get alerts on the counterparties you care about, by email
           {tgChannel ? " or Telegram" : ""}.
         </span>
-        <div className="ml-auto flex items-center gap-2.5">
+        <div className="ml-auto flex items-center gap-1.5">
           {tgChannel && (
             <a
               href={tgChannel}
               target="_blank"
               rel="noopener noreferrer"
-              className="font-mono text-xs px-3 py-1.5 rounded-lg border border-border text-text-secondary hover:border-accent-blue hover:text-accent-blue transition-colors"
+              className="btn btn-ghost"
             >
-              Telegram channel →
+              Telegram channel <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
             </a>
           )}
-          <button
-            onClick={() => setOpen(true)}
-            className="font-mono text-xs px-3 py-1.5 rounded-lg bg-accent-blue text-white hover:opacity-90 active:translate-y-px transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-blue focus-visible:outline-offset-2"
-          >
+          <button type="button" onClick={() => setOpen(true)} className="btn btn-primary">
             Email alerts
           </button>
         </div>
@@ -125,104 +119,115 @@ export function AlertSubscribeCard() {
   }
 
   return (
-    <div className="border border-border rounded-2xl bg-background-subtle p-5 mb-6">
-      <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary mb-3">
-        Email alerts — pick your counterparties
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Email alerts</h2>
+        <span className="panel-meta">pick your counterparties</span>
       </div>
-
-      {/* Selected chips */}
-      {selected.size > 0 && (
-        <div className="flex gap-1.5 flex-wrap mb-2.5">
-          {[...selected.entries()].map(([id, name]) => (
-            <button
-              key={id}
-              onClick={() => {
-                const next = new Map(selected);
-                next.delete(id);
-                setSelected(next);
-              }}
-              className="font-mono text-xs px-2 py-1 rounded-md bg-background-elevated border border-border text-text-primary hover:border-accent-red transition-colors"
-              title="Remove"
-            >
-              {name} ×
-            </button>
-          ))}
-        </div>
-      )}
-
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={curators.length ? "Search curators…" : "Loading curators…"}
-        className="w-full font-mono text-sm bg-background-elevated border border-border rounded-lg px-3 py-2 mb-1.5 focus:outline-none focus:border-accent-blue placeholder:text-text-muted"
-      />
-      {query.trim() && (
-        <div className="flex gap-1.5 flex-wrap mb-3">
-          {matches.map((c) => (
-            <button
-              key={c.id}
-              onClick={() => {
-                const next = new Map(selected);
-                next.set(c.id, c.name);
-                setSelected(next);
-                setQuery("");
-              }}
-              disabled={selected.has(c.id)}
-              className="font-mono text-xs px-2 py-1 rounded-md border border-border-subtle text-text-secondary hover:border-accent-blue hover:text-accent-blue disabled:opacity-40 transition-colors"
-            >
-              + {c.name}
-            </button>
-          ))}
-          {matches.length === 0 && (
-            <span className="font-mono text-xs text-text-muted py-1">No curator matches</span>
-          )}
-        </div>
-      )}
-
-      <label className="flex items-center gap-2 font-mono text-sm text-text-secondary mb-3 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={wantsDigest}
-          onChange={(e) => setWantsDigest(e.target.checked)}
-          className="accent-[var(--accent-blue,#3b82f6)]"
-        />
-        Also send me the daily digest
-      </label>
-
-      <div className="flex gap-2 flex-wrap">
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@fund.xyz"
-          className="flex-1 min-w-[220px] font-mono text-sm bg-background-elevated border border-border rounded-lg px-3 py-2 focus:outline-none focus:border-accent-blue placeholder:text-text-muted"
-        />
-        <button
-          onClick={submit}
-          disabled={state === "submitting" || !email || (selected.size === 0 && !wantsDigest)}
-          className="font-mono text-sm px-4 py-2 rounded-lg bg-accent-blue text-white hover:opacity-90 active:translate-y-px disabled:opacity-40 disabled:cursor-not-allowed transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-blue focus-visible:outline-offset-2"
-        >
-          {state === "submitting" ? "Sending…" : "Subscribe"}
-        </button>
-        <button
-          onClick={() => setOpen(false)}
-          className="font-mono text-sm px-3 py-2 rounded-lg border border-border text-text-tertiary hover:text-text-secondary transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
-
-      {error && <div className="font-mono text-xs text-accent-red mt-2.5">{error}</div>}
-      <div className="font-mono text-[11px] text-text-muted mt-3 leading-relaxed">
-        Warning + critical alerts on your curators, batched with the 6h data refresh. Double
-        opt-in; unsubscribe link in every email.
-        {tgChannel && (
-          <>
-            {" "}Prefer Telegram? <a href={tgChannel} target="_blank" rel="noopener noreferrer" className="text-accent-blue">Join the channel</a> — all warning/critical alerts + the daily digest.
-          </>
+      <div className="p-3">
+        {/* Selected chips */}
+        {selected.size > 0 && (
+          <div className="flex gap-1.5 flex-wrap mb-2">
+            {[...selected.entries()].map(([id, name]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => {
+                  const next = new Map(selected);
+                  next.delete(id);
+                  setSelected(next);
+                }}
+                className="text-xs h-6 px-2 bg-background-elevated border border-border-strong text-text-primary hover:border-accent-red hover:text-accent-red transition-colors"
+                title="Remove"
+                aria-label={`Remove ${name}`}
+              >
+                {name} ×
+              </button>
+            ))}
+          </div>
         )}
+
+        <label htmlFor="alert-sub-curator" className="label block mb-1.5">Curators</label>
+        <input
+          id="alert-sub-curator"
+          type="text"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={curators.length ? "Search curators…" : "Loading curators…"}
+          className="field text-sm mb-1.5"
+        />
+        {query.trim() && (
+          <div className="flex gap-1.5 flex-wrap mb-2.5">
+            {matches.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  const next = new Map(selected);
+                  next.set(c.id, c.name);
+                  setSelected(next);
+                  setQuery("");
+                }}
+                disabled={selected.has(c.id)}
+                className="text-xs h-6 px-2 border border-border text-text-secondary hover:border-accent-blue hover:text-accent-blue disabled:opacity-40 transition-colors"
+              >
+                + {c.name}
+              </button>
+            ))}
+            {matches.length === 0 && (
+              <span className="text-xs text-text-muted py-1">No curator matches. Check the spelling.</span>
+            )}
+          </div>
+        )}
+
+        <label className="flex items-center gap-2 text-sm text-text-secondary my-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={wantsDigest}
+            onChange={(e) => setWantsDigest(e.target.checked)}
+            className="accent-[var(--accent-blue)]"
+          />
+          Also send me the daily digest
+        </label>
+
+        <label htmlFor="alert-sub-email" className="label block mb-1.5">Email</label>
+        <div className="flex gap-1.5 flex-wrap">
+          <input
+            id="alert-sub-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@fund.xyz"
+            className="field text-sm flex-1 min-w-[200px] w-auto"
+          />
+          <button
+            type="button"
+            onClick={submit}
+            disabled={state === "submitting" || !email || (selected.size === 0 && !wantsDigest)}
+            className="btn btn-primary"
+          >
+            {state === "submitting" ? "Sending…" : "Subscribe"}
+          </button>
+          <button type="button" onClick={() => setOpen(false)} className="btn btn-ghost">
+            Cancel
+          </button>
+        </div>
+
+        {error && <div className="text-xs text-accent-red mt-2">{error}</div>}
+        <p className="text-xs text-text-tertiary mt-2.5 pt-2.5 border-t border-border-subtle leading-relaxed">
+          Warning and critical alerts on your curators, batched with the 6h data refresh. Double
+          opt-in; every email has an unsubscribe link.
+          {tgChannel && (
+            <>
+              {" "}Prefer Telegram?{" "}
+              <a href={tgChannel} target="_blank" rel="noopener noreferrer" className="text-accent-blue hover:underline">
+                Join the channel
+              </a>{" "}
+              for all warning and critical alerts and the daily digest.
+            </>
+          )}
+        </p>
       </div>
-    </div>
+    </section>
   );
 }

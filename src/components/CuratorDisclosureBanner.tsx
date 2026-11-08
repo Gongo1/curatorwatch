@@ -11,32 +11,32 @@ export function CuratorDisclosureBanner({ address }: { address: string }) {
   if (disclosures.length === 0) return null;
 
   return (
-    <div id="curator-disclosure" className="mb-8 scroll-mt-24 space-y-3">
+    <section
+      id="curator-disclosure"
+      aria-label="Material disclosures"
+      className="panel scroll-mt-24 border-accent-red-muted"
+    >
+      <div className="panel-head">
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-accent-red" aria-hidden />
+        <h2 className="panel-title text-accent-red">
+          Disclosure{disclosures.length > 1 ? "s" : ""}
+        </h2>
+        <span className="panel-meta">off-chain · not priced in on-chain figures</span>
+      </div>
       {disclosures.map((d, i) => (
-        <div
-          key={i}
-          className="flex gap-3 rounded-2xl border border-accent-red/40 bg-accent-red/[0.06] p-4"
-        >
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-accent-red" aria-hidden />
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <span className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-accent-red">
-                Disclosure
-              </span>
-              <span className="text-sm font-semibold text-text-primary">{d.title}</span>
-            </div>
-            <p className="mt-1 text-sm leading-relaxed text-text-secondary">{d.detail}</p>
-            <a
-              href={d.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-1.5 inline-flex items-center gap-1 font-mono text-xs text-text-tertiary hover:text-text-secondary"
-            >
-              {d.date} · {d.sourceTitle} <ExternalLink className="h-3 w-3" />
-            </a>
-          </div>
+        <div key={i} className="px-3 py-2.5 border-b border-border-subtle last:border-b-0">
+          <div className="text-sm font-semibold text-text-primary">{d.title}</div>
+          <p className="mt-1 text-sm leading-relaxed text-text-secondary max-w-[110ch]">{d.detail}</p>
+          <a
+            href={d.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1.5 inline-flex items-center gap-1 text-xs text-text-tertiary hover:text-accent-blue"
+          >
+            <span className="num">{d.date}</span> · {d.sourceTitle} <ExternalLink className="h-3 w-3" aria-hidden />
+          </a>
         </div>
       ))}
-    </div>
+    </section>
   );
 }

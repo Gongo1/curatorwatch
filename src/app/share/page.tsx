@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { formatCurrency, formatPercentage } from "@/lib/utils/format";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
 
 interface CuratorData {
   name: string;
@@ -42,7 +44,7 @@ export default function SharePage() {
   }, []);
 
   if (loading) {
-    return <div className="flex items-center justify-center py-20 text-white">Loading...</div>;
+    return <div className="flex items-center justify-center py-20 label">Loading…</div>;
   }
 
   const today = new Date().toLocaleDateString("en-US", {
@@ -58,292 +60,224 @@ export default function SharePage() {
         description="Screenshot these cards for X and LinkedIn posts"
         breadcrumbs={[{ label: "Dashboard", href: "/" }, { label: "Share" }]}
       />
-      <div className="grid gap-8">
+      <div className="grid gap-6">
           {/* Card 1: Hero Stats Card (1200x675 - Twitter/X optimal) */}
-          <div>
-            <h2 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wider">
-              Card 1: Hero Stats (X Header)
-            </h2>
-            <div
-              className="w-[1200px] h-[675px] bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 rounded-3xl p-12 flex flex-col justify-between relative overflow-hidden"
-              style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
-            >
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl" />
+          <CardSlot label="Card 1: Hero Stats (X Header)" size="1200×675">
+            <div className="w-[1200px] h-[675px] bg-background border border-border-strong flex flex-col">
+              <CardBar right={<><span className="label mr-3">Live data</span><span className="num text-text-primary">{today}</span></>} />
 
-              {/* Header */}
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-500 flex items-center justify-center">
-                    <span className="text-white font-bold text-2xl">C</span>
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-white">CuratorWatch</h1>
-                    <p className="text-neutral-400 text-lg">Morpho Midnight Vault Analytics</p>
-                  </div>
+              <div className="flex-1 flex flex-col justify-between px-12 py-10">
+                <div>
+                  <h1 className="cond text-6xl font-bold text-text-primary leading-none">CuratorWatch</h1>
+                  <p className="text-2xl text-text-secondary mt-3">Morpho Midnight Vault Analytics</p>
                 </div>
-                <div className="text-right">
-                  <p className="text-neutral-500 text-sm">Live Data</p>
-                  <p className="text-white font-medium">{today}</p>
-                </div>
+
+                {/* Main Stats */}
+                <dl className="grid grid-cols-4 border border-border bg-background-subtle">
+                  <StatBox
+                    label="Total Value Locked"
+                    value={formatCurrency(stats?.totalAUM || 0)}
+                    highlight
+                  />
+                  <StatBox
+                    label="Active Vaults"
+                    value={stats?.totalVaults?.toString() || "0"}
+                  />
+                  <StatBox
+                    label="Curators"
+                    value={stats?.totalCurators?.toString() || "0"}
+                  />
+                  <StatBox
+                    label="Net APY"
+                    value={formatPercentage(stats?.avgApy || 0)}
+                  />
+                </dl>
               </div>
 
-              {/* Main Stats */}
-              <div className="grid grid-cols-4 gap-8 relative z-10">
-                <StatBox
-                  label="Total Value Locked"
-                  value={formatCurrency(stats?.totalAUM || 0)}
-                  highlight
-                />
-                <StatBox
-                  label="Active Vaults"
-                  value={stats?.totalVaults?.toString() || "0"}
-                />
-                <StatBox
-                  label="Curators"
-                  value={stats?.totalCurators?.toString() || "0"}
-                />
-                <StatBox
-                  label="Net APY"
-                  value={formatPercentage(stats?.avgApy || 0)}
-                  valueColor="text-emerald-400"
-                />
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between relative z-10">
-                <p className="text-neutral-500">curatorwatch.com</p>
-                <p className="text-neutral-500">@curator_watch</p>
-              </div>
+              <CardFoot left="curatorwatch.com" right="@curator_watch" />
             </div>
-          </div>
+          </CardSlot>
 
           {/* Card 2: Top Curators Leaderboard */}
-          <div>
-            <h2 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wider">
-              Card 2: Curator Leaderboard
-            </h2>
-            <div
-              className="w-[1200px] h-[675px] bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 rounded-3xl p-12 flex flex-col relative overflow-hidden"
-            >
-              {/* Background decoration */}
-              <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl" />
+          <CardSlot label="Card 2: Curator Leaderboard" size="1200×675">
+            <div className="w-[1200px] h-[675px] bg-background border border-border-strong flex flex-col">
+              <CardBar right={<span className="num text-text-primary">{today}</span>} />
 
-              {/* Header */}
-              <div className="flex items-center justify-between mb-8">
-                <div>
-                  <h1 className="text-3xl font-bold text-white mb-1">Top Curators by AUM</h1>
-                  <p className="text-neutral-400">Morpho Midnight Ethereum Mainnet</p>
+              <div className="flex-1 flex flex-col px-12 py-8 min-h-0">
+                <div className="mb-6">
+                  <h1 className="cond text-5xl font-bold text-text-primary leading-none">Top Curators by AUM</h1>
+                  <p className="text-xl text-text-secondary mt-2">Morpho Midnight Ethereum Mainnet</p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-                    <span className="text-white font-bold">C</span>
-                  </div>
-                  <span className="text-white font-semibold">CuratorWatch</span>
+
+                {/* Leaderboard */}
+                <div className="flex-1 grid grid-cols-2 grid-rows-4 border border-border bg-background-subtle">
+                  {topCurators.slice(0, 8).map((curator, index) => (
+                    <div
+                      key={curator.name}
+                      className={`flex items-center gap-5 px-6 border-border-subtle ${
+                        index % 2 === 0 ? "border-r" : ""
+                      } ${index < 6 ? "border-b" : ""}`}
+                    >
+                      <span className={`num text-2xl font-semibold w-10 ${index < 3 ? "text-accent-blue" : "text-text-muted"}`}>
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xl text-text-primary font-semibold truncate">{curator.name}</p>
+                        <p className="label text-sm mt-1">{curator.vaultCount} vault{curator.vaultCount !== 1 ? "s" : ""}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="num text-xl text-text-primary font-semibold">{formatCurrency(curator.totalAUM)}</p>
+                        <p className="num text-sm text-text-secondary mt-1">{formatPercentage(curator.avgNetApy)} APY</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
-              {/* Leaderboard */}
-              <div className="flex-1 grid grid-cols-2 gap-4">
-                {topCurators.slice(0, 8).map((curator, index) => (
-                  <div
-                    key={curator.name}
-                    className={`flex items-center gap-4 p-4 rounded-xl ${
-                      index < 3 ? "bg-blue-500/10 border border-blue-500/20" : "bg-white/5"
-                    }`}
-                  >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg ${
-                      index === 0 ? "bg-yellow-500 text-black" :
-                      index === 1 ? "bg-neutral-300 text-black" :
-                      index === 2 ? "bg-amber-700 text-white" :
-                      "bg-neutral-700 text-white"
-                    }`}>
-                      {index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white font-semibold truncate">{curator.name}</p>
-                      <p className="text-neutral-400 text-sm">{curator.vaultCount} vault{curator.vaultCount !== 1 ? "s" : ""}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-white font-bold">{formatCurrency(curator.totalAUM)}</p>
-                      <p className="text-emerald-400 text-sm">{formatPercentage(curator.avgNetApy)} APY</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between mt-6 pt-4 border-t border-white/10">
-                <p className="text-neutral-500">{today}</p>
-                <p className="text-neutral-500">curatorwatch.com • @curator_watch</p>
-              </div>
+              <CardFoot left={today} right="curatorwatch.com · @curator_watch" />
             </div>
-          </div>
+          </CardSlot>
 
           {/* Card 3: Single Stat Highlight (Square for Instagram/LinkedIn) */}
-          <div>
-            <h2 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wider">
-              Card 3: AUM Highlight (Square)
-            </h2>
-            <div
-              className="w-[1080px] h-[1080px] bg-gradient-to-br from-neutral-950 via-blue-950/30 to-neutral-950 rounded-3xl p-16 flex flex-col justify-between relative overflow-hidden"
-            >
-              {/* Background decoration */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-500/20 rounded-full blur-3xl" />
-
-              {/* Logo */}
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="w-16 h-16 rounded-2xl bg-blue-500 flex items-center justify-center">
-                  <span className="text-white font-bold text-3xl">C</span>
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white">CuratorWatch</h1>
-                  <p className="text-neutral-400">Morpho Midnight Analytics</p>
-                </div>
-              </div>
+          <CardSlot label="Card 3: AUM Highlight (Square)" size="1080×1080">
+            <div className="w-[1080px] h-[1080px] bg-background border border-border-strong flex flex-col">
+              <CardBar right={<span className="label text-base">Morpho Midnight Analytics</span>} />
 
               {/* Main Number */}
-              <div className="text-center relative z-10">
-                <p className="text-neutral-400 text-2xl mb-4 uppercase tracking-widest">Total Value Locked</p>
-                <p className="text-8xl font-bold text-white mb-4">{formatCurrency(stats?.totalAUM || 0)}</p>
-                <p className="text-neutral-400 text-xl">across {stats?.totalVaults} vaults from {stats?.totalCurators} curators</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center px-16">
+                <p className="label text-3xl tracking-[0.12em]">Total Value Locked</p>
+                <p className="num text-[9rem] font-semibold leading-none text-accent-blue mt-8">
+                  {formatCurrency(stats?.totalAUM || 0)}
+                </p>
+                <div className="w-full max-w-2xl border-t border-border mt-10 pt-6">
+                  <p className="text-2xl text-text-secondary">
+                    across <span className="num text-text-primary">{stats?.totalVaults}</span> vaults from{" "}
+                    <span className="num text-text-primary">{stats?.totalCurators}</span> curators
+                  </p>
+                </div>
               </div>
 
-              {/* Footer */}
-              <div className="flex items-center justify-between relative z-10">
-                <p className="text-neutral-500 text-lg">{today}</p>
-                <p className="text-neutral-500 text-lg">curatorwatch.com</p>
-              </div>
+              <CardFoot left={today} right="curatorwatch.com" large />
             </div>
-          </div>
+          </CardSlot>
 
           {/* Card 4: Weekly Alpha Format */}
-          <div>
-            <h2 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wider">
-              Card 4: Weekly Alpha Thread Header
-            </h2>
-            <div
-              className="w-[1200px] h-[675px] bg-gradient-to-br from-neutral-950 to-blue-950/50 rounded-3xl p-12 flex flex-col justify-between relative overflow-hidden"
-            >
-              {/* Background pattern */}
-              <div className="absolute inset-0 opacity-30">
-                <div className="absolute top-20 left-20 w-40 h-40 border border-blue-500/30 rounded-full" />
-                <div className="absolute top-32 left-32 w-40 h-40 border border-blue-500/20 rounded-full" />
-                <div className="absolute bottom-20 right-20 w-60 h-60 border border-purple-500/30 rounded-full" />
+          <CardSlot label="Card 4: Weekly Alpha Thread Header" size="1200×675">
+            <div className="w-[1200px] h-[675px] bg-background border border-border-strong flex flex-col">
+              <CardBar right={<span className="num text-text-primary">{today}</span>} />
+
+              <div className="flex-1 flex flex-col justify-between px-12 py-10">
+                <div>
+                  <span className="fn-tag text-base px-3 py-2">Weekly Morpho Alpha</span>
+                  <h1 className="cond text-7xl font-bold text-text-primary leading-[0.95] mt-6 mb-5">
+                    This Week in<br />Morpho Midnight Vaults
+                  </h1>
+                  <p className="text-text-secondary text-2xl max-w-2xl">
+                    Curator movements, yield changes, and risk alerts you need to know.
+                  </p>
+                </div>
+
+                {/* Stats preview */}
+                <dl className="grid grid-cols-3 max-w-3xl border border-border bg-background-subtle">
+                  <StatBox label="Total AUM" value={formatCurrency(stats?.totalAUM || 0)} compact />
+                  <StatBox label="APY" value={formatPercentage(stats?.avgApy || 0)} compact />
+                  <StatBox label="Active Vaults" value={String(stats?.totalVaults ?? "")} compact />
+                </dl>
               </div>
 
-              {/* Content */}
-              <div className="relative z-10">
-                <div className="inline-block px-4 py-2 bg-blue-500/20 rounded-full border border-blue-500/30 mb-6">
-                  <span className="text-blue-400 font-medium">Weekly Morpho Alpha</span>
-                </div>
-                <h1 className="text-5xl font-bold text-white leading-tight mb-4">
-                  This Week in<br />Morpho Midnight Vaults
-                </h1>
-                <p className="text-neutral-400 text-xl max-w-xl">
-                  Curator movements, yield changes, and risk alerts you need to know.
-                </p>
-              </div>
-
-              {/* Stats preview */}
-              <div className="flex gap-8 relative z-10">
-                <div className="px-6 py-4 bg-white/5 rounded-xl border border-white/10">
-                  <p className="text-neutral-400 text-sm mb-1">Total AUM</p>
-                  <p className="text-white text-2xl font-bold">{formatCurrency(stats?.totalAUM || 0)}</p>
-                </div>
-                <div className="px-6 py-4 bg-white/5 rounded-xl border border-white/10">
-                  <p className="text-neutral-400 text-sm mb-1">APY</p>
-                  <p className="text-emerald-400 text-2xl font-bold">{formatPercentage(stats?.avgApy || 0)}</p>
-                </div>
-                <div className="px-6 py-4 bg-white/5 rounded-xl border border-white/10">
-                  <p className="text-neutral-400 text-sm mb-1">Active Vaults</p>
-                  <p className="text-white text-2xl font-bold">{stats?.totalVaults}</p>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-                    <span className="text-white font-bold">C</span>
-                  </div>
-                  <span className="text-white font-semibold">CuratorWatch</span>
-                </div>
-                <p className="text-neutral-500">@curator_watch</p>
-              </div>
+              <CardFoot left="curatorwatch.com" right="@curator_watch" />
             </div>
-          </div>
+          </CardSlot>
 
           {/* Card 5: Coming Soon Features */}
-          <div>
-            <h2 className="text-sm font-medium text-neutral-500 mb-3 uppercase tracking-wider">
-              Card 5: Coming Soon / Roadmap
-            </h2>
-            <div
-              className="w-[1200px] h-[675px] bg-gradient-to-br from-purple-950/50 via-neutral-950 to-neutral-950 rounded-3xl p-12 flex flex-col justify-between relative overflow-hidden"
-            >
-              {/* Background decoration */}
-              <div className="absolute top-0 left-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl" />
-              <div className="absolute bottom-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl" />
+          <CardSlot label="Card 5: Coming Soon / Roadmap" size="1200×675">
+            <div className="w-[1200px] h-[675px] bg-background border border-border-strong flex flex-col">
+              <CardBar right={<span className="label text-base">CuratorWatch Roadmap</span>} />
 
-              {/* Header */}
-              <div className="flex items-center justify-between relative z-10">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-500 flex items-center justify-center">
-                    <span className="text-white font-bold text-2xl">C</span>
-                  </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-white">What's Next</h1>
-                    <p className="text-neutral-400">CuratorWatch Roadmap</p>
-                  </div>
+              <div className="flex-1 flex flex-col justify-between px-12 py-10">
+                <h1 className="cond text-6xl font-bold text-text-primary leading-none">What&apos;s Next</h1>
+
+                {/* Features Grid */}
+                <div className="grid grid-cols-2 border border-border bg-background-subtle">
+                  <FeatureCard
+                    code="01"
+                    title="Smart Contract Risk"
+                    description="Audit status, code complexity, and exploit history for every vault"
+                    className="border-r border-b"
+                  />
+                  <FeatureCard
+                    code="02"
+                    title="Redemption Risk"
+                    description="Liquidity depth analysis and withdrawal simulation"
+                    className="border-b"
+                  />
+                  <FeatureCard
+                    code="03"
+                    title="Composability Maps"
+                    description="Visualize protocol dependencies and contagion risk"
+                    className="border-r"
+                  />
+                  <FeatureCard
+                    code="04"
+                    title="RWA Yield Impact"
+                    description="Track how real-world assets are reshaping DeFi yields"
+                  />
                 </div>
               </div>
 
-              {/* Features Grid */}
-              <div className="grid grid-cols-2 gap-6 relative z-10">
-                <FeatureCard
-                  icon="🔒"
-                  title="Smart Contract Risk"
-                  description="Audit status, code complexity, and exploit history for every vault"
-                />
-                <FeatureCard
-                  icon="💧"
-                  title="Redemption Risk"
-                  description="Liquidity depth analysis and withdrawal simulation"
-                />
-                <FeatureCard
-                  icon="🔗"
-                  title="Composability Maps"
-                  description="Visualize protocol dependencies and contagion risk"
-                />
-                <FeatureCard
-                  icon="🏛️"
-                  title="RWA Yield Impact"
-                  description="Track how real-world assets are reshaping DeFi yields"
-                />
-              </div>
-
-              {/* Footer */}
-              <div className="flex items-center justify-between relative z-10">
-                <p className="text-purple-400 font-medium">Building the intelligence layer for DeFi</p>
-                <p className="text-neutral-500">curatorwatch.com</p>
-              </div>
+              <CardFoot
+                left={<span className="text-accent-blue">Building the intelligence layer for DeFi</span>}
+                right="curatorwatch.com"
+              />
             </div>
-          </div>
+          </CardSlot>
 
       </div>
       {/* Instructions */}
-      <div className="mt-12 p-6 bg-neutral-800 rounded-xl">
-        <h2 className="text-lg font-semibold text-white mb-3">How to Use These Cards</h2>
-        <ol className="text-neutral-300 space-y-2">
-          <li>1. Right-click on any card and select &quot;Take Screenshot&quot; (or use your OS screenshot tool)</li>
-          <li>2. Crop to the card boundaries</li>
-          <li>3. Post directly to X or LinkedIn</li>
-          <li>4. Cards are optimized: 1200x675 for X, 1080x1080 for Instagram/LinkedIn square</li>
+      <Panel title="How to use these cards" className="mt-6" bodyClassName="p-3">
+        <ol className="text-sm text-text-secondary space-y-1.5">
+          <li><span className="num text-text-tertiary mr-2">1.</span>Right-click on any card and select &quot;Take Screenshot&quot; (or use your OS screenshot tool)</li>
+          <li><span className="num text-text-tertiary mr-2">2.</span>Crop to the card boundaries</li>
+          <li><span className="num text-text-tertiary mr-2">3.</span>Post directly to X or LinkedIn</li>
+          <li><span className="num text-text-tertiary mr-2">4.</span>Cards are optimized: <span className="num">1200x675</span> for X, <span className="num">1080x1080</span> for Instagram/LinkedIn square</li>
         </ol>
-      </div>
+      </Panel>
     </>
+  );
+}
+
+// A card with its caption. The card keeps its fixed export size; the slot
+// scrolls sideways on narrow screens so the page itself never overflows.
+function CardSlot({ label, size, children }: { label: string; size: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <h2 className="label mb-1.5">
+        {label} <span className="num text-text-muted normal-case ml-1">{size}</span>
+      </h2>
+      <div className="overflow-x-auto">{children}</div>
+    </div>
+  );
+}
+
+// Card title bar: logo + wordmark (as in the app header), context on the right.
+function CardBar({ right }: { right?: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-4 h-20 px-12 bg-background-elevated border-b border-border-strong flex-none">
+      <Image src="/logo.png" alt="" width={36} height={36} className="flex-none" />
+      <span className="cond text-3xl font-extrabold uppercase tracking-[0.06em] text-text-primary">
+        Curator<span className="text-accent-blue">Watch</span>
+      </span>
+      <span className="ml-auto flex items-center text-lg">{right}</span>
+    </div>
+  );
+}
+
+function CardFoot({ left, right, large = false }: { left: React.ReactNode; right: React.ReactNode; large?: boolean }) {
+  return (
+    <div className={`flex items-center justify-between h-14 px-12 border-t border-border flex-none ${large ? "text-xl" : "text-lg"}`}>
+      <span className="text-text-tertiary">{left}</span>
+      <span className="text-text-tertiary">{right}</span>
+    </div>
   );
 }
 
@@ -351,27 +285,41 @@ function StatBox({
   label,
   value,
   highlight,
-  valueColor
+  compact = false,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
-  valueColor?: string;
+  compact?: boolean;
 }) {
   return (
-    <div className={`p-6 rounded-2xl ${highlight ? "bg-blue-500/20 border border-blue-500/30" : "bg-white/5"}`}>
-      <p className="text-neutral-400 text-sm mb-2 uppercase tracking-wider">{label}</p>
-      <p className={`text-4xl font-bold ${valueColor || "text-white"}`}>{value}</p>
+    <div className={`border-r border-border last:border-r-0 ${compact ? "px-6 py-4" : "px-7 py-6"}`}>
+      <dt className="label text-base">{label}</dt>
+      <dd className={`num font-semibold leading-none mt-3 ${compact ? "text-3xl" : "text-5xl"} ${highlight ? "text-accent-blue" : "text-text-primary"}`}>
+        {value}
+      </dd>
     </div>
   );
 }
 
-function FeatureCard({ icon, title, description }: { icon: string; title: string; description: string }) {
+function FeatureCard({
+  code,
+  title,
+  description,
+  className = "",
+}: {
+  code: string;
+  title: string;
+  description: string;
+  className?: string;
+}) {
   return (
-    <div className="p-6 bg-white/5 rounded-2xl border border-white/10">
-      <span className="text-4xl mb-4 block">{icon}</span>
-      <h3 className="text-xl font-semibold text-white mb-2">{title}</h3>
-      <p className="text-neutral-400">{description}</p>
+    <div className={`flex gap-5 p-7 border-border ${className}`}>
+      <span className="num text-2xl font-semibold text-accent-blue">{code}</span>
+      <div>
+        <h3 className="cond text-2xl font-bold uppercase tracking-[0.03em] text-text-primary mb-2">{title}</h3>
+        <p className="text-lg text-text-secondary">{description}</p>
+      </div>
     </div>
   );
 }

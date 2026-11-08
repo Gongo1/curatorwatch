@@ -54,56 +54,55 @@ export function EmailDeliveryCard() {
   };
 
   return (
-    <div className="mt-10 grid sm:grid-cols-2 gap-4">
-      <div className="flex items-center justify-between gap-4 border border-border rounded-xl bg-background-subtle px-5 py-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <Mail className="w-4 h-4 text-accent-blue flex-none" />
+    <section className="panel">
+      <div className="panel-head">
+        <h2 className="panel-title">Delivery</h2>
+        <span className="panel-meta">email</span>
+      </div>
+      <div className="flex items-center justify-between gap-3 px-3 py-2.5 border-b border-border-subtle">
+        <div className="flex items-start gap-2.5 min-w-0">
+          <Mail className="w-4 h-4 mt-0.5 text-accent-blue flex-none" aria-hidden="true" />
           <div className="min-w-0">
-            <div className="text-sm font-medium text-text-primary">Curator Daily digest</div>
-            <div className="font-mono text-xs text-text-tertiary truncate">
-              The day&rsquo;s curator moves, in your inbox every morning
-            </div>
+            <div className="text-sm font-medium text-text-primary">Curator Daily</div>
+            <div className="text-xs text-text-tertiary">The day&rsquo;s curator moves, 05:30 UTC</div>
           </div>
         </div>
         <button
           type="button"
           onClick={toggleDigest}
           disabled={busy}
-          className={`flex-none inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold font-mono transition-colors active:translate-y-px disabled:opacity-60 ${
-            wantsDigest
-              ? "border border-accent-green/40 bg-accent-green/10 text-accent-green"
-              : "bg-accent-blue text-background hover:opacity-90"
+          aria-pressed={!!wantsDigest}
+          className={`btn h-7 px-2.5 flex-none ${
+            wantsDigest ? "border-accent-green/50 text-accent-green" : "btn-primary"
           }`}
         >
           {wantsDigest ? (
             <>
-              <Check className="w-3.5 h-3.5" /> On
+              <Check className="w-3.5 h-3.5" aria-hidden="true" /> On
             </>
           ) : busy ? (
-            "Saving…"
+            "Saving"
           ) : (
-            "Yes, send it"
+            "Email me"
           )}
         </button>
       </div>
 
       <Link
         href="/alerts"
-        className="flex items-center justify-between gap-4 border border-border rounded-xl bg-background-subtle px-5 py-4 hover:border-accent-blue transition-colors group"
+        className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-background-hover transition-colors group"
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <Bell className="w-4 h-4 text-accent-blue flex-none" />
+        <div className="flex items-start gap-2.5 min-w-0">
+          <Bell className="w-4 h-4 mt-0.5 text-accent-blue flex-none" aria-hidden="true" />
           <div className="min-w-0">
             <div className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-              Curator alerts by email
+              Curator alerts
             </div>
-            <div className="font-mono text-xs text-text-tertiary truncate">
-              Pick which curators ping you — configure on the Alerts page
-            </div>
+            <div className="text-xs text-text-tertiary">Choose which curators email you</div>
           </div>
         </div>
-        <span className="flex-none font-mono text-xs text-accent-blue">Configure →</span>
+        <span className="label text-accent-blue flex-none">Set up</span>
       </Link>
-    </div>
+    </section>
   );
 }

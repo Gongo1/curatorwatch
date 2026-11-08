@@ -4,6 +4,9 @@ import { fetchAllDashboardData } from "@/lib/dashboard-queries";
 import { ApyDistViz } from "@/components/ApyDistViz";
 import { formatCurrency } from "@/lib/utils/format";
 import { curatorSlug } from "@/lib/curator-aliases";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Panel } from "@/components/layout/Panel";
+import { Quote } from "@/components/layout/Quote";
 
 // ISR aligned to the ingestion cadence, like the home page: the cron
 // revalidates this path on completion; 6h is the fallback ceiling.
@@ -56,98 +59,100 @@ export default async function YieldsPage() {
   const topShare = totalYield > 0 ? ((totalYield - restYield) / totalYield) * 100 : 0;
 
   return (
-    <div className="max-w-[1000px]">
-      {/* ── Executive summary ── */}
-      <header className="mb-8">
-        <div className="font-mono text-xs uppercase tracking-[0.12em] text-text-tertiary">
-          Annual yield to LPs · whole tracked ecosystem
-        </div>
-        <div className="font-mono font-semibold text-[clamp(2.6rem,7vw,4.2rem)] leading-[0.98] tracking-[-0.03em] tabular-nums my-2">
-          {compactUsd(totalYield)}
-        </div>
-        <div className="font-mono text-sm text-text-secondary">
-          paid by <span className="text-text-primary font-semibold">{rows.length}</span>{" "}
-          yield-generating curators
-          <span className="text-text-muted mx-2">·</span>
-          <span className="text-text-primary font-semibold">{stats.totalVaults}</span> vaults
-          <span className="text-text-muted mx-2">·</span>
-          TVL-weighted net APY{" "}
-          <span className="text-accent-green font-semibold">
-            {(weightedApy * 100).toFixed(2)}%
-          </span>
-        </div>
-      </header>
+    <div className="space-y-1.5">
+      <PageHeader
+        title="Yields"
+        description="What the curated ecosystem pays LPs: annual yield, the net-APY spread, and which curators pay out the most."
+      />
 
-      {/* ── Distribution: the honest version of "what's the APY?" ── */}
-      {dist && dist.count > 0 && (
-        <section className="border border-border rounded-2xl bg-background-subtle p-6 mb-10 max-w-[560px]">
-          <ApyDistViz d={dist} tall label={`Net APY distribution · ${dist.count} vaults`} />
-          <p className="font-mono text-xs text-text-tertiary mt-4 leading-relaxed">
-            Most curated TVL clusters in the bright bands; the long tail is real
-            but thin. A single average hides this — the distribution is the
-            number that matters.
-          </p>
-        </section>
-      )}
-
-      {/* ── Who pays the most ── */}
-      <section>
-        <div className="flex items-baseline gap-3 mb-5 pb-3 border-b border-border flex-wrap">
-          <span className="w-[7px] h-[7px] rounded-sm bg-accent-blue -translate-y-0.5" />
-          <span className="font-display font-bold text-xl tracking-tight">
-            Who pays the most
-          </span>
-          <span className="font-mono text-xs text-text-tertiary ml-auto text-right">
-            annual $ yield · top {top.length} = {Math.round(topShare)}% of the total
-          </span>
-        </div>
-        <div className="flex flex-col gap-3">
-          {top.map((r, i) => (
-            <div
-              key={r.address}
-              className="grid grid-cols-[28px_180px_1fr_200px] max-sm:grid-cols-[28px_1fr_120px] gap-4 items-center"
-            >
-              <span className="font-mono text-xs text-text-tertiary tabular-nums">
-                {i + 1}
-              </span>
-              <Link
-                href={`/curator/${curatorSlug(r.name, r.address)}`}
-                className="text-sm text-text-primary hover:text-accent-blue transition-colors truncate font-medium"
-                title={r.name}
-              >
-                {r.name}
-              </Link>
-              <div className="h-[18px] rounded bg-background-elevated overflow-hidden max-sm:hidden">
-                <span
-                  className="block h-full"
-                  style={{
-                    width: `${(r.annualYield / maxYield) * 100}%`,
-                    background: "var(--accent-blue)",
-                    opacity: 0.85,
-                  }}
-                />
-              </div>
-              <span className="font-mono text-xs text-text-secondary text-right tabular-nums">
-                <b className="text-text-primary font-semibold">
-                  {formatCurrency(r.annualYield)}
-                </b>{" "}
-                <span className="text-accent-green">{(r.apy * 100).toFixed(1)}%</span>{" "}
-                <span className="text-text-tertiary">· {compactUsd(r.aum)}</span>
-              </span>
-            </div>
-          ))}
-        </div>
-        {rest.length > 0 && (
-          <p className="font-mono text-xs text-text-tertiary mt-4">
-            + {rest.length} more curators paying {formatCurrency(restYield)} between them.
-          </p>
-        )}
-        <p className="font-mono text-xs text-text-tertiary mt-2 leading-relaxed">
-          Annualized from the latest 6h snapshot: each curator&rsquo;s TVL × its
-          TVL-weighted net APY, across every tracked vault regardless of source.
-          Open a curator for the per-vault breakdown.
-        </p>
+      {/* ── Quote line: the yield summary in one row ── */}
+      <section aria-label="Yield summary" className="panel">
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+          <Quote k="Annual yield to LPs" v={compactUsd(totalYield)} />
+          <Quote k="TVL-weighted net APY" v={`${(weightedApy * 100).toFixed(2)}%`} />
+          <Quote k="Yield-generating curators" v={String(rows.length)} />
+          <Quote k="Vaults" v={String(stats.totalVaults)} />
+          <Quote k={`Top ${top.length} share`} v={`${Math.round(topShare)}%`} sub="of yield" />
+        </dl>
       </section>
+
+      <div className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_23rem] items-start">
+        {/* ── Who pays the most ── */}
+        <Panel title="Who pays the most" meta={`annual $ yield · top ${top.length}`}>
+          <table className="w-full text-sm table-fixed">
+            <caption className="sr-only">Curators ranked by annual yield paid to LPs</caption>
+            <thead>
+              <tr className="h-7 border-b border-border bg-background">
+                <th scope="col" className="label text-right w-9 pr-3">#</th>
+                <th scope="col" className="label text-left">Curator</th>
+                <th scope="col" className="label text-left hidden md:table-cell w-[30%] pl-3">
+                  <span className="sr-only">Share of top yield</span>
+                </th>
+                <th scope="col" className="label text-right w-[6.5rem] sm:w-[7.5rem]">Annual yield</th>
+                <th scope="col" className="label text-right w-[4.5rem] pr-3 sm:pr-0">Net APY</th>
+                <th scope="col" className="label text-right w-[5.5rem] pr-3 hidden sm:table-cell">TVL</th>
+              </tr>
+            </thead>
+            <tbody>
+              {top.map((r, i) => (
+                <tr key={r.address} className="h-8 border-b border-border-subtle hover:bg-background-hover">
+                  <td className="num text-xs text-text-tertiary text-right pr-3">{i + 1}</td>
+                  <td className="truncate">
+                    <Link
+                      href={`/curator/${curatorSlug(r.name, r.address)}`}
+                      className="font-medium text-text-primary hover:text-accent-blue transition-colors"
+                      title={r.name}
+                    >
+                      {r.name}
+                    </Link>
+                  </td>
+                  <td className="hidden md:table-cell pl-3 pr-2">
+                    <div className="h-2.5 bg-background" aria-hidden="true">
+                      <span
+                        className="block h-full bg-accent-blue"
+                        style={{ width: `${(r.annualYield / maxYield) * 100}%` }}
+                      />
+                    </div>
+                  </td>
+                  <td className="num text-right font-semibold text-text-primary">
+                    {formatCurrency(r.annualYield)}
+                  </td>
+                  <td className="num text-right text-text-secondary pr-3 sm:pr-0">{(r.apy * 100).toFixed(1)}%</td>
+                  <td className="num text-right text-text-tertiary pr-3 hidden sm:table-cell">
+                    {compactUsd(r.aum)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-3 py-2 space-y-1 text-xs text-text-tertiary leading-relaxed">
+            {rest.length > 0 && (
+              <p>
+                + <span className="num">{rest.length}</span> more curators paying{" "}
+                <span className="num text-text-secondary">{formatCurrency(restYield)}</span> between them.
+              </p>
+            )}
+            <p>
+              Annualized from the latest 6h snapshot: each curator&rsquo;s TVL × its
+              TVL-weighted net APY, across every tracked vault regardless of source.
+              Open a curator for the per-vault breakdown.
+            </p>
+          </div>
+        </Panel>
+
+        {/* ── Distribution: the honest version of "what's the APY?" ── */}
+        {dist && dist.count > 0 && (
+          <Panel title="Net APY spread" meta={`${dist.count} vaults`} bodyClassName="p-3">
+            <ApyDistViz d={dist} tall label="Vault count by net APY band" />
+            <p className="text-xs text-text-tertiary mt-3 leading-relaxed">
+              Most curated TVL clusters in the bright bands; the long tail is real
+              but thin. A single average hides this. The distribution is the
+              number that matters.
+            </p>
+          </Panel>
+        )}
+      </div>
     </div>
   );
 }
+

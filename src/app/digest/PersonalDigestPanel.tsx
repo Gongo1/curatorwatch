@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { personalizeDigest } from "@/lib/digest/personalize";
 import type { DigestData } from "@/lib/digest/types";
+import { Panel } from "@/components/layout/Panel";
 
 function usd(n: number): string {
   const a = Math.abs(n);
@@ -42,47 +43,44 @@ export function PersonalDigestPanel({ data }: { data: DigestData }) {
   const watchedCount = portfolio.trackedCurators.length;
 
   return (
-    <section className="mt-6 rounded-2xl border border-accent-blue/30 bg-accent-blue/5 p-5">
-      <div className="flex items-baseline justify-between gap-3 mb-3 flex-wrap">
-        <span className="font-display font-bold text-base">Your watchlist</span>
-        <span className="font-mono text-[11px] text-text-tertiary">
-          {watchedCount} tracked · this device
-        </span>
-      </div>
-
+    <Panel title="Your watchlist" meta={`${watchedCount} tracked · this device`}>
       {watchedCount === 0 ? (
-        <p className="text-sm text-text-secondary">
+        <p className="px-3 py-2.5 text-sm text-text-secondary leading-relaxed max-w-[70ch]">
           Track curators (the Track button on any profile) for a personalized read of each
-          day&rsquo;s digest. The full delivered edition — every watched curator, emailed — ships
+          day&rsquo;s digest. The full delivered edition (every watched curator, emailed) ships
           with accounts.
         </p>
       ) : personal.hasMatches ? (
-        <div className="space-y-2 font-mono text-sm">
+        <ul>
           {[...personal.inflows, ...personal.outflows].map((f) => (
-            <Link
-              key={f.curatorId}
-              href={`/curator/${f.slug}`}
-              className="flex justify-between gap-3 text-text-secondary hover:text-accent-blue transition-colors"
-            >
-              <span className="truncate">{f.name ?? "—"}</span>
-              <span className={`tabular-nums whitespace-nowrap ${f.deltaUsd >= 0 ? "text-accent-green" : "text-accent-red"}`}>
-                {usd(f.deltaUsd)} ({signedPct(f.pct)})
-              </span>
-            </Link>
+            <li key={f.curatorId}>
+              <Link
+                href={`/curator/${f.slug}`}
+                className="flex items-center justify-between gap-3 px-3 h-8 border-b border-border-subtle hover:bg-background-hover transition-colors group"
+              >
+                <span className="truncate text-sm text-text-primary group-hover:text-accent-blue">{f.name ?? "—"}</span>
+                <span className={`num text-sm whitespace-nowrap ${f.deltaUsd >= 0 ? "up" : "down"}`}>
+                  {usd(f.deltaUsd)} <span className="text-xs">({signedPct(f.pct)})</span>
+                </span>
+              </Link>
+            </li>
           ))}
           {personal.concentration.map((c) => (
-            <div key={c.symbol} className="text-text-secondary">
-              <span className="text-accent-yellow">⚠</span> {c.topCurator} runs {Math.round(c.topCuratorPct)}% of {c.symbol}
-            </div>
+            <li key={c.symbol} className="flex items-center gap-2 px-3 h-8 border-b border-border-subtle text-sm text-text-secondary">
+              <span className="text-accent-yellow" aria-hidden="true">⚠</span>
+              <span className="truncate">
+                {c.topCurator} runs <span className="num text-accent-yellow">{Math.round(c.topCuratorPct)}%</span> of {c.symbol}
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
-        <p className="text-sm text-text-secondary">
+        <p className="px-3 py-2.5 text-sm text-text-secondary leading-relaxed max-w-[70ch]">
           None of your {watchedCount} tracked curator{watchedCount === 1 ? "" : "s"} moved into
           today&rsquo;s top movers. The full personalized edition (every watched curator) ships with
           accounts.
         </p>
       )}
-    </section>
+    </Panel>
   );
 }

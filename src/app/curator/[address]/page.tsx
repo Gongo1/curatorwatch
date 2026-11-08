@@ -42,15 +42,21 @@ export default async function CuratorProfile({ params }: PageProps) {
 
   if (!data) {
     return (
-      <div className="py-8 max-w-[1000px]">
-        <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-text-tertiary hover:text-text-primary transition-colors mb-6">
-          <ArrowLeft className="w-4 h-4" /> Back to curators
-        </Link>
-        <div className="bg-background-subtle rounded-2xl border border-border p-8 text-center">
-          <h2 className="font-display text-lg font-bold text-text-primary">Curator not found</h2>
-          <p className="mt-2 text-sm text-text-secondary">This curator doesn’t exist.</p>
-          <p className="mt-1 text-xs text-text-tertiary font-mono">{address}</p>
-        </div>
+      <div className="max-w-[720px]">
+        <section className="panel">
+          <div className="panel-head">
+            <h1 className="panel-title">Curator not found</h1>
+          </div>
+          <div className="p-3">
+            <p className="text-sm text-text-secondary">
+              No tracked curator matches this address or name. Check the link, or find the curator in the ranking.
+            </p>
+            <p className="mt-1.5 num text-xs text-text-tertiary break-all">{address}</p>
+            <Link href="/" className="btn btn-ghost mt-3">
+              <ArrowLeft className="w-3.5 h-3.5" aria-hidden="true" /> Back to curators
+            </Link>
+          </div>
+        </section>
       </div>
     );
   }

@@ -7,7 +7,7 @@ import { stressTrendBlurb, type StressPoint } from "@/lib/stress-trend";
 // deterministic trend blurb. Data is the nightly digest's stored readings —
 // server-fetched, ISR-cached with the page; no client fetch.
 
-const W = 260;
+const W = 320;
 const H = 64;
 const PAD_X = 6;
 const PAD_TOP = 8;
@@ -46,26 +46,20 @@ export function StressStrip({
   const edges = BAND_EDGES.filter((e) => e > lo && e < hi);
 
   return (
-    <div className="grid sm:grid-cols-[auto_auto_1fr] gap-x-8 gap-y-4 items-center rounded-2xl border border-border bg-background-subtle px-5 py-4 mb-6">
-      <div>
-        <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">
-          Curator stress index
-        </div>
-        <div className="flex items-center gap-3 mt-1">
-          <span className="font-mono font-bold text-3xl tabular-nums">{Math.round(last.score)}</span>
-          <span className={`font-mono text-xs border rounded-md px-2 py-0.5 ${BAND_STYLE[band]}`}>
-            {band}
-          </span>
-        </div>
+    <div className="p-3">
+      <div className="flex items-baseline gap-3">
+        <span className="num font-semibold text-[2rem] leading-none text-text-primary">{Math.round(last.score)}</span>
+        <span className={`label border px-1.5 py-0.5 ${BAND_STYLE[band]}`}>{band}</span>
+        <span className="ml-auto label normal-case tracking-normal font-normal num">
+          {fmtSlug(last.slug)}
+        </span>
       </div>
 
       {points.length >= 2 ? (
-        <div>
+        <div className="mt-2.5">
           <svg
             viewBox={`0 0 ${W} ${H}`}
-            width={W}
-            height={H}
-            className="max-w-full"
+            className="w-full h-auto block"
             role="img"
             aria-label={`Curator stress index, last ${points.length} days: ${points
               .map((p) => Math.round(p.score))
@@ -80,19 +74,27 @@ export function StressStrip({
                   y1={y(e)}
                   y2={y(e)}
                   stroke="var(--border)"
-                  strokeDasharray="3 4"
+                  strokeDasharray="2 3"
                   strokeWidth="1"
+                  vectorEffect="non-scaling-stroke"
                 />
-                <text x={W - PAD_X} y={y(e) - 2} textAnchor="end" fontSize="8" fill="var(--text-muted)" fontFamily="ui-monospace,monospace">
+                <text x={PAD_X} y={y(e) - 2} fontSize="8" fill="var(--text-muted)" fontFamily="var(--font-mono)">
                   {e}
                 </text>
               </g>
             ))}
-            <path d={path} fill="none" stroke="var(--accent-blue)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            <path
+              d={path}
+              fill="none"
+              stroke="var(--accent-blue)"
+              strokeWidth="1.75"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
             {points.map((p, i) => (
               <g key={p.slug}>
                 {i === points.length - 1 && (
-                  <circle cx={x(i)} cy={y(p.score)} r="3.5" fill="var(--accent-blue)" />
+                  <rect x={x(i) - 2.5} y={y(p.score) - 2.5} width="5" height="5" fill="var(--accent-blue)" />
                 )}
                 {/* Oversized invisible hit target; native SVG tooltip */}
                 <circle cx={x(i)} cy={y(p.score)} r="9" fill="transparent">
@@ -101,7 +103,7 @@ export function StressStrip({
               </g>
             ))}
           </svg>
-          <div className="flex justify-between font-mono text-[0.6rem] text-text-muted px-1">
+          <div className="flex justify-between num text-[0.65rem] text-text-muted mt-1">
             <span>{fmtSlug(points[0].slug)}</span>
             <span>
               range {Math.round(Math.min(...scores))}–{Math.round(Math.max(...scores))}
@@ -110,17 +112,15 @@ export function StressStrip({
           </div>
         </div>
       ) : (
-        <div className="font-mono text-xs text-text-tertiary">7-day line appears as nightly readings accumulate.</div>
+        <p className="text-xs text-text-tertiary mt-2">The 7-day line appears as nightly readings accumulate.</p>
       )}
 
-      <div className="min-w-0">
-        <p className="text-sm leading-relaxed text-text-secondary">
-          {stressTrendBlurb(points, drivers)}
-        </p>
-        <Link href="/digest" className="font-mono text-xs text-accent-blue mt-1 inline-block">
-          From the Curator Daily →
-        </Link>
-      </div>
+      <p className="text-[0.85rem] leading-relaxed text-text-secondary mt-2.5">
+        {stressTrendBlurb(points, drivers)}
+      </p>
+      <Link href="/digest" className="label text-accent-blue hover:underline mt-2 inline-block">
+        Read the Curator Daily
+      </Link>
     </div>
   );
 }

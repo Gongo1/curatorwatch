@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { ExternalLink, Plus, Check, Globe, GitCompare } from "lucide-react";
+import { ExternalLink, Plus, Check, Globe, GitCompare, ArrowDown, ArrowUp } from "lucide-react";
 import { Newswire } from "@/components/news/Newswire";
 import { CuratorBlurb } from "@/components/curators/CuratorBlurb";
 import { CuratorDisclosureBanner } from "@/components/CuratorDisclosureBanner";
@@ -10,6 +10,8 @@ import { CuratorDepositors } from "@/components/CuratorDepositors";
 import { DataAsOf } from "@/components/DataAsOf";
 import { ApyDistViz, buildApyDistribution } from "@/components/ApyDistViz";
 import { NotCountedNote } from "@/components/NotCountedNote";
+import { Panel } from "@/components/layout/Panel";
+import { FnTag } from "@/components/layout/FnTag";
 import { usePortfolio } from "@/hooks/usePortfolio";
 import { formatCurrency, formatTimeAgo } from "@/lib/utils/format";
 import type {
@@ -131,262 +133,334 @@ export function CuratorProfileView({ data }: CuratorProfileViewProps) {
   const onVSort = (k: typeof vsort.k) =>
     setVsort((s) => (s.k === k ? { k, dir: (s.dir === 1 ? -1 : 1) as 1 | -1 } : { k, dir: k === "name" || k === "asset" || k === "protocol" ? 1 : -1 }));
 
-  return (
-    <div className="max-w-[1340px] xl:grid xl:grid-cols-[minmax(0,1fr)_320px] xl:gap-8 xl:items-start">
-      <div className="max-w-[1000px] min-w-0">
-      <div className="font-mono text-xs text-text-tertiary flex items-center gap-2 mb-5">
-        <Link href="/" className="hover:text-text-primary transition-colors">Curators</Link>
-        <span className="text-text-muted">/</span>
-        <span className="text-text-secondary">{name}</span>
-        {data.dataAsOf && (
-          <span className="ml-auto inline-flex items-center gap-1.5 text-text-tertiary" title="When the on-chain data on this page was last collected">
-            <span className="w-1.5 h-1.5 rounded-full bg-accent-green flex-none" />
-            Data as of {fmtAsOf(data.dataAsOf)}
-          </span>
-        )}
-      </div>
+  const badDebt = data.liquidationSummary?.totalBadDebtUsd ?? 0;
+  const topAsset = derived.assets[0];
 
-      {/* ── Trust masthead: identity (full width) ── */}
-      <header className="mb-6">
-        <div>
-          <div className="flex gap-4 items-start">
-            <div className="relative w-14 h-14 rounded-[13px] flex-none bg-background-elevated border border-border grid place-items-center overflow-hidden font-display font-extrabold text-xl text-accent-blue">
+  return (
+    <div className="space-y-1.5">
+      {/* ── Security-description header: function tag, name, credentials, actions ── */}
+      <header className="pb-3 border-b border-border">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 mb-2 label flex-wrap">
+          <Link href="/" className="hover:text-accent-blue transition-colors">Curators</Link>
+          <span className="text-text-muted">/</span>
+          <span className="text-text-secondary truncate max-w-[60vw]">{name}</span>
+          {data.dataAsOf && (
+            <span
+              className="ml-auto inline-flex items-center gap-1.5"
+              title="When the on-chain data on this page was last collected"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-green flex-none" aria-hidden="true" />
+              Data as of <span className="num normal-case tracking-normal font-normal text-text-secondary">{fmtAsOf(data.dataAsOf)}</span>
+            </span>
+          )}
+        </nav>
+
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="flex items-start gap-3 min-w-0">
+            <FnTag />
+            <div className="relative w-9 h-9 flex-none bg-background-elevated border border-border grid place-items-center overflow-hidden cond font-bold text-sm text-accent-blue">
               {initials(name)}
               {curator.logoUrl && (
                 /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={curator.logoUrl} alt="" width={56} height={56} loading="eager" className="absolute inset-0 w-full h-full object-cover" onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")} />
+                <img src={curator.logoUrl} alt="" width={36} height={36} loading="eager" className="absolute inset-0 w-full h-full object-cover" onError={(e) => ((e.currentTarget as HTMLImageElement).style.display = "none")} />
               )}
             </div>
             <div className="min-w-0">
-              <h1 className="font-display font-bold text-[clamp(2rem,4vw,2.9rem)] leading-[1.05] tracking-[-0.02em] break-words">{name}</h1>
+              <h1 className="cond font-bold text-[1.45rem] leading-none tracking-[0.01em] text-text-primary break-words">{name}</h1>
               {(curator.legalName || curator.description) && (
-                <p className="text-text-secondary text-sm mt-1">
+                <p className="text-sm text-text-secondary mt-1.5 max-w-[75ch]">
                   {curator.legalName}
                   {curator.legalName && curator.description ? " · " : ""}
                   {curator.description}
                 </p>
               )}
-              <div className="flex flex-wrap gap-2 mt-4">
+              <ul className="flex flex-wrap gap-1 mt-2" aria-label="Credentials">
                 {creds.map((c, i) => (
-                  <span key={i} className={`font-mono text-xs border border-border rounded-md px-2.5 py-1 bg-background-subtle ${c.muted ? "text-text-tertiary" : "text-text-secondary"}`}>
+                  <li
+                    key={i}
+                    className={`label border border-border px-1.5 py-1 ${c.muted ? "text-text-muted" : "text-text-secondary"}`}
+                  >
                     {c.label}
-                  </span>
+                  </li>
                 ))}
-              </div>
-              <DataAsOf sources={derived.sources} className="mt-3" />
-              <div className="flex flex-wrap gap-2 mt-4">
-                <button
-                  onClick={() => (isTracked ? untrackCurator(curator.id) : trackCurator(curator.id, name))}
-                  className={`inline-flex items-center gap-1.5 text-sm font-medium rounded-lg px-3.5 py-1.5 border transition-colors active:translate-y-px ${isTracked ? "border-accent-blue text-accent-blue bg-accent-blue/10" : "border-border text-text-primary hover:bg-background-subtle"}`}
-                >
-                  {isTracked ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
-                  {isTracked ? "Tracking" : "Track"}
-                </button>
-                <Link
-                  href={`/compare?c=${curator.address}`}
-                  className="inline-flex items-center gap-1.5 text-sm rounded-lg px-3.5 py-1.5 border border-border text-text-primary hover:bg-background-subtle transition-colors"
-                >
-                  <GitCompare className="w-3.5 h-3.5" /> Compare
-                </Link>
-                {curator.website && (
-                  <a href={curator.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm rounded-lg px-3.5 py-1.5 border border-border text-text-primary hover:bg-background-subtle transition-colors">
-                    <Globe className="w-3.5 h-3.5" /> Website
-                  </a>
-                )}
-                {curator.twitter && (
-                  <a href={`https://x.com/${curator.twitter}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm rounded-lg px-3.5 py-1.5 border border-border text-text-primary hover:bg-background-subtle transition-colors">
-                    <ExternalLink className="w-3.5 h-3.5" /> @{curator.twitter}
-                  </a>
-                )}
-              </div>
+              </ul>
             </div>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => (isTracked ? untrackCurator(curator.id) : trackCurator(curator.id, name))}
+              aria-pressed={isTracked}
+              className={`btn ${isTracked ? "btn-ghost border-accent-blue text-accent-blue" : "btn-primary"}`}
+            >
+              {isTracked ? <Check className="w-3.5 h-3.5" aria-hidden="true" /> : <Plus className="w-3.5 h-3.5" aria-hidden="true" />}
+              {isTracked ? "Tracking" : "Track"}
+            </button>
+            <Link href={`/compare?c=${curator.address}`} className="btn btn-ghost">
+              <GitCompare className="w-3.5 h-3.5" aria-hidden="true" /> Compare
+            </Link>
+            {curator.website && (
+              <a href={curator.website} target="_blank" rel="noopener noreferrer" className="btn btn-ghost">
+                <Globe className="w-3.5 h-3.5" aria-hidden="true" /> Website
+              </a>
+            )}
+            {curator.twitter && (
+              <a href={`https://x.com/${curator.twitter}`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost normal-case">
+                <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" /> @{curator.twitter}
+              </a>
+            )}
           </div>
         </div>
       </header>
 
-      {/* ── About: computed figures + curated dossier facts ── */}
-      <CuratorBlurb curator={curator} vaults={countedVaults} />
-
-      {/* ── Verdict: TVL at a glance ── */}
-      <div className="max-w-md mb-8">
-        <div className="border border-border rounded-2xl bg-background-subtle p-5">
-          <div className="font-mono text-xs uppercase tracking-[0.1em] text-text-tertiary">Total value locked</div>
-          <div className="font-mono font-semibold text-3xl tracking-tight tabular-nums mt-0.5 mb-3">
-            {formatCurrency(derived.totalTVL)} <span className="text-text-tertiary text-sm font-normal">· {countedVaults.length} vaults</span>
-          </div>
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <Fact k="Networks" v={derived.networks.join(" · ")} />
-            <Fact
-              k="Top asset"
-              v={derived.assets[0] ? `${derived.assets[0].symbol} · ${Math.round(derived.assets[0].pct)}%` : "—"}
-            />
-            <Fact k="Avg net APY" v={`${(derived.weightedApy * 100).toFixed(1)}%`} />
-            <div>
-              <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">Bad debt</div>
-              <div className={`font-mono text-sm text-text-primary mt-0.5 tabular-nums ${data.liquidationSummary && data.liquidationSummary.totalBadDebtUsd > 0 ? "text-accent-red" : "text-accent-green"}`}>
-                {data.liquidationSummary && data.liquidationSummary.totalBadDebtUsd > 0
-                  ? formatCurrency(data.liquidationSummary.totalBadDebtUsd)
-                  : "None"}
-              </div>
-            </div>
-          </div>
+      {/* ── Key quotes: the curator in one row ── */}
+      <section aria-label="Key figures" className="panel">
+        <dl className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+          <Quote k="Total value locked" v={formatCurrency(derived.totalTVL)} sub={`${countedVaults.length} vaults`} />
+          <Quote k="Avg net APY" v={`${(derived.weightedApy * 100).toFixed(1)}%`} sub="TVL-wtd" />
+          <Quote k="Annual yield to LPs" v={formatCurrency(derived.annualYield)} />
+          <Quote
+            k="Top asset"
+            v={topAsset ? topAsset.symbol : "—"}
+            sub={topAsset ? `${Math.round(topAsset.pct)}%` : undefined}
+            text
+          />
+          <Quote
+            k="Networks"
+            v={String(derived.networks.length)}
+            sub={derived.networks.join(" · ")}
+            subTitle={derived.networks.join(" · ")}
+          />
+          <Quote
+            k="Bad debt"
+            v={badDebt >= 0.005 ? formatCurrency(badDebt) : "None"}
+            valueClass={badDebt >= 0.005 ? "down" : undefined}
+          />
+        </dl>
+        <div className="border-t border-border px-3 py-1.5 min-h-[1.9rem]">
+          <DataAsOf sources={derived.sources} />
         </div>
-      </div>
+      </section>
 
       {/* ── Material off-chain disclosures the EL engine can't price (litigation, etc.) ── */}
       <CuratorDisclosureBanner address={curator.address} />
 
-      {/* ── Track record: AUM under management over time ── */}
-      <Section
-        title="Track record"
-        meta={
-          data.aumHistory && data.aumHistory.length > 1
-            ? `AUM · daily · since ${fmtDay(data.aumHistory[0].date)}`
-            : "AUM over time"
-        }
-      >
-        <TrackRecord history={data.aumHistory ?? []} />
-      </Section>
+      <div className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_23rem] items-start">
+        <div className="grid gap-1.5 min-w-0">
+          {/* ── About: computed figures + curated dossier facts ── */}
+          <CuratorBlurb curator={curator} vaults={countedVaults} />
 
-      {/* ── Vaults managed ── */}
-      <Section title="Vaults managed" meta="sortable — fees · yields">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse min-w-[520px]">
-            <thead>
-              <tr>
-                <VTh k="name" sort={vsort} onSort={onVSort} className="text-left">Vault</VTh>
-                <VTh k="asset" sort={vsort} onSort={onVSort} className="text-left">Asset</VTh>
-                <VTh k="protocol" sort={vsort} onSort={onVSort} className="text-left">Protocol</VTh>
-                <VTh k="tvl" sort={vsort} onSort={onVSort} className="text-right">TVL</VTh>
-                <VTh k="apy" sort={vsort} onSort={onVSort} className="text-right">Net APY</VTh>
-                <VTh k="fee" sort={vsort} onSort={onVSort} className="text-right">Perf fee</VTh>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedVaults.map((v) => {
-                return (
-                  <tr key={v.id} className="border-t border-border-subtle hover:bg-background-subtle transition-colors group">
-                    <td className="py-3 px-3">
-                      <Link href={`/vault/${v.address}`} className="text-sm font-medium text-text-primary group-hover:text-accent-blue transition-colors">
-                        {v.name}
-                      </Link>
-                      {v.counting && !v.counting.counted && (
-                        <div className="mt-0.5">
-                          <NotCountedNote counting={v.counting} />
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-3 px-3"><span className="font-mono text-xs text-text-secondary border border-border rounded px-1.5 py-0.5">{v.asset.symbol}</span></td>
-                    <td className="py-3 px-3">
-                      <span className="font-mono text-xs text-text-secondary capitalize">{v.protocol || "—"}</span>
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{formatCurrency(tvlOf(v))}</td>
-                    <td className="py-3 px-3 text-right font-mono text-sm tabular-nums">{netApyOf(v) > 0 ? `${(netApyOf(v) * 100).toFixed(2)}%` : "—"}</td>
-                    <td className="py-3 px-3 text-right font-mono text-sm tabular-nums text-text-secondary">
-                      {v.performanceFee != null ? `${(v.performanceFee * 100).toFixed(0)}%` : "—"}
-                    </td>
+          {/* ── Track record: AUM under management over time ── */}
+          <Panel
+            title="Track record"
+            meta={
+              data.aumHistory && data.aumHistory.length > 1
+                ? `AUM · daily · since ${fmtDay(data.aumHistory[0].date)}`
+                : "AUM over time"
+            }
+            bodyClassName="p-3"
+          >
+            <TrackRecord history={data.aumHistory ?? []} />
+          </Panel>
+
+          {/* ── Vaults managed ── */}
+          <Panel title="Vaults managed" meta={`${vaults.length} vaults · sortable`}>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="h-7 border-b border-border bg-background">
+                    <VTh k="name" sort={vsort} onSort={onVSort} className="text-left">Vault</VTh>
+                    <VTh k="asset" sort={vsort} onSort={onVSort} className="text-left">Asset</VTh>
+                    <VTh k="protocol" sort={vsort} onSort={onVSort} className="text-left hidden md:table-cell">Protocol</VTh>
+                    <VTh k="tvl" sort={vsort} onSort={onVSort} className="text-right">TVL</VTh>
+                    <VTh k="apy" sort={vsort} onSort={onVSort} className="text-right">Net APY</VTh>
+                    <VTh k="fee" sort={vsort} onSort={onVSort} className="text-right hidden sm:table-cell">Perf fee</VTh>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Section>
-
-      {/* ── Asset distribution (concentration of the holdings above) ── */}
-      <Section title="Asset distribution" meta="concentration across vaults">
-        <div className="flex flex-col gap-3">
-          {derived.assets.slice(0, 8).map((a) => (
-            <div key={a.symbol} className="grid grid-cols-[84px_1fr_150px] gap-4 items-center">
-              <span className="font-mono text-sm text-text-primary">{a.symbol}</span>
-              <div className="h-2 rounded bg-background-elevated overflow-hidden">
-                <span className="block h-full" style={{ width: `${a.pct}%`, background: "var(--accent-blue)", opacity: 0.85 }} />
-              </div>
-              <span className="font-mono text-xs text-text-secondary text-right tabular-nums">
-                <b className="text-text-primary font-semibold">{formatCurrency(a.amount)}</b> · {a.pct.toFixed(1)}%
-              </span>
+                </thead>
+                <tbody>
+                  {sortedVaults.map((v) => (
+                    <tr key={v.id} className="h-9 border-b border-border-subtle last:border-0 hover:bg-background-hover transition-colors group">
+                      <td className="py-1.5 px-3">
+                        <Link href={`/vault/${v.address}`} className="font-medium text-text-primary group-hover:text-accent-blue transition-colors">
+                          {v.name}
+                        </Link>
+                        {v.counting && !v.counting.counted && (
+                          <div className="mt-0.5">
+                            <NotCountedNote counting={v.counting} />
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-1.5 px-3 num text-xs text-text-secondary">{v.asset.symbol}</td>
+                      <td className="py-1.5 px-3 text-xs text-text-secondary capitalize hidden md:table-cell">{v.protocol || "—"}</td>
+                      <td className="py-1.5 px-3 text-right num text-text-primary whitespace-nowrap">{formatCurrency(tvlOf(v))}</td>
+                      <td className="py-1.5 px-3 text-right num text-text-primary">{netApyOf(v) > 0 ? `${(netApyOf(v) * 100).toFixed(2)}%` : "—"}</td>
+                      <td className="py-1.5 px-3 text-right num text-text-secondary hidden sm:table-cell">
+                        {v.performanceFee != null ? `${(v.performanceFee * 100).toFixed(0)}%` : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-          ))}
-        </div>
-      </Section>
+          </Panel>
 
-      {/* ── Economics: where the yield comes from ── */}
-      <Section title="Economics" meta="annual yield, by vault">
-        <div className="grid sm:grid-cols-2 gap-4 mb-6 items-stretch">
-          <ECard label="Annual yield to LPs" value={formatCurrency(derived.annualYield)} sub="TVL-weighted across vaults" accent />
-          {derived.apyDist && derived.apyDist.count >= 3 ? (
-            <div className="border border-border rounded-xl bg-background-subtle p-5 flex flex-col justify-center">
-              <ApyDistViz d={derived.apyDist} label={`Net APY · ${derived.apyDist.count} vaults`} />
-            </div>
-          ) : (
-            <ECard label="Avg net APY" value={`${(derived.weightedApy * 100).toFixed(2)}%`} sub="TVL-weighted" />
+          {/* ── Economics: where the yield comes from ── */}
+          <Panel title="Yield by vault" meta="annual $ to LPs · top 8" bodyClassName="p-3">
+            {derived.yieldByVault.length === 0 ? (
+              <p className="text-sm text-text-tertiary">No counted vault reports a positive net APY yet, so there is no yield to break down.</p>
+            ) : (
+              <>
+                <div className="label mb-2">Bar = $ paid per year · figure = net APY</div>
+                <div className="flex flex-col">
+                  {derived.yieldByVault.map((y, i) => (
+                    <div
+                      // Names repeat across a curator's vaults ("Sentora USD" ×2).
+                      key={`${y.name}-${i}`}
+                      className="grid grid-cols-[minmax(0,8.5rem)_minmax(2rem,1fr)_auto] sm:grid-cols-[minmax(0,13rem)_1fr_auto] gap-3 items-center h-7"
+                    >
+                      <span className="text-sm text-text-primary truncate" title={y.name}>{y.name}</span>
+                      <div className="h-2.5 bg-background">
+                        <span className="block h-full" style={{ width: `${(y.dollars / derived.maxYield) * 100}%`, background: "var(--chart-1)" }} />
+                      </div>
+                      <span className="num text-xs text-text-secondary text-right whitespace-nowrap">
+                        <b className="text-text-primary font-semibold">{formatCurrency(y.dollars)}</b>{" "}
+                        <span className="inline-block w-[3.25rem]">{(y.apy * 100).toFixed(1)}%</span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </Panel>
+
+          {/* ── Changes & alerts: what moved, when ── */}
+          <Panel
+            title="Changes & alerts"
+            meta={`${data.timeline?.length ?? 0} · auto-detected · this curator’s vaults`}
+            bodyClassName="max-h-[30rem] overflow-y-auto"
+          >
+            <CuratorTimeline entries={data.timeline ?? []} />
+          </Panel>
+
+          {/* ── Top depositors (live) ── */}
+          <CuratorDepositors curatorAddress={curator.address} />
+        </div>
+
+        {/* ── Right rail: concentration, spread, losses, press ── */}
+        <div className="grid gap-1.5 min-w-0">
+          <Panel title="Asset distribution" meta={`${derived.assets.length} assets · share of TVL`} bodyClassName="p-3">
+            {derived.assets.length === 0 ? (
+              <p className="text-sm text-text-tertiary">No counted vaults, so there is no asset mix to show.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <caption className="sr-only">Share of this curator’s TVL by asset</caption>
+                <tbody>
+                  {derived.assets.slice(0, 8).map((a) => (
+                    <tr key={a.symbol} className="h-7">
+                      <td className="w-[4.5rem] pr-2 font-semibold text-text-primary truncate max-w-[4.5rem]">{a.symbol}</td>
+                      <td>
+                        <div className="h-1.5 bg-background" aria-hidden="true">
+                          <span className="block h-full" style={{ width: `${a.pct}%`, background: "var(--chart-1)" }} />
+                        </div>
+                      </td>
+                      <td className="num text-xs text-text-secondary text-right pl-2 whitespace-nowrap w-[1%]">
+                        {formatCurrency(a.amount)}
+                      </td>
+                      <td className="num text-xs text-text-primary text-right pl-2 whitespace-nowrap w-[1%]">
+                        {a.pct.toFixed(1)}%
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </Panel>
+
+          {derived.apyDist && derived.apyDist.count >= 3 && (
+            <Panel title="Net APY spread" meta={`${derived.apyDist.count} vaults`} bodyClassName="p-3">
+              <ApyDistViz d={derived.apyDist} label="Vault count by net APY band" tall />
+            </Panel>
           )}
+
+          {/* ── Liquidations lens (inline) ── */}
+          <Panel title="Liquidations" href="/liquidations" meta="markets this curator allocates to">
+            {data.liquidationSummary ? (
+              <dl className="text-sm">
+                <KV k="All time" v={String(data.liquidationSummary.total)} />
+                <KV k="Last 30 days" v={String(data.liquidationSummary.recent30d)} />
+                <KV k="Repaid" v={formatCurrency(data.liquidationSummary.totalRepaidUsd)} />
+                <KV k="Seized" v={formatCurrency(data.liquidationSummary.totalSeizedUsd)} />
+                <KV
+                  k="Bad debt"
+                  v={data.liquidationSummary.totalBadDebtUsd >= 0.005 ? formatCurrency(data.liquidationSummary.totalBadDebtUsd) : "None"}
+                  valueClass={data.liquidationSummary.totalBadDebtUsd >= 0.005 ? "down" : undefined}
+                />
+              </dl>
+            ) : (
+              <p className="px-3 pt-3 text-sm text-text-tertiary">No liquidation data for this curator&rsquo;s markets.</p>
+            )}
+            <p className="px-3 py-2.5 text-xs text-text-tertiary leading-relaxed">
+              Healthy liquidations repay lenders in full; bad debt is the loss signal.
+              Full event detail lives in the{" "}
+              <Link href="/liquidations" className="text-accent-blue hover:underline">Liquidations lens</Link>.
+            </p>
+          </Panel>
+
+          {/* ── Newswire: press naming this curator ── */}
+          <Newswire
+            variant="rail"
+            items={data.news}
+            title="Newswire"
+            emptyHint={`No headlines naming ${name} yet. We scan major crypto desks every few hours.`}
+          />
         </div>
-        <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary mb-3">Annual yield ($) by vault — bar = $ paid, figure = APY</div>
-        <div className="flex flex-col gap-3">
-          {derived.yieldByVault.map((y) => (
-            <div key={y.name} className="grid grid-cols-[150px_1fr_140px] gap-4 items-center">
-              <span className="text-sm text-text-primary truncate" title={y.name}>{y.name}</span>
-              <div className="h-[18px] rounded bg-background-elevated overflow-hidden">
-                <span className="block h-full" style={{ width: `${(y.dollars / derived.maxYield) * 100}%`, background: "var(--accent-blue)", opacity: 0.85 }} />
-              </div>
-              <span className="font-mono text-xs text-text-secondary text-right tabular-nums">
-                <b className="text-text-primary font-semibold">{formatCurrency(y.dollars)}</b> <span className="text-accent-green">{(y.apy * 100).toFixed(1)}%</span>
-              </span>
-            </div>
-          ))}
-        </div>
-      </Section>
-
-      {/* ── Liquidations lens (inline) ── */}
-      <Section title="Liquidations" meta="across markets this curator allocates to">
-        {data.liquidationSummary ? (
-          <div className="flex gap-x-10 gap-y-3 flex-wrap">
-            <Fact k="All time" v={String(data.liquidationSummary.total)} />
-            <Fact k="Last 30 days" v={String(data.liquidationSummary.recent30d)} />
-            <Fact k="Repaid" v={formatCurrency(data.liquidationSummary.totalRepaidUsd)} />
-            <Fact k="Seized" v={formatCurrency(data.liquidationSummary.totalSeizedUsd)} />
-            <div>
-              <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">Bad debt</div>
-              <div className={`font-mono text-sm mt-0.5 tabular-nums ${data.liquidationSummary.totalBadDebtUsd > 0 ? "text-accent-red" : "text-accent-green"}`}>
-                {data.liquidationSummary.totalBadDebtUsd > 0
-                  ? formatCurrency(data.liquidationSummary.totalBadDebtUsd)
-                  : "None"}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <p className="font-mono text-sm text-text-tertiary">No liquidation data for this curator&rsquo;s markets.</p>
-        )}
-        <p className="font-mono text-xs text-text-tertiary mt-3">
-          Healthy liquidations repay lenders in full; bad debt is the loss signal.
-          Full event detail lives in the <Link href="/liquidations" className="text-accent-blue underline underline-offset-2">Liquidations lens</Link>.
-        </p>
-      </Section>
-
-      {/* ── Changes & alerts: what moved, when ── */}
-      <Section
-        title="Changes & alerts"
-        meta="auto-detected across this curator’s vaults"
-      >
-        <CuratorTimeline entries={data.timeline ?? []} />
-      </Section>
-
-      {/* ── Top depositors (live) ── */}
-      <Section title="Top depositors" meta="across this curator’s vaults">
-        <CuratorDepositors curatorAddress={curator.address} />
-      </Section>
       </div>
+    </div>
+  );
+}
 
-      {/* ── Newswire rail: press naming this curator ── */}
-      <aside className="mt-10 xl:mt-0 xl:sticky xl:top-6">
-        <Newswire
-          variant="rail"
-          items={data.news}
-          title="Newswire"
-          emptyHint={`No headlines naming ${name} yet. We scan major crypto desks every few hours.`}
-        />
-      </aside>
+function Quote({
+  k,
+  v,
+  sub,
+  subTitle,
+  text = false,
+  valueClass,
+}: {
+  k: string;
+  v: string;
+  sub?: string;
+  subTitle?: string;
+  text?: boolean;
+  valueClass?: string;
+}) {
+  return (
+    <div className="px-3 py-2.5 border-border border-b lg:border-b-0 border-r min-w-0">
+      <dt className="label">{k}</dt>
+      <dd className="flex items-baseline gap-2 mt-1.5 min-w-0">
+        <span
+          className={`${text ? "cond font-bold text-[1.3rem] truncate" : "num font-semibold text-[1.45rem]"} leading-none ${
+            valueClass ?? "text-text-primary"
+          }`}
+        >
+          {v}
+        </span>
+        {sub && (
+          <span className={`${text ? "num text-xs" : "label"} text-text-tertiary truncate`} title={subTitle}>
+            {sub}
+          </span>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+function KV({ k, v, valueClass = "text-text-primary" }: { k: string; v: string; valueClass?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 h-8 px-3 border-b border-border-subtle">
+      <dt className="label">{k}</dt>
+      <dd className={`num ${valueClass}`}>{v}</dd>
     </div>
   );
 }
@@ -405,19 +479,32 @@ function compactUsd(n: number): string {
 // Server-data SVG area chart — no chart library, nothing to lazy-load.
 function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
+  // Draw in CSS pixels (viewBox width = rendered width) so axis text stays
+  // 10px at every screen width instead of scaling with the chart.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(680);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = Math.round(entries[0].contentRect.width);
+      if (w > 0) setW(w);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [history.length]);
 
   if (history.length < 2) {
     return (
-      <p className="font-mono text-sm text-text-tertiary">
-        Not enough history yet — AUM tracking for this curator began recently.
+      <p className="text-sm text-text-tertiary">
+        Not enough history yet: AUM tracking for this curator began recently.
         The chart appears once a few days of snapshots accumulate.
       </p>
     );
   }
 
   // viewBox geometry with padding for axis labels.
-  const W = 680;
-  const H = 200;
+  const H = W < 480 ? 180 : 230;
   const PAD_L = 52; // room for "$180M" y-labels
   const PAD_R = 12;
   const PAD_T = 10;
@@ -456,7 +543,7 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
   const d30 = n > 30 ? history[n - 31] : first;
   const change30Pct = d30.aumUsd > 0 ? ((last.aumUsd - d30.aumUsd) / d30.aumUsd) * 100 : 0;
   const sign = (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%`;
-  const tone = (v: number) => (v >= 0 ? "text-accent-green" : "text-accent-red");
+  const tone = (v: number) => (v >= 0 ? "up" : "down");
 
   const onMove = (e: React.MouseEvent<SVGSVGElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -470,20 +557,14 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
 
   return (
     <div>
-      <div className="flex gap-x-10 gap-y-3 flex-wrap mb-4">
+      <dl className="flex gap-x-8 gap-y-2 flex-wrap mb-3">
         <Fact k="AUM today" v={compactUsd(last.aumUsd)} />
-        <div>
-          <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">30d change</div>
-          <div className={`font-mono text-sm mt-0.5 tabular-nums ${tone(change30Pct)}`}>{sign(change30Pct)}</div>
-        </div>
-        <div>
-          <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">Since {fmtDay(first.date)}</div>
-          <div className={`font-mono text-sm mt-0.5 tabular-nums ${tone(changePct)}`}>{sign(changePct)}</div>
-        </div>
+        <Fact k="30d change" v={sign(change30Pct)} valueClass={tone(change30Pct)} />
+        <Fact k={`Since ${fmtDay(first.date)}`} v={sign(changePct)} valueClass={tone(changePct)} />
         <Fact k="Peak" v={compactUsd(max)} />
         <Fact k="Products" v={`${last.vaultCount} vaults`} />
-      </div>
-      <div className="relative border border-border rounded-2xl bg-background-subtle p-4">
+      </dl>
+      <div ref={boxRef} className="relative">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="w-full h-auto block overflow-visible"
@@ -500,10 +581,9 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
                 x2={W - PAD_R}
                 y1={y(v)}
                 y2={y(v)}
-                stroke="var(--border)"
+                stroke="var(--border-subtle)"
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
-                opacity={0.5}
               />
               <text
                 x={PAD_L - 8}
@@ -511,8 +591,8 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
                 textAnchor="end"
                 dominantBaseline="middle"
                 fill="var(--text-tertiary)"
-                fontSize="11"
-                fontFamily="var(--font-mono, monospace)"
+                fontSize="10"
+                fontFamily="var(--font-mono)"
               >
                 {compactUsd(v)}
               </text>
@@ -527,19 +607,19 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
               y={H - 6}
               textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
               fill="var(--text-tertiary)"
-              fontSize="11"
-              fontFamily="var(--font-mono, monospace)"
+              fontSize="10"
+              fontFamily="var(--font-mono)"
             >
               {fmtDay(history[i].date)}
             </text>
           ))}
 
-          <path d={area} fill="var(--accent-blue)" opacity="0.12" />
+          <path d={area} fill="var(--chart-1)" opacity="0.1" />
           <path
             d={line}
             fill="none"
-            stroke="var(--accent-blue)"
-            strokeWidth="2"
+            stroke="var(--chart-1)"
+            strokeWidth="1.5"
             vectorEffect="non-scaling-stroke"
           />
 
@@ -551,16 +631,15 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
                 x2={x(hoverIdx as number)}
                 y1={PAD_T}
                 y2={PAD_T + plotH}
-                stroke="var(--accent-blue)"
+                stroke="var(--border-strong)"
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
-                opacity={0.5}
               />
               <circle
                 cx={x(hoverIdx as number)}
                 cy={y(hp.aumUsd)}
-                r="3.5"
-                fill="var(--accent-blue)"
+                r="3"
+                fill="var(--chart-1)"
                 stroke="var(--background)"
                 strokeWidth="1.5"
               />
@@ -571,24 +650,20 @@ function TrackRecord({ history }: { history: CuratorAumPoint[] }) {
         {/* HTML tooltip positioned in viewBox-percentage space */}
         {hp && (
           <div
-            className="absolute pointer-events-none -translate-x-1/2 -translate-y-full bg-background-elevated border border-border rounded-lg px-2.5 py-1.5 shadow-xl whitespace-nowrap z-10"
+            className="absolute pointer-events-none -translate-x-1/2 -translate-y-full bg-background-elevated border border-border-strong px-2 py-1 whitespace-nowrap z-10 num text-xs"
             style={{
               left: `${(x(hoverIdx as number) / W) * 100}%`,
               top: `calc(${(y(hp.aumUsd) / H) * 100}% - 8px)`,
             }}
           >
-            <div className="font-mono text-[0.62rem] text-text-tertiary">{fmtDay(hp.date)}</div>
-            <div className="font-mono text-sm font-semibold tabular-nums text-text-primary">
-              {compactUsd(hp.aumUsd)}
-            </div>
-            <div className="font-mono text-[0.6rem] text-text-tertiary tabular-nums">
-              {hp.vaultCount} vaults
-            </div>
+            <div className="text-text-tertiary">{fmtDay(hp.date)}</div>
+            <div className="font-semibold text-text-primary">{compactUsd(hp.aumUsd)}</div>
+            <div className="text-text-tertiary">{hp.vaultCount} vaults</div>
           </div>
         )}
       </div>
-      <p className="font-mono text-xs text-text-tertiary mt-3">
-        Daily closing AUM from CuratorWatch snapshots — hover for any day. History
+      <p className="text-xs text-text-tertiary mt-2">
+        Daily closing AUM from CuratorWatch snapshots. Hover for any day. History
         begins when tracking began, not at the curator&rsquo;s inception.
       </p>
     </div>
@@ -604,7 +679,7 @@ const SEVERITY_DOT: Record<string, string> = {
 function CuratorTimeline({ entries }: { entries: CuratorTimelineEntry[] }) {
   if (entries.length === 0) {
     return (
-      <p className="font-mono text-sm text-text-tertiary">
+      <p className="p-3 text-sm text-text-tertiary">
         No detected changes or alerts yet for this curator&rsquo;s vaults.
       </p>
     );
@@ -612,9 +687,9 @@ function CuratorTimeline({ entries }: { entries: CuratorTimelineEntry[] }) {
   return (
     <ol className="flex flex-col">
       {entries.map((e) => (
-        <li key={`${e.source}-${e.id}`} className="flex gap-3 py-3 border-t border-border-subtle first:border-t-0">
+        <li key={`${e.source}-${e.id}`} className="flex gap-2.5 px-3 py-2 border-b border-border-subtle last:border-b-0">
           <span
-            className={`mt-1.5 w-2 h-2 rounded-sm flex-none ${SEVERITY_DOT[e.severity] ?? "bg-text-tertiary"}`}
+            className={`mt-1.5 w-1.5 h-1.5 rounded-full flex-none ${SEVERITY_DOT[e.severity] ?? "bg-text-tertiary"}`}
             aria-hidden="true"
           />
           <div className="min-w-0 flex-1">
@@ -623,12 +698,12 @@ function CuratorTimeline({ entries }: { entries: CuratorTimelineEntry[] }) {
               {e.vaultAddress && e.vaultName && (
                 <Link
                   href={`/vault/${e.vaultAddress}`}
-                  className="font-mono text-xs text-text-tertiary hover:text-accent-blue transition-colors truncate"
+                  className="text-xs text-text-tertiary hover:text-accent-blue transition-colors truncate"
                 >
                   {e.vaultName}
                 </Link>
               )}
-              <span className="font-mono text-xs text-text-tertiary ml-auto whitespace-nowrap">
+              <span className="num text-[0.7rem] text-text-tertiary ml-auto whitespace-nowrap">
                 {formatTimeAgo(e.detectedAt)}
               </span>
             </div>
@@ -642,34 +717,11 @@ function CuratorTimeline({ entries }: { entries: CuratorTimelineEntry[] }) {
   );
 }
 
-function Fact({ k, v }: { k: string; v: string }) {
+function Fact({ k, v, valueClass = "text-text-primary" }: { k: string; v: string; valueClass?: string }) {
   return (
     <div>
-      <div className="font-mono text-[0.6rem] uppercase tracking-[0.1em] text-text-tertiary">{k}</div>
-      <div className="font-mono text-sm text-text-primary mt-0.5 tabular-nums truncate">{v}</div>
-    </div>
-  );
-}
-
-function Section({ title, meta, children }: { title: string; meta?: string; children: React.ReactNode }) {
-  return (
-    <section className="mt-12">
-      <div className="flex items-baseline gap-3 mb-5 pb-3 border-b border-border flex-wrap">
-        <span className="w-[7px] h-[7px] rounded-sm bg-accent-blue -translate-y-0.5" />
-        <span className="font-display font-bold text-xl tracking-tight">{title}</span>
-        {meta && <span className="font-mono text-xs text-text-tertiary ml-auto text-right">{meta}</span>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function ECard({ label, value, sub, accent }: { label: string; value: string; sub?: string; accent?: boolean }) {
-  return (
-    <div className="border border-border rounded-xl bg-background-subtle p-5">
-      <div className="font-mono text-[0.62rem] uppercase tracking-[0.1em] text-text-tertiary">{label}</div>
-      <div className={`font-mono font-semibold text-xl tracking-tight mt-1.5 tabular-nums ${accent ? "text-accent-green" : ""}`}>{value}</div>
-      {sub && <div className="font-mono text-xs text-text-tertiary mt-0.5">{sub}</div>}
+      <dt className="label">{k}</dt>
+      <dd className={`num text-sm mt-1 truncate ${valueClass}`}>{v}</dd>
     </div>
   );
 }
@@ -677,9 +729,12 @@ function ECard({ label, value, sub, accent }: { label: string; value: string; su
 function VTh({ k, sort, onSort, className = "", children }: { k: VSortKey; sort: { k: string; dir: number }; onSort: (k: VSortKey) => void; className?: string; children: React.ReactNode }) {
   const active = sort.k === k;
   return (
-    <th className={`font-mono text-[0.62rem] uppercase tracking-[0.1em] font-medium pb-3 px-3 ${className}`}>
-      <button type="button" onClick={() => onSort(k)} className={`hover:text-text-primary transition-colors ${active ? "text-accent-blue" : "text-text-tertiary"}`}>
-        {children}{active ? (sort.dir < 0 ? " ↓" : " ↑") : ""}
+    <th scope="col" aria-sort={active ? (sort.dir < 0 ? "descending" : "ascending") : undefined} className={`px-3 font-normal ${className}`}>
+      <button type="button" onClick={() => onSort(k)} className={`label whitespace-nowrap hover:text-text-primary transition-colors ${active ? "text-accent-blue" : ""}`}>
+        {children}
+        <span className="inline-flex w-3 justify-center align-[-2px]" aria-hidden="true">
+          {active && (sort.dir < 0 ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />)}
+        </span>
       </button>
     </th>
   );
